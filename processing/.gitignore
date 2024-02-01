@@ -1,0 +1,14 @@
+build/
+bin/
+.vs/
+
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+
+fastdds/
+paho.mqtt.cpp/
+rapidjson/
+spdlog/
+
