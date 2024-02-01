@@ -84,7 +84,7 @@ void request_data(){
     exptected_responses = publisher->get_subscribers();
     MQTTMessage* mqttMessage = new MQTTMessage();
     mqttMessage->uuid(1);
-    mqttMessage->topic("out/adapters");
+    mqttMessage->topic("to/adapters");
     mqttMessage->message("request");
     mqttMessage->datetime(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
     publisher->publish(mqttMessage);
@@ -95,7 +95,7 @@ void setup_pub_dds(){
     signal(SIGTERM, pub_sig_handler);
     typeSupport = new TypeSupport(&mqttMessagePubSubType);
     publisher = new DDSPublisher<MQTTMessage, MQTTMessagePubSubType>(typeSupport);
-    publisher->init("ServerPub", 0, "out/adapters", "MQTTMessage", TOPIC_QOS_DEFAULT);
+    publisher->init("ServerPub", 0, "to/adapters", "MQTTMessage", TOPIC_QOS_DEFAULT);
 }
 
 void setup_sub_dds(string sub_topic) {
@@ -103,7 +103,7 @@ void setup_sub_dds(string sub_topic) {
     listener_ = new SubListener();
     typeSupport = new TypeSupport(&mqttMessagePubSubType);
     subscriber = new DDSSubscriber(listener_, typeSupport);
-    subscriber->init("ServerSub", 0, "in/adapters", "MQTTMessage", TOPIC_QOS_DEFAULT);
+    subscriber->init("ServerSub", 0, "from/adapters", "MQTTMessage", TOPIC_QOS_DEFAULT);
 }
 
 int main() {

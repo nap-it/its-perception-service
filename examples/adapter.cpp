@@ -58,10 +58,10 @@ public:
         if (reader->take_next_sample(&message, &info) == ReturnCode_t::RETCODE_OK) {
             if (info.valid_data) {
                 std::cout << "Message: " << message.message() << " RECEIVED." << std::endl;
-                if (message.topic() == "out/adapters") {
+                if (message.topic() == "to/adapters") {
                     cout << "Received request for adapters" << endl;
                     try {
-                        send_data("in/adapters", "adapter sensor data");
+                        send_data("from/adapters", "adapter sensor data");
                     } catch (const std::exception& e) {
                         std::cerr << e.what() << '\n';
                         raise(SIGTERM);
@@ -103,8 +103,8 @@ void setup_sub_dds(string sub_topic) {
 
 
 int main() {
-    setup_pub_dds("in/adapters");
-    setup_sub_dds("out/adapters");
+    setup_pub_dds("from/adapters");
+    setup_sub_dds("to/adapters");
     while(1) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
