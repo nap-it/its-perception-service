@@ -1,0 +1,15 @@
+version: '2.4'
+services:
+  radar:
+    hostname: radar
+    image: radar-adapter:teste
+    entrypoint: "/main"
+    cap_add:
+      - "NET_ADMIN"
+    networks:
+      vanetzalan0:
+        ipv4_address: 192.168.98.40
+
+networks:
+  vanetzalan0:
+    external: true
