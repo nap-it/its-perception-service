@@ -22,6 +22,47 @@ TypeSupport* typeSupport;
 MQTTMessagePubSubType mqttMessagePubSubType;
 DDSSubscriber* subscriber;
 
+const char* jsonString = R"({
+    "timestamp": 123,
+    "numberObjects": 123,
+    "objects": [
+        {
+            "acceleration": 1.0,
+            "heading": null,
+            "latitude": null,
+            "longitude": null,
+            "objID": null,
+            "sensorID": null,
+            "speed": null,
+            "timestamp": null,
+            "confidence": null,
+            "classification": {
+                "confidence": 0,
+                "class": {}
+            }
+        },
+        {
+            "acceleration": 2.0,
+            "heading": null,
+            "latitude": null,
+            "longitude": null,
+            "objID": null,
+            "sensorID": null,
+            "speed": null,
+            "timestamp": null,
+            "confidence": null,
+            "classification": {
+                "confidence": 0,
+                "class": {}
+            }
+        }
+    ],
+    "times": {
+        "time1": 123,
+        "time2": 124
+    }
+})";
+
 
 //send sensor data
 void send_data(string pub_topic, string payload){
@@ -59,9 +100,9 @@ public:
             if (info.valid_data) {
                 std::cout << "Message: " << message.message() << " RECEIVED." << std::endl;
                 if (message.topic() == "to/adapters") {
-                    cout << "Received request for adapters" << endl;
+                    cout << "Received request" << endl;
                     try {
-                        send_data("from/adapters", "adapter sensor data");
+                        send_data("from/adapters", jsonString);
                     } catch (const std::exception& e) {
                         std::cerr << e.what() << '\n';
                         raise(SIGTERM);
@@ -88,7 +129,7 @@ void setup_pub_dds(string pub_topic){
     signal(SIGTERM, pub_sig_handler);
     typeSupport = new TypeSupport(&mqttMessagePubSubType);
     publisher = new DDSPublisher<MQTTMessage, MQTTMessagePubSubType>(typeSupport);
-    publisher->init("AdapterPub", 0, pub_topic, "MQTTMessage", TOPIC_QOS_DEFAULT);
+    publisher->init("Adapter1Pub", 0, pub_topic, "MQTTMessage", TOPIC_QOS_DEFAULT);
 
 }
 
@@ -98,14 +139,19 @@ void setup_sub_dds(string sub_topic) {
     listener_ = new SubListener();
     typeSupport = new TypeSupport(&mqttMessagePubSubType);
     subscriber = new DDSSubscriber(listener_, typeSupport);
-    subscriber->init("AdapterSub", 0, sub_topic, "MQTTMessage", TOPIC_QOS_DEFAULT);
+    subscriber->init("Adapter1Sub", 0, sub_topic, "MQTTMessage", TOPIC_QOS_DEFAULT);
 }
 
 
 int main() {
     setup_pub_dds("from/adapters");
     setup_sub_dds("to/adapters");
-    while(1) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    try {
+        while(1) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        }
+    } catch (const std::exception& e) {
+        std::cerr << e.what() << '\n';
+        raise(SIGTERM);
     }
 }
