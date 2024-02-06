@@ -10,10 +10,37 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libboost-system-dev \
     libcrypto++-dev \
     libfastcdr-dev \
-    libfastrtps-dev
+    libfastrtps-dev \
+    git \
+    ca-certificates
 WORKDIR /
-COPY . /
+COPY . /radar-adapter
+
+RUN git clone https://github.com/eclipse/paho.mqtt.c.git
+WORKDIR paho.mqtt.c
+RUN git checkout v1.3.13
+RUN cmake -Bbuild -H. -DPAHO_ENABLE_TESTING=OFF -DPAHO_BUILD_STATIC=ON \
+        -DPAHO_WITH_SSL=ON -DPAHO_HIGH_PERFORMANCE=ON
+RUN cmake --build build/ --target install
+RUN ldconfig
+
+WORKDIR /
+RUN git clone https://github.com/eclipse/paho.mqtt.cpp
+WORKDIR /paho.mqtt.cpp
+RUN cmake -Bbuild -H. -DPAHO_BUILD_STATIC=ON \
+        -DPAHO_BUILD_DOCUMENTATION=OFF -DPAHO_BUILD_SAMPLES=ON
+RUN cmake --build build/ --target install
+RUN ldconfig
+
+WORKDIR /radar-adapter/vendor
+RUN git clone https://code.nap.av.it.pt/external-tools/rapidjson.git
+RUN git clone https://code.nap.av.it.pt/external-tools/spdlog.git
+
+WORKDIR /radar-adapter
 RUN cmake .
 RUN cmake --build .
 RUN chmod +x main
-ENTRYPOINT ["/main"]
+ENTRYPOINT ["/radar-adapter/main"]
+
+#ENTRYPOINT ["sleep"]
+#CMD 50000

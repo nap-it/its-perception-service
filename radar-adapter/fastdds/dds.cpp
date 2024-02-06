@@ -69,7 +69,7 @@ void Dds::subscribe(std::string topic) {
     dds_subscribers[topic] = std::move(ptr);
 }
 
-void Dds::provison_publisher(std::string topic) {
+void Dds::provision_publisher(std::string topic) {
     std::unique_ptr<DDSPublisher<MQTTMessage, MQTTMessagePubSubType>> ptr = \
         std::make_unique<DDSPublisher<MQTTMessage, MQTTMessagePubSubType>>(typeSupport);
     ptr.get()->init(this->client_name, this->domain, topic, "MQTTMessage", TOPIC_QOS_DEFAULT);
@@ -77,7 +77,7 @@ void Dds::provison_publisher(std::string topic) {
 }
 
 void Dds::from_dds_thread() {
-    while(1) {
+    while (1) {
         std::this_thread::sleep_for(std::chrono::seconds(100));
     }
 }

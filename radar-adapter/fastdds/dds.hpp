@@ -28,7 +28,7 @@ public:
     Dds(string client_name, int domain, function<void(std::string, std::string)> func);
     ~Dds();
     void publish(string topic, string message);
-    void provison_publisher(string topic);
+    void provision_publisher(string topic);
     void subscribe(string topic);
     void on_message(string topic, string message);
 };
