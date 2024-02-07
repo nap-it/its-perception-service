@@ -18,22 +18,22 @@
 #include <rapidjson/prettywriter.h>
 
 //DDS
-#include "fastdds/DDSSubscriber.hpp"
-#include "fastdds/DDSPublisher.hpp"
+#include "fastdds/dds.hpp"
 #include "fastdds/MQTTMessagePubSubTypes.h"
 
 
 //config
 #include "config_reader.hpp"
 
+//sensor
+#include "sensor_info.hpp"
+
 using namespace std;
 using namespace boost::asio;
 using namespace rapidjson;
 
-TypeSupport* typeSupport;
-MQTTMessagePubSubType mqttMessagePubSubType;
-DDSPublisher<MQTTMessage, MQTTMessagePubSubType>* publisher;
-DDSSubscriber* subscriber;
+//DDS variables
+Dds* server;
 
 
 //globals
@@ -42,9 +42,14 @@ int received_responses = 0;
 std::chrono::milliseconds request_deadline(0);
 std::chrono::milliseconds request_interval(0);
 std::chrono::milliseconds add_sensor_interval(0); 
+std::chrono::milliseconds last_request(0);
+std::chrono::milliseconds last_sensor(0);
+std::chrono::milliseconds max_interval(0);
 string sub_topic = "";
 string pub_topic = "";
-vector<string> received_objects;
+unsigned long int timestamp_milliseconds = 0;
+
+vector<Document> received_objects = vector<Document>();
 
 void readConfigFile(const string& path){
     INIReader reader (path);
@@ -54,130 +59,128 @@ void readConfigFile(const string& path){
     request_deadline = std::chrono::milliseconds(reader.GetInteger("dds", "request_deadline", 1000));
     request_interval = std::chrono::milliseconds(reader.GetInteger("dds", "request_interval", 1000));
     add_sensor_interval = std::chrono::milliseconds(reader.GetInteger("dds", "add_sensor_interval", 1000));
+    max_interval = std::chrono::milliseconds(reader.GetInteger("dds", "max_interval", 1000));
 }
 
-string convertValueToString(const Value& value) {
+string printJsonValue(const Value& value) {
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
     value.Accept(writer);
     return buffer.GetString();
 }
 
-void generateCpm(const vector<string>& objects){
-    cout << "-------------- Generating CPM --------------" << endl;
+void printJsonVector(const vector<Document>& objects){
+    cout << "-------------- Printing Vector<Document> --------------" << endl;
     for (const auto& obj : objects) {
-        cout << obj << endl;
+        StringBuffer buffer;
+        Writer<StringBuffer> writer(buffer);
+        obj.Accept(writer);
+        cout << buffer.GetString() << endl;   
     }
 }
 
-void handle_response(const string& response){
+void handle_response(string topic, const string& response){
     Document doc;
     doc.Parse(response.c_str());
+    cout << "New response: " << response << endl;
 
     //TODO: check if response is valid
+    
+    if (doc.HasMember("requestID") && doc["requestID"].IsUint64()) {
+        unsigned long int requestID = doc["requestID"].GetUint64();
+        if (requestID != timestamp_milliseconds) {
+            cout << "Invalid requestID" << endl;
+            return;
+        }
+    } else {
+        cout << "Invalid requestID" << endl;
+        return;
+    }
 
     // Extract data
     if (doc.HasMember("objects") && doc["objects"].IsArray()) {
         const Value& objs = doc["objects"];
+
         for (auto& obj : objs.GetArray()) {
-            // Proper way to deep copy using the CopyFrom method
-            Value obj_copy(kObjectType);
-            obj_copy.CopyFrom(obj, doc.GetAllocator());
-            string obj_str = convertValueToString(obj_copy);    
-            received_objects.push_back(obj_str); // Use std::move to avoid unnecessary copying
+            // Proper way to deep copy using the CopyFrom method    
+            Document copyDoc;
+            copyDoc.CopyFrom(obj, copyDoc.GetAllocator());
+            received_objects.push_back(move(copyDoc));
         }
+    } else {
+        cout << "No objects on response" << endl;
     }
     received_responses++;
-
-    if (received_responses == exptected_responses) {
-        cout << "-------------- Received all responses --------------" << endl;
-        generateCpm(received_objects);
-        received_objects.clear();
-        received_responses = 0;
-    }
 }
 
-
-class SubListener : public DataReaderListener {
-public:
-    SubListener() {
-    }
-
-    ~SubListener() override {}
-
-    void on_subscription_matched(DataReader*, const SubscriptionMatchedStatus& info) override {
-        if (info.current_count_change == 1) {
-            num_publishers = info.total_count;
-            std::cout << "Subscriber matched." << std::endl;
-        } else if (info.current_count_change == -1) {
-            num_publishers = info.total_count;
-            std::cout << "Subscriber unmatched." << std::endl;
-        } else {
-            std::cout << info.current_count_change
-                << " is not a valid value for SubscriptionMatchedStatus current count change" << std::endl;
-        }
-    }
-
-    void on_data_available(DataReader* reader) override {
-        SampleInfo info;
-        if (reader->take_next_sample(&message, &info) == ReturnCode_t::RETCODE_OK) {
-            if (info.valid_data) {
-                handle_response(message.message());
-            }
-        }
-    }
-    MQTTMessage message;
-    std::atomic_int num_publishers;
-};
-SubListener* listener_;
-
-void pub_sig_handler(int sig) {
-    delete publisher;
-}
-
-void sub_sig_handler(int sig) {
-    delete subscriber;
-}
 
 void request_data(){
-    exptected_responses = publisher->get_subscribers();
+    exptected_responses = 2;
     std::chrono::time_point<std::chrono::system_clock> timestamp = std::chrono::system_clock::now();
-    string timestamp_str = std::to_string(std::chrono::duration_cast<std::chrono::microseconds>(timestamp.time_since_epoch()).count());
-    string message = "{timestamp: " + timestamp_str + "}";
-    MQTTMessage* mqttMessage = new MQTTMessage();
-    mqttMessage->uuid(1);
-    mqttMessage->topic(pub_topic);
-    mqttMessage->message(message);
-    mqttMessage->datetime(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
-    publisher->publish(mqttMessage);
+    auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(timestamp.time_since_epoch()).count();
+    timestamp_milliseconds = static_cast<unsigned long int>(milliseconds);
+
+    // Create request
+    Document request;
+    request.SetObject();
+    Document::AllocatorType& allocator = request.GetAllocator();
+    request.AddMember("requestID", timestamp_milliseconds, allocator);
+    request.AddMember("numberObjects", 1, allocator);
+    
+    string payload = printJsonValue(request);
+    
+    server->publish(pub_topic, payload);
     cout << "Sent request for " << exptected_responses << " adapters" << endl;
 }
 
-void setup_pub_dds(){
-    signal(SIGTERM, pub_sig_handler);
-    typeSupport = new TypeSupport(&mqttMessagePubSubType);
-    publisher = new DDSPublisher<MQTTMessage, MQTTMessagePubSubType>(typeSupport);
-    publisher->init("ServerPub", 0, pub_topic, "MQTTMessage", TOPIC_QOS_DEFAULT);
+
+void setup_dds(){
+    // signal(SIGTERM, pub_sig_handler);
+    server = new Dds("Server", 0, handle_response);
+    server->provision_publisher(pub_topic);
+    server->subscribe(sub_topic);
 }
 
-void setup_sub_dds() {
-    signal(SIGTERM, sub_sig_handler);
-    listener_ = new SubListener();
-    typeSupport = new TypeSupport(&mqttMessagePubSubType);
-    subscriber = new DDSSubscriber(listener_, typeSupport);
-    subscriber->init("ServerSub", 0, sub_topic, "MQTTMessage", TOPIC_QOS_DEFAULT);
-}
 
 int main() {
     readConfigFile("config.ini");
-    setup_pub_dds();
-    setup_sub_dds();
+    setup_dds();
+    last_request = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()) - request_interval;
+    last_sensor = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()) - add_sensor_interval;
     while(1) {
         try {
-            request_data();
+            auto current_request = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
+            if (current_request - last_request > request_interval) {
+                last_request = current_request;
+                request_data();
+                received_responses = 0;
+                while(received_responses < exptected_responses) {
+                    if(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()) - current_request > request_deadline) {
+                        cout << "Request deadline reached" << endl;
+                        break;
+                    }
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                }
+                if (received_responses == exptected_responses) {
+                    cout << "Received all responses" << endl;
+                } else {
+                    cout << "Received " << received_responses << " responses" << endl;
+                }
+
+                if(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()) - last_sensor > add_sensor_interval) {
+                    last_sensor = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
+                    cout << "Adding sensor" << endl;
+                    Document sensor_data = getSensorInformationContainer();
+                } 
+
+                printJsonVector(received_objects);
+                received_objects.clear();
+
+            }
+
         } catch(...) {
             raise(SIGTERM);
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(request_interval));
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 }

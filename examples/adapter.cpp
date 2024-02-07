@@ -10,22 +10,26 @@
 #include <sys/ipc.h>
 #include <sys/msg.h>
 
-#include "fastdds/DDSSubscriber.hpp"
-#include "fastdds/DDSPublisher.hpp"
+//json
+#include "rapidjson/document.h"
+#include "rapidjson/writer.h"
+#include "rapidjson/stringbuffer.h"
+#include <rapidjson/prettywriter.h>
+
+//DDS
+#include "fastdds/dds.hpp"
 #include "fastdds/MQTTMessagePubSubTypes.h"
 
 using namespace std;
 using namespace boost::asio;
+using namespace rapidjson;
 
-DDSPublisher<MQTTMessage, MQTTMessagePubSubType>* publisher;
-TypeSupport* typeSupport;
-MQTTMessagePubSubType mqttMessagePubSubType;
-DDSSubscriber* subscriber;
 
-const char* jsonString = R"({
-    "timestamp": 123,
-    "numberObjects": 123,
-    "objects": [
+Dds* adapter;
+
+
+const char* jsonObjectsStr = R"(
+    [
         {
             "acceleration": 1.0,
             "heading": null,
@@ -56,96 +60,63 @@ const char* jsonString = R"({
                 "class": {}
             }
         }
-    ],
-    "times": {
-        "time1": 123,
-        "time2": 124
-    }
-})";
-
+    ])";
+string jsonToString(const Document& d) {
+    StringBuffer buffer;
+    PrettyWriter<StringBuffer> writer(buffer);
+    d.Accept(writer);
+    return buffer.GetString();
+}
 
 //send sensor data
-void send_data(string pub_topic, string payload){
-    MQTTMessage* mqttMessage = new MQTTMessage();
-    mqttMessage->uuid(1);
-    mqttMessage->topic(pub_topic);
-    mqttMessage->message(payload);
-    mqttMessage->datetime(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
-    publisher->publish(mqttMessage);
-}
+void send_data(string pub_topic, const string& request){
+    Document requestJson;
+    requestJson.Parse(request.c_str());
 
-class SubListener : public DataReaderListener {
-public:
-    SubListener() {
+    unsigned long int requestID = 0;
+    int numberObjects = 0;
+    if (requestJson.HasMember("requestID")){
+        requestID = requestJson["requestID"].GetUint64();
+    }
+    if (requestJson.HasMember("numberObjects")){
+        numberObjects = requestJson["numberObjects"].GetInt();
     }
 
-    ~SubListener() override {}
-
-    void on_subscription_matched(DataReader*, const SubscriptionMatchedStatus& info) override {
-        if (info.current_count_change == 1) {
-            num_publishers = info.total_count;
-            std::cout << "Subscriber matched." << std::endl;
-        } else if (info.current_count_change == -1) {
-            num_publishers = info.total_count;
-            std::cout << "Subscriber unmatched." << std::endl;
-        } else {
-            std::cout << info.current_count_change
-                << " is not a valid value for SubscriptionMatchedStatus current count change" << std::endl;
-        }
+    cout << "RequestID: " << requestID << endl;
+    cout << "Number of objects: " << numberObjects << endl;
+    
+    Document replyJson = Document();
+    replyJson.SetObject();
+    Document::AllocatorType& allocator = replyJson.GetAllocator();
+    replyJson.AddMember("requestID", requestID, allocator);
+    replyJson.AddMember("numberObjects", numberObjects, allocator);
+    Document jsonObjectsDoc = Document();
+    jsonObjectsDoc.Parse(jsonObjectsStr);
+    
+    if (!jsonObjectsDoc.HasParseError() && jsonObjectsDoc.IsArray()) {
+        // Properly deep copy the array into replyJson using CopyFrom
+        Value objects(kArrayType);
+        objects.CopyFrom(jsonObjectsDoc, allocator); // Deep copy the array
+        replyJson.AddMember("objects", objects, allocator);
+    } else {
+        cout << "Failed to parse jsonObjectsStr or it's not an array." << endl;
     }
 
-    void on_data_available(DataReader* reader) override {
-        SampleInfo info;
-        if (reader->take_next_sample(&message, &info) == ReturnCode_t::RETCODE_OK) {
-            if (info.valid_data) {
-                std::cout << "Message: " << message.message() << " RECEIVED." << std::endl;
-                if (message.topic() == "to/adapters") {
-                    cout << "Received request" << endl;
-                    try {
-                        send_data("from/adapters", jsonString);
-                    } catch (const std::exception& e) {
-                        std::cerr << e.what() << '\n';
-                        raise(SIGTERM);
-                    }
-                }
-            }
-        }
-    }
-    MQTTMessage message;
-    std::atomic_int num_publishers;
-};
-SubListener* listener_;
+    string payload = jsonToString(replyJson);
 
-void pub_sig_handler(int sig) {
-    delete publisher;
+    adapter->publish("from/adapters",payload);
 }
 
-void sub_sig_handler(int sig) {
-    delete subscriber;
+
+void setup_dds(){
+    // signal(SIGTERM, pub_sig_handler);
+    adapter = new Dds("Adapter1", 0, send_data);
+    adapter->provision_publisher("from/adapters");
+    adapter->subscribe("to/adapters");
 }
-
-//setup publisher to send sensor data
-void setup_pub_dds(string pub_topic){
-    signal(SIGTERM, pub_sig_handler);
-    typeSupport = new TypeSupport(&mqttMessagePubSubType);
-    publisher = new DDSPublisher<MQTTMessage, MQTTMessagePubSubType>(typeSupport);
-    publisher->init("Adapter1Pub", 0, pub_topic, "MQTTMessage", TOPIC_QOS_DEFAULT);
-
-}
-
-//setup subscriber to receive cps requests
-void setup_sub_dds(string sub_topic) {
-    signal(SIGTERM, sub_sig_handler);
-    listener_ = new SubListener();
-    typeSupport = new TypeSupport(&mqttMessagePubSubType);
-    subscriber = new DDSSubscriber(listener_, typeSupport);
-    subscriber->init("Adapter1Sub", 0, sub_topic, "MQTTMessage", TOPIC_QOS_DEFAULT);
-}
-
 
 int main() {
-    setup_pub_dds("from/adapters");
-    setup_sub_dds("to/adapters");
+    setup_dds();
     try {
         while(1) {
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
