@@ -10,8 +10,11 @@
 
 using namespace std;
 
-/** Global Mqtt variable */
-MqttWrapper * mqtt_wrapper;
+// Global variables
+map<int, radarMqttObject> objects_to_send;      // shared between threads
+map<int, radarMqttObject> last_sent;            // save data of the last time the object was included in a CPM
+std::mutex lock_mutex;
+Dds* dds_;
 
 mqtt_server readConfigFile(const std::string& path)
 {
@@ -40,19 +43,34 @@ void on_message_dds(std::string topic, std::string message) {
     std::cout << "Message: " << message << " RECEIVED." << std::endl;
     if (topic == "to/adapters") {
         std::cout << "Received request for adapters" << std::endl;
+        string reply = prepare_reply(message, &lock_mutex, &objects_to_send, &last_sent);
+        dds_->publish("from/adapters", reply);
+        spdlog::info("Reply sent.\n");
+        // clear "objects_to_send"
+        std::lock_guard guard(lock_mutex);
+        objects_to_send.clear();
     }
 }
 
 void on_message_mqtt(std::string topic, std::string message) {
-    std::cout << "Message: " << message << " RECEIVED." << std::endl;
+//    std::cout << "Message: " << message << " RECEIVED." << std::endl;
+
     radarMqttObject obj = json_to_struct(message);
+    bool is_newInfo = calc_is_new_info(&lock_mutex, &last_sent, obj);
+
+    if (is_newInfo) {
+        // save to objects to send objects
+        std::lock_guard guard(lock_mutex);
+        objects_to_send[obj.objectID] = obj;
+    }
 }
 
 int main() {
+
     // Read config file
     mqtt_server mqttServerInfo = readConfigFile("/config.ini");
 
-    mqtt_wrapper = new MqttWrapper(mqttServerInfo, on_message_mqtt);
+    MqttWrapper * mqtt_wrapper = new MqttWrapper(mqttServerInfo, on_message_mqtt);
 
     // Wait for the connection to be established before further actions
     while (!mqtt_wrapper->is_connected()) {
@@ -60,8 +78,9 @@ int main() {
     }
 
     // DDS
-    Dds* dds = new Dds("RadarAdapter", 0, on_message_dds);
-    dds->subscribe("to/adapters");
+    dds_ = new Dds("RadarAdapter", 0, on_message_dds);
+    dds_->provision_publisher("from/adapters");
+    dds_->subscribe("to/adapters");
 
     while (1) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));

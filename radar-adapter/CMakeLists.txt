@@ -23,6 +23,7 @@ add_executable(main main.cpp ${FASTDDS_SRC}
         mqtt.h
         config_reader.h
         radar_data_management.cpp
-        radar_data_management.h)
+        radar_data_management.h
+)
 
 target_link_libraries(main pthread paho-mqttpp3 paho-mqtt3as ssl crypto fastcdr fastrtps)
