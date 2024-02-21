@@ -127,7 +127,16 @@ std::string prepare_reply(const std::string& request, std::mutex* lock, std::map
         tmpObject.AddMember("speed", value.speed, allocator);
         tmpObject.AddMember("timestamp", value.timestamp, allocator);
         tmpObject.AddMember("confidence", value.confidence, allocator);
-        // todo classification
+
+        // Classification
+        rapidjson::Value classificationArray(rapidjson::kArrayType);
+        rapidjson::Value classificationObject(rapidjson::kObjectType);
+        rapidjson::Value objectClassObject(rapidjson::kObjectType);
+        objectClassObject.AddMember("vehicleSubClass", value.classification, allocator);
+        classificationObject.AddMember("objectClass", objectClassObject, allocator);
+        classificationObject.AddMember("confidence", 101, allocator);   // unavailable (101)
+        classificationArray.PushBack(classificationObject, allocator);
+        tmpObject.AddMember("classification", classificationArray, allocator);
 
         objects_json.PushBack(tmpObject, allocator);
 

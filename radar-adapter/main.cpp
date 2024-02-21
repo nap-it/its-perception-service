@@ -44,8 +44,9 @@ void on_message_dds(std::string topic, std::string message) {
     if (topic == "to/adapters") {
         std::cout << "Received request for adapters" << std::endl;
         string reply = prepare_reply(message, &lock_mutex, &objects_to_send, &last_sent);
+//        std::cout << "reply: " << reply << std::endl;
         dds_->publish("from/adapters", reply);
-        spdlog::info("Reply sent.\n");
+        spdlog::info("Reply to {} sent.\n", message);
         // clear "objects_to_send"
         std::lock_guard guard(lock_mutex);
         objects_to_send.clear();
