@@ -40,7 +40,7 @@ mqtt_server readConfigFile(const std::string& path)
 
 
 void on_message_dds(std::string topic, std::string message) {
-    std::cout << "Message: " << message << " RECEIVED." << std::endl;
+    std::cout << "Message: " << message << " RECEIVED FROM TOPIC" << topic << std::endl;
     if (topic == "to/adapters") {
         std::cout << "Received request for adapters" << std::endl;
         string reply = prepare_reply(message, &lock_mutex, &objects_to_send, &last_sent);
