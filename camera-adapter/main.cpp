@@ -1,18 +1,18 @@
 #include <map>
 #include <chrono>
-#include <vector>
 #include <boost/asio.hpp>
 #include <thread>
+#include <list>
 #include "fastdds/dds.hpp"
 #include "mqtt.h"
 #include "config_reader.h"
-#include "radar_data_management.h"
+#include "camera_data_management.h"
 
 using namespace std;
 
 // Global variables
-map<int, radarMqttObject> objects_to_send;      // shared between threads
-map<int, radarMqttObject> last_sent;            // save data of the last time the object was included in a CPM
+map<int, cameraMqttObject> objects_to_send;      // shared between threads
+map<int, cameraMqttObject> last_sent;            // save data of the last time the object was included in a CPM
 std::mutex lock_mutex;
 Dds* dds_;
 
@@ -28,8 +28,8 @@ mqtt_server readConfigFile(const std::string& path)
 
     mqttInfo.address = "tcp://" + host + ":" + std::to_string(port);
     std::cout << "Address: " << mqttInfo.address << std::endl;
-    mqttInfo.client_id = reader.Get("mqtt", "client_id", "client") + "-radar";
-    mqttInfo.subscription_topic = reader.Get("mqtt", "radar_topic", "");
+    mqttInfo.client_id = reader.Get("mqtt", "client_id", "client") + "-camera";
+    mqttInfo.subscription_topic = reader.Get("mqtt", "camera_topic", "");
 
     std::cout << "Subscription topic: " << mqttInfo.subscription_topic << std::endl;
     mqttInfo.qos= reader.GetInteger("mqtt", "qos", 1);
@@ -40,9 +40,8 @@ mqtt_server readConfigFile(const std::string& path)
 
 
 void on_message_dds(std::string topic, std::string message) {
-    std::cout << "Message: " << message << " RECEIVED FROM TOPIC" << topic << std::endl;
+    std::cout << "Message: " << message << " RECEIVED FROM TOPIC " << topic << std::endl;
     if (topic == "to/adapters") {
-        std::cout << "Received request for adapters" << std::endl;
         string reply = prepare_reply(message, &lock_mutex, &objects_to_send, &last_sent);
 //        std::cout << "reply: " << reply << std::endl;
         dds_->publish("from/adapters", reply);
@@ -56,13 +55,16 @@ void on_message_dds(std::string topic, std::string message) {
 void on_message_mqtt(std::string topic, std::string message) {
 //    std::cout << "Message: " << message << " RECEIVED." << std::endl;
 
-    radarMqttObject obj = json_to_struct(message);
-    bool is_newInfo = calc_is_new_info(&lock_mutex, &last_sent, obj);
+    std::list<cameraMqttObject> camera_objects = parse_json(message);
 
-    if (is_newInfo) {
-        // save to objects to send objects
-        std::lock_guard guard(lock_mutex);
-        objects_to_send[obj.objectID] = obj;
+    for(auto obj : camera_objects) {
+        bool is_newInfo = calc_is_new_info(&lock_mutex, &last_sent, obj);
+
+        if (is_newInfo) {
+            // save to objects to send objects
+            std::lock_guard guard(lock_mutex);
+            objects_to_send[obj.objectID] = obj;
+        }
     }
 }
 
@@ -79,7 +81,7 @@ int main() {
     }
 
     // DDS
-    dds_ = new Dds("RadarAdapter", 0, on_message_dds);
+    dds_ = new Dds("CameraAdapter", 0, on_message_dds);
     dds_->provision_publisher("from/adapters");
     dds_->subscribe("to/adapters");
 

@@ -1,11 +1,10 @@
-cmake_minimum_required(VERSION 3.10)
-project(radarAdapter)
+cmake_minimum_required(VERSION 3.18.4)
+project(camera_adapter)
 
 set(CMAKE_CXX_STANDARD 17)
 
-include_directories(${CMAKE_SOURCE_DIR}/vendor)
-include_directories(${CMAKE_SOURCE_DIR}/fastdds)
 include_directories(${CMAKE_SOURCE_DIR})
+include_directories(${CMAKE_SOURCE_DIR}/vendor)
 
 find_package(Threads REQUIRED)
 find_package(Fastcdr REQUIRED)
@@ -22,8 +21,8 @@ add_executable(main main.cpp ${FASTDDS_SRC}
         mqtt.cpp
         mqtt.h
         config_reader.h
-        radar_data_management.cpp
-        radar_data_management.h
+        camera_data_management.cpp
+        camera_data_management.h
 )
 
 target_link_libraries(main pthread paho-mqttpp3 paho-mqtt3as ssl crypto fastcdr fastrtps)

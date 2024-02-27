@@ -28,7 +28,7 @@ public:
         }
         else {
             std::cout << info.current_count_change
-                << " is not a valid value for PublicationMatchedStatus current count change." << std::endl;
+                      << " is not a valid value for PublicationMatchedStatus current count change." << std::endl;
         }
     }
     std::atomic_int num_subscribers;
@@ -110,11 +110,11 @@ public:
         return true;
     }
 
-    bool publish(MSG *msg) {
+    bool publish(std::unique_ptr<MSG> msg) {
         std::cout << "Going to publish" << std::endl;
         if (writerListener_.num_subscribers > 0)
         {
-            writer_->write(msg);
+            writer_->write(msg.get());
             std::cout << "Published" << std::endl;
             return true;
         }
