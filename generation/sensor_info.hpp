@@ -4,6 +4,7 @@
 
 #include <vector>
 #include <rapidjson/document.h>
+#include <vector>
 
 struct PerceptionRegionShape {
     int semiMajorRangeLength = 0;
@@ -26,7 +27,8 @@ struct SensorInformationContainer {
     std::vector<Sensor> containerData;
 };
 
+std::vector<rapidjson::Document> initSensorInformation();
 // Declaration of the function
-rapidjson::Document getSensorInformationContainer();
+const std::vector<rapidjson::Document>& getSensorInformation();
 
 #endif // SENSOR_INFO_HPP
