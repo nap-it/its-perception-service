@@ -31,10 +31,14 @@ const int object_size = 500;
 const int max_message_size = 1500;
 const int header_manag_stat_size = 38;
 const int R = 6371000;
+const long int time2004ms = 1072915200000;
 
 CpmObjectId createCpmId(int combinedId){
     CpmObjectId cpm_id;
     cpm_id.id = current_id++;
+    if (current_id > 65535){
+        current_id = 1;
+    }
     cpm_id.timestamp = static_cast<unsigned long int>(
         std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::system_clock::now().time_since_epoch()
@@ -420,7 +424,9 @@ vector<string> generateCPM(const vector<Document>& receivedObjs, float cam_latit
 
     auto time_before_objs = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
-    unsigned long int deltaTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    unsigned long int deltaTime1970 = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
+    unsigned long int deltaTime = deltaTime1970 - time2004ms;
 
     vector<Document> perceivedObjectsList = getPerceivedObjectsList(deltaTime, receivedObjs, cam_latitude, cam_longitude);
 
