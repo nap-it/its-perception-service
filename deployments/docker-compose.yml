@@ -1,0 +1,38 @@
+version: '2.4'
+services:
+  cpm-generation:
+    image: code.nap.av.it.pt:5050/mobility-networks/cps/generation:latest
+    restart: always
+    volumes:
+      - /services/cps/config.ini:/config.ini
+      - /services/info.ini:/services/info.ini
+    networks:
+      deploymentslan:
+
+  cpm-processing:
+    image: code.nap.av.it.pt:5050/mobility-networks/cps/processing:latest
+    restart: always
+    volumes:
+      - /services/cps/config.ini:/config.ini
+    networks:
+      deploymentslan:
+
+  radar-adapter:
+    image: code.nap.av.it.pt:5050/mobility-networks/cps/radar-adapter:latest
+    restart: always
+    volumes:
+      - /services/cps/config.ini:/config.ini
+    networks:
+      deploymentslan:
+
+  camera-adapter:
+    image: code.nap.av.it.pt:5050/mobility-networks/cps/camera-adapter:latest
+    restart: always
+    volumes:
+      - /services/cps/config.ini:/config.ini
+    networks:
+      deploymentslan:
+
+networks:
+  deploymentslan:
+    external: true
