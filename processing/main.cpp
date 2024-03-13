@@ -8,180 +8,151 @@
 #include <boost/bind/bind.hpp>
 #include <sys/ipc.h>
 #include <sys/msg.h>
+#include <thread>
+#include <signal.h>
+
+//json
+#include "rapidjson/document.h"
+#include "rapidjson/writer.h"
+#include "rapidjson/stringbuffer.h"
+#include <rapidjson/prettywriter.h>
 
 //DDS
-#include "fastdds/DDSSubscriber.hpp"
-#include "fastdds/DDSPublisher.hpp"
+#include "fastdds/dds.hpp"
 #include "fastdds/MQTTMessagePubSubTypes.h"
-#include "dds-sub.h"
 
 //MQTT
-#include "mqtt.h"
-#include "mqtt/async_client.h"
+#include "mqttwrapper.h"
 
 //Config reader
 #include "config_reader.hpp"
 
+#include "cpm-processing.h"
+
 using namespace std;
 using namespace boost::asio;
+using namespace rapidjson;
+
+//thread variables
+std::mutex mtx;
+std::condition_variable cv;
+
+//DDS variables
+Dds* server;
+string dds_pub_topic;
+string dds_sub_topic; 
+bool dds_enable_publish;
+bool dds_enable_subscribe;
+
+//MQTT variables
+MqttWrapper* mqtt_server;
+data_mqtt_server data_mqtt;
+string mqtt_pub_topic;
+string mqtt_sub_topic;
+bool mqtt_enable_subscribe;
+bool mqtt_enable_publish;
 
 //global variables
-bool ddsPubEnabled = false;
-bool mqttPubEnabled = false;
+string processed_cpm;
 
-//DDS Publisher variables
-string publisher_dds_topic;
-TypeSupport* typeSupport;
-DDSPublisher<MQTTMessage, MQTTMessagePubSubType>* dds_publisher;
-MQTTMessagePubSubType mqttMessagePubSubType;
+void readConfigFile(const string& path){
+    INIReader reader (path);
 
-void init_dds_publisher() {
-    cout << publisher_dds_topic << endl;
-    typeSupport = new TypeSupport(&mqttMessagePubSubType);
-    dds_publisher = new DDSPublisher<MQTTMessage, MQTTMessagePubSubType>(typeSupport);
-    dds_publisher->init("TestPublisher", 0, publisher_dds_topic, "MQTTMessage", TOPIC_QOS_DEFAULT);
+    //DDS
+    dds_enable_publish = reader.GetBoolean("dds-processing", "enable_publisher", true);
+    dds_enable_subscribe = reader.GetBoolean("dds-processing", "enable_subscriber", true);
+    dds_pub_topic = reader.Get("dds-processing", "topic_publish", "apu/objects");
+    dds_sub_topic = reader.Get("dds-processing", "topic_subscribe", "in/cpm");
+
+    //MQTT
+    mqtt_enable_publish = reader.GetBoolean("mqtt-processing", "enable_publisher", true);
+    mqtt_enable_subscribe = reader.GetBoolean("mqtt-processing", "enable_subscriber", false);
+    mqtt_pub_topic = reader.Get("mqtt-processing", "topic_publish", "apu/objects");
+    mqtt_sub_topic = reader.Get("mqtt-processing", "topic_subscribe", "in/cpm");
 }
 
-//MQTT Publisher variables
-string publisher_mqtt_topic;
-string publisher_mqtt_host;
-string publisher_mqtt_port;
-mqtt::async_client *mqtt_pub_client;
+data_mqtt_server getMqttData(const string& path, bool mqtt_enable_subscribe){
+    data_mqtt_server data_mqtt;
+    INIReader reader (path);
 
-void init_mqtt_publisher() {
-    mqtt_pub_client = new mqtt::async_client(publisher_mqtt_host, "publisher");
-    mqtt::connect_options connOpts;
-    connOpts.set_clean_session(false);
-    connOpts.set_automatic_reconnect(true);
-    connOpts.set_keep_alive_interval(20);
-    
-    try {
-        spdlog::info("Publisher connecting to the MQTT server...");
-        mqtt_pub_client->connect(connOpts);
+    string host = reader.Get("mqtt-processing", "host", "192.168.98.1");
+    int port = reader.GetInteger("mqtt-processing", "port", 1883);
+
+    data_mqtt.address = "tcp://" + host + ":" + to_string(port);
+    data_mqtt.client_id = "sever-processing";
+    data_mqtt.publish_topic = mqtt_pub_topic;
+    if (mqtt_enable_subscribe) {
+        string sub_topic = mqtt_sub_topic;
+        vector<string> topics;
+        topics.push_back(sub_topic);
+        data_mqtt.subscription_topic = topics;
     }
-    catch (const mqtt::exception& exc) {
-        spdlog::error("Error: {}", exc.what());
-        return;
-    }
-    spdlog::info( "Publisher connected to MQTT");
-    
+
+    return data_mqtt;
 }
 
-void publishProcessedCpm(string cpm_objects) {
-    if (ddsPubEnabled) {
-        MQTTMessage* mqttMessage = new MQTTMessage();
-        mqttMessage->uuid(1);
-        mqttMessage->topic(publisher_dds_topic);
-        mqttMessage->message(cpm_objects);
-        mqttMessage->datetime(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
-        dds_publisher->publish(mqttMessage);
-        spdlog::info("Published message to DDS");
-
-    }
-    
-    if (mqttPubEnabled) {
-        try
-        {
-            mqtt_pub_client->publish(publisher_mqtt_topic, cpm_objects.c_str(), cpm_objects.size());
-
-        } catch (const mqtt::exception& exc) {
-            std::cerr << "Error publishing message: " << exc.what() << std::endl;
-            throw; // Rethrow the exception or handle it as needed
-        }
-        spdlog::info("Published message to MQTT");
-    }
+string json_to_string(Document& json){
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    json.Accept(writer);
+    return buffer.GetString();
 }
 
-void run_dds(string sub_topic) {
+void dds_handler(string topic, const string& response){
 
-    ddsSetPublishProcessedCpm(publishProcessedCpm);
+    // spdlog::info("DDS Received message {}", response);
 
-    SubListener* listener_;
-    TypeSupport* typeSupport;
-    MQTTMessagePubSubType mqttMessagePubSubType;
-    
-    //DDS setup
-    listener_ = new SubListener();
-    typeSupport = new TypeSupport(&mqttMessagePubSubType);
-    DDSSubscriber* subscriber = new DDSSubscriber(listener_, typeSupport);
-    subscriber->init("TestSubscriber", 0, sub_topic, "MQTTMessage", TOPIC_QOS_DEFAULT);
+    string cpmJson = process_cpm(response);
 
-    while(1) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    }
+    spdlog::info("Processed message {}", cpmJson);
 }
 
-void run_mqtt(){
-    //MQTT setup
-    server mqttServer = readConfigFile("./config.ini");
-    mqtt::async_client client(mqttServer.address, mqttServer.client_id);
-    mqtt::connect_options connOpts;
-    connOpts.set_clean_session(false);
-    connOpts.set_automatic_reconnect(true);
 
-    callback cb(client, connOpts, mqttServer);
-    client.set_callback(cb);
+void mqtt_handler(std::string topic, std::string message) {
 
-    mqttSetPublishProcessedCpm(publishProcessedCpm);
+    spdlog::info("MQTT Received message {}", message);
 
-    // Start the connection.
-    // When completed, the callback will subscribe to topic.
-    try {
-        spdlog::info("Subscriber connecting to the MQTT server...");
-        client.connect(connOpts, nullptr, cb);
-    }
-    catch (const mqtt::exception& exc) {
-        spdlog::error("Error: {}", exc.what());
-        return;
-    }
+}
 
-    spdlog::info("Subscriber connected to MQTT");
 
-    while (true) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    }
-    
+void setup_dds(){
+    server = new Dds("ProcessingServer", 0, dds_handler);
+    server->provision_publisher(dds_pub_topic);
+    cout << dds_sub_topic << endl;
+    server->subscribe(dds_sub_topic);
 }
 
 int main() {
+    spdlog::info("Starting server...");
+    readConfigFile("/config.ini");
 
-    //Read config file
-    INIReader reader("./config.ini");
-
-    //Reading configuration parameters 
-    bool ddsSubEnabled = reader.GetBoolean("dds", "enable_subscriber", false);
-    bool mqttSubEnabled = reader.GetBoolean("mqtt", "enable_subscriber", false);
-    ddsPubEnabled = reader.GetBoolean("dds", "enable_publisher", false);
-    mqttPubEnabled = reader.GetBoolean("mqtt", "enable_publisher", false);
-
-    if(ddsPubEnabled){
-        publisher_dds_topic = reader.Get("dds", "topic_publish", "apu/objects");
-        init_dds_publisher();
-        cout << "DDS Publisher enabled" << endl;
-    }
-    if (mqttPubEnabled) {
-        publisher_mqtt_topic = reader.Get("mqtt", "topic_publish", "apu/objects");
-        publisher_mqtt_host = reader.Get("mqtt", "host", "localhost");
-        publisher_mqtt_port = reader.Get("mqtt", "port", "1883");
-        init_mqtt_publisher();
-        cout << "MQTT Publisher enabled" << endl;
-        
-    } 
-
-    //Abort if both are disabled or enabled
-    if (ddsSubEnabled == mqttSubEnabled) {
+    if(dds_enable_subscribe == mqtt_enable_subscribe){
         spdlog::error("DDS and MQTT cannot be both enabled or disabled");
         return 1;
     }
 
-    //Run DDS or MQTT client
-    if (ddsSubEnabled) {
-        cout << "Running DDS" << endl;
-        string sub_topic = reader.Get("dds", "topic_subscribe", "vanetza/out/cpm");
-        run_dds(sub_topic);
-    } else {
-        cout << "Running MQTT" << endl;
-        run_mqtt();
+    spdlog::info("Setting up DDS...");
+    if(dds_enable_publish || dds_enable_subscribe){
+        setup_dds();
+    }
+
+    if(mqtt_enable_publish || mqtt_enable_subscribe){
+        spdlog::info("Setting up MQTT...");
+        data_mqtt = getMqttData("/config.ini", mqtt_enable_subscribe);
+        mqtt_server = new MqttWrapper(data_mqtt, mqtt_handler);
+        while(!mqtt_server->is_connected()){
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+        
+    }
+
+    while (1){
+        // string temp = R"({"generationDeltaTime":637329278612,"cpmParameters":{"managementContainer":{"referenceTime":637329278612,"referencePosition":{"latitude":40.630279541015625,"longitude":-8.654230117797852,"altitude":{"altitudeValue":63.79999923706055,"altitudeConfidence":9},"positionConfidenceEllipse":{"semiMajorConfidence":4095,"semiMinorConfidence":4095,"semiMajorOrientation":0.0}}},"wrappedCpmContainer":[{"containerId":1,"containerData":{"orientationAngle":9.100000381469727}},{"containerId":5,"containerData":{"numberOfPerceivedObjects":1,"perceivedObjects":[{"objectID":2,"sensorIDList":[2],"measurementDeltaTime":129,"objectPerceptionQuality":82,"position":{"xCoordinate":{"value":18.83220100402832,"confidence":1},"yCoordinate":{"value":1.2725249528884888,"confidence":1}},"xSpeed":{"value":16383.0,"confidence":1},"ySpeed":{"value":16383.0,"confidence":1},"xAcceleration":{"longitudinalAccelerationValue":161.0,"longitudinalAccelerationConfidence":102},"yAcceleration":{"lateralAccelerationValue":161.0,"lateralAccelerationConfidence":102},"classification":[{"objectClass":{"vehicleSubClass":5},"confidence":101}]}]}}]}})";
+
+        // processed_cpm = process_cpm(temp);
+
+        // spdlog::info("Processed message {}", processed_cpm);
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
     return 0;

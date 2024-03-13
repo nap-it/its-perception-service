@@ -10,6 +10,8 @@
 #include <signal.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
+#include <mutex>
+#include <condition_variable>
 
 //json
 #include "rapidjson/document.h"
@@ -39,6 +41,7 @@ using namespace rapidjson;
 
 //DDS variables
 Dds* server;
+int domain_id = 0;
 
 //MQTT variables
 MqttWrapper* mqtt_server;
@@ -58,7 +61,8 @@ string sub_adapter_topic = "";
 string pub_adapter_topic = "";
 string pub_cpm_topic = "";
 unsigned long int timestamp_milliseconds = 0;
-
+unsigned long int request_instance = 0;
+unsigned long int reply_instance = 0;
 int maxObjectAge = 0;
 
 //CAM variables
@@ -70,21 +74,26 @@ float cam_heading = 9.1;
 
 vector<Document> received_objects = vector<Document>();
 
+//thread variables
+std::mutex mtx;
+std::condition_variable cv;
+
 void readConfigFile(const string& path){
     INIReader reader (path);
     sub_adapter_topic = reader.Get("dds", "topic_adapter_subscribe", "from/adapters");
     pub_adapter_topic = reader.Get("dds", "topic_adapter_publish", "to/adapters");
-    pub_cpm_topic = reader.Get("dds", "topic_cpm_publish", "out/cpm");
+    pub_cpm_topic = reader.Get("dds", "topic_cpm_publish", "in/cpm");
+    domain_id = reader.GetInteger("dds", "domain_id", 0);
 
-    request_deadline = std::chrono::milliseconds(reader.GetInteger("dds", "request_deadline", 1000));
-    request_interval = std::chrono::milliseconds(reader.GetInteger("dds", "request_interval", 1000));
+    request_deadline = std::chrono::milliseconds(reader.GetInteger("dds", "request_deadline", 50));
+    request_interval = std::chrono::milliseconds(reader.GetInteger("dds", "request_interval", 100));
     add_sensor_interval = std::chrono::milliseconds(reader.GetInteger("dds", "add_sensor_interval", 1000));
     max_interval = std::chrono::milliseconds(reader.GetInteger("dds", "max_interval", 1000));
-    maxObjectAge = reader.GetInteger("general", "clean_object_interval", 10000);
+    maxObjectAge = reader.GetInteger("general", "clean_object_interval", 15000);
 
-    mqtt_enable_publish = reader.GetBoolean("mqtt", "enable_publish", true);
+    mqtt_enable_publish = reader.GetBoolean("mqtt", "enable_publish", false);
 
-    exptected_responses = reader.GetInteger("general", "expected_responses", 1);
+    exptected_responses = reader.GetInteger("general", "expected_responses", 2);
 }
 
 data_mqtt_server readMqttData(const string& path){
@@ -92,12 +101,12 @@ data_mqtt_server readMqttData(const string& path){
 
     INIReader reader (path);
 
-    string host = reader.Get("mqtt", "host", "localhost");
+    string host = reader.Get("mqtt", "host", "192.168.98.1");
     int port = reader.GetInteger("mqtt", "port", 1883);
 
     data.address = "tcp://" + host + ":" + to_string(port);
     data.client_id = "server";
-    data.publish_topic = reader.Get("mqtt", "topic_cpm_publish", "out/cpm");
+    data.publish_topic = reader.Get("mqtt", "topic_cpm_publish", "in/cpm");
 
     return data;
 }
@@ -121,19 +130,24 @@ void printJsonVector(const vector<Document>& objects){
 }
 
 void adapter_handler(const string& response){
+    auto start_handle_adapter = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
+    reply_instance = start_handle_adapter;
+
+    unsigned long int total = reply_instance - request_instance;
+
+    spdlog::warn("Time waiting for reply: {}", (total));
 
     Document doc;
-
-    spdlog::info("Received response from adapter: {}", response);
+    // spdlog::info("Received response from adapter: {}", response);
     doc.Parse(response.c_str());
     
-    auto start_handle_adapter = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     
     // Check requestID is the same as the one sent
     if (doc.HasMember("requestID") && doc["requestID"].IsUint64()) {
-        unsigned long int requestID = doc["requestID"].GetUint64();
-        if (requestID != timestamp_milliseconds) {
-            cout << "Invalid requestID (expected: " << timestamp_milliseconds << ", received: " << requestID << ")" << endl;
+        unsigned long int receivedRequestID = doc["requestID"].GetUint64();
+        if (receivedRequestID != timestamp_milliseconds) {
+            cout << "Invalid requestID (expected: " << timestamp_milliseconds << ", received: " << receivedRequestID << ")" << endl;
             return;
         }
     } else {
@@ -146,7 +160,6 @@ void adapter_handler(const string& response){
         const Value& objs = doc["objects"];
 
         for (auto& obj : objs.GetArray()) {
-            // Proper way to deep copy using the CopyFrom method    
             Document copyDoc;
             copyDoc.CopyFrom(obj, copyDoc.GetAllocator());
             received_objects.push_back(move(copyDoc));
@@ -155,12 +168,15 @@ void adapter_handler(const string& response){
         cout << "No objects on response" << endl;
     }
 
-    auto end_handle_adapter = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-
-    spdlog::info("Time to handle adapter response: {}", (end_handle_adapter - start_handle_adapter));
+    
 
     // Increase received responses
+    std::lock_guard<std::mutex> lock(mtx);
     received_responses++;
+    cv.notify_all();
+
+    auto end_handle_adapter = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    spdlog::info("Time to handle adapter response: {}", (end_handle_adapter - start_handle_adapter));
 
 }
 
@@ -212,32 +228,8 @@ void handle_response(string topic, const string& response){
 
 void mqtt_handle_response(string topic, const string msg){return;}
 
-
-string getRequestData(unsigned long int requestID) {
-
-    auto time_request = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-
-    // Create request
-
-    spdlog::info("Requesting data with requestID: {}", requestID);
-
-    Document request;
-    request.SetObject();
-    Document::AllocatorType& allocator = request.GetAllocator();
-    request.AddMember("requestID", requestID, allocator);
-    request.AddMember("numberObjects", 1, allocator);
-    string payload = documentToString(request);
-
-    auto starting_time_before_publish = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-
-    spdlog::info("Time to create request: {}", (starting_time_before_publish - time_request));
-
-    return payload;
-}
-
-
 void setup_dds(){
-    server = new Dds("Server", 0, handle_response);
+    server = new Dds("Generation", domain_id, handle_response);
     server->provision_publisher(pub_adapter_topic);
     server->provision_publisher(pub_cpm_topic);
     server->subscribe(sub_adapter_topic);
@@ -247,10 +239,10 @@ void setup_dds(){
 
 int main() {
     cout << "Starting server..." << endl;
-    readConfigFile("config.ini");
+    readConfigFile("/config.ini");
     if(mqtt_enable_publish) {
         cout << "Setting up MQTT..." << endl;
-        data_mqtt = readMqttData("config.ini");
+        data_mqtt = readMqttData("/config.ini");
         mqtt_server = new MqttWrapper(data_mqtt);
         while (!mqtt_server->is_connected()){
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -258,6 +250,7 @@ int main() {
     }
     cout << "Setting up DDS..." << endl;
     setup_dds();
+    cout << "Expected responses: " << exptected_responses << endl;
     vector<Document> sensorInfo = initSensorInformation();
     last_request = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()) - request_interval;
     last_sensor = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()) - add_sensor_interval;
@@ -272,35 +265,36 @@ int main() {
 
                 last_request = current_request;
 
-                timestamp_milliseconds = current_request.count();
+                timestamp_milliseconds = current_request.count() - 1072915200000;
 
                 // string request = getRequestData(timestamp_milliseconds);
 
                 auto starting_time_before_request = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-
+                received_responses = 0;
                 //Request data from adapters
                 server->publish("to/adapters", "{\"requestID\":" + to_string(timestamp_milliseconds) + ",\"numberObjects\":1}");
 
                 auto ending_time_after_publish = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+                
+                request_instance = starting_time_before_request;
 
-                spdlog::info("Time to publish request: {}", (ending_time_after_publish - starting_time_before_request));
+                // spdlog::warn("Published request in instant: {}", ending_time_after_publish);
 
-                auto starting_time_after_request = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+                spdlog::info("Time to publish request: {}us with ID {}", (ending_time_after_publish - starting_time_before_request), timestamp_milliseconds);
 
-                received_responses = 0;
+                std::unique_lock<std::mutex> lk(mtx);
+                if (!cv.wait_for(lk, request_deadline, []{return received_responses >= exptected_responses;})) {
+                    spdlog::error("Request deadline reached or received responses: {}", received_responses);
+                }  
 
-                //Wait for responses or deadline
-                while(received_responses < exptected_responses) {
-                    if(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()) - current_request > request_deadline) {
-                        cout << "Request deadline reached" << endl;
-                        break;
-                    }
-                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
-                }
-
-                auto starting_time_after_deadline = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-
-                spdlog::info("Time to wait for responses: {}", (starting_time_after_deadline - starting_time_after_request));
+                // //Wait for responses or deadline
+                // while(received_responses < exptected_responses) {
+                //     if(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()) - current_request > request_deadline) {
+                //         cout << "Request deadline reached" << endl;
+                //         break;
+                //     }
+                //     std::this_thread::sleep_for(std::chrono::microseconds(20));
+                // }
 
                 //Check if it is time to add sensor information
                 if(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()) - last_sensor > add_sensor_interval) {
@@ -330,7 +324,7 @@ int main() {
 
                     spdlog::info("Time to publish to DDS: {}", (ending_time_after_publish_dds - starting_time_before_publish_dds));
 
-                    spdlog::info("CPM: {}", cpm_str);
+                    // spdlog::info("CPM: {}", cpm_str);
 
                     //Publish CPM to MQTT
 
@@ -343,12 +337,7 @@ int main() {
                 }
                 received_objects.clear();
 
-                auto starting_time_before_clean = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
                 cleanOldObjects(maxObjectAge);
-
-                auto ending_time_after_clean = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-
-                spdlog::info("Time to clean old objects: {}", (ending_time_after_clean - starting_time_before_clean));
 
                 auto ending_time = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 

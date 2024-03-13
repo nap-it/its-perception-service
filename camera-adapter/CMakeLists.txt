@@ -4,7 +4,9 @@ project(camera_adapter)
 set(CMAKE_CXX_STANDARD 17)
 
 include_directories(${CMAKE_SOURCE_DIR})
-include_directories(${CMAKE_SOURCE_DIR}/vendor)
+include_directories(${CMAKE_SOURCE_DIR}/spdlog/include)
+include_directories(${CMAKE_SOURCE_DIR}/rapidjson)
+include_directories(${CMAKE_SOURCE_DIR}/fastdds)
 
 find_package(Threads REQUIRED)
 find_package(Fastcdr REQUIRED)

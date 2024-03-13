@@ -1,5 +1,8 @@
 #include "camera_data_management.h"
 
+const long int time2004ms = 1072915200000;
+const long M_PI180 = M_PI / 180.0;
+
 std::list<cameraMqttObject> parse_json(const std::string& mqtt_camera_object) {
     // Parse the JSON string
     rapidjson::Document document;
@@ -12,7 +15,7 @@ std::list<cameraMqttObject> parse_json(const std::string& mqtt_camera_object) {
     }
 
     std::list<cameraMqttObject> objs;
-    double timestamp = document["timestamp"].GetDouble();
+    unsigned long int timestamp = static_cast<unsigned long int>(document["timestamp"].GetDouble() * 1000) - time2004ms;
 
     const rapidjson::Value& mqttListOfObjects = document["listOfObjects"];
 
@@ -46,6 +49,36 @@ std::list<cameraMqttObject> parse_json(const std::string& mqtt_camera_object) {
     }
 
     return objs;
+}
+std::list<std::string> structs_to_string(std::list<cameraMqttObject> camera_object){
+    std::list<std::string> serialized_list;
+    for(auto obj : camera_object) {
+        rapidjson::Document document;
+        document.SetObject();
+        rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
+
+        document.AddMember("heading", obj.heading, allocator);
+        document.AddMember("latitude", obj.latitude, allocator);
+        document.AddMember("longitude", obj.longitude, allocator);
+        document.AddMember("objID", obj.objectID, allocator);
+        document.AddMember("sensorID", 2, allocator);
+        document.AddMember("speed", obj.speed, allocator);
+        document.AddMember("timestamp", obj.timestamp, allocator);
+        document.AddMember("confidence", obj.confidence, allocator);
+
+        // Classification
+        rapidjson::Value classificationArray(rapidjson::kArrayType);
+        rapidjson::Value classificationObject(rapidjson::kObjectType);
+        rapidjson::Value objectClassObject(rapidjson::kObjectType);
+        objectClassObject.AddMember("vehicleSubClass", obj.classification, allocator);
+        classificationObject.AddMember("objectClass", objectClassObject, allocator);
+        classificationObject.AddMember("confidence", 101, allocator);   // unavailable (101)
+        classificationArray.PushBack(classificationObject, allocator);
+        document.AddMember("classification", classificationArray, allocator);
+
+        serialized_list.push_back(jsonToString(document));
+    }
+    return serialized_list;
 }
 
 bool calc_is_new_info(std::mutex* lock, std::map<int, cameraMqttObject> *dict, cameraMqttObject camera_object) {
@@ -102,7 +135,7 @@ double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
 
 // Convert degrees to radians
 double toRadians(double degrees) {
-    return degrees * M_PI / 180.0;
+    return degrees * M_PI180;
 }
 
 std::string prepare_reply(const std::string& request, std::mutex* lock, std::map<int, cameraMqttObject> * objects, std::map<int, cameraMqttObject> * dict_last_sent) {
@@ -165,6 +198,31 @@ std::string prepare_reply(const std::string& request, std::mutex* lock, std::map
     return jsonToString(replyJson);
 }
 
+std::string get_reply(const std::string& request, std::mutex* lock, std::map<int, std::string> * serialized_objects){
+    std::lock_guard guard(*lock);
+    std::stringstream replyStream;
+
+    rapidjson::Document requestJson;
+    requestJson.Parse(request.c_str());
+
+    unsigned long int requestID = 0;
+    int numberObjects = 0;
+    if (requestJson.HasMember("requestID")){
+        requestID = requestJson["requestID"].GetUint64();
+    }
+    if (requestJson.HasMember("numberObjects")){
+        numberObjects = requestJson["numberObjects"].GetInt();
+    }
+
+    replyStream << "{\"requestID\":" << requestID << ",\"numberObjects\":" << numberObjects << ",\"objects\":[";
+    for(auto const& [key, value] : *serialized_objects) {
+        replyStream << value << ",";
+    }
+    std::string reply = replyStream.str();
+    if (reply.back() == ',') reply.pop_back();
+    reply += "]}";
+    return reply;
+}
 // Convert RapidJSON document to string
 std::string jsonToString(const rapidjson::Document& d) {
     rapidjson::StringBuffer buffer;

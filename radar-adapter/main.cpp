@@ -13,8 +13,10 @@ using namespace std;
 // Global variables
 map<int, radarMqttObject> objects_to_send;      // shared between threads
 map<int, radarMqttObject> last_sent;            // save data of the last time the object was included in a CPM
+map<int, string> serialized_objects_to_send;    // shared between threads
 std::mutex lock_mutex;
 Dds* dds_;
+const long int time2004ms = 1072915200000;
 
 mqtt_server readConfigFile(const std::string& path)
 {
@@ -22,14 +24,16 @@ mqtt_server readConfigFile(const std::string& path)
 
     INIReader reader (path);
 
-    std::string host = reader.Get("mqtt", "host", "localhost");
+    std::string host = reader.Get("mqtt", "host", "atcll-p35-jetson.nap.av.it.pt");
     std::cout << "Host: " << host << std::endl;
     long port = reader.GetInteger("mqtt", "port", 1883);
 
     mqttInfo.address = "tcp://" + host + ":" + std::to_string(port);
     std::cout << "Address: " << mqttInfo.address << std::endl;
-    mqttInfo.client_id = reader.Get("mqtt", "client_id", "client") + "-radar";
-    mqttInfo.subscription_topic = reader.Get("mqtt", "radar_topic", "");
+    string client = reader.Get("mqtt", "client_id", "client") + "-radar";
+    cout << "Client: " << client << endl;
+    mqttInfo.client_id = client;
+    mqttInfo.subscription_topic = reader.Get("mqtt", "radar_topic", "jetson/radar-plus");
 
     std::cout << "Subscription topic: " << mqttInfo.subscription_topic << std::endl;
     mqttInfo.qos= reader.GetInteger("mqtt", "qos", 1);
@@ -38,31 +42,84 @@ mqtt_server readConfigFile(const std::string& path)
     return mqttInfo;
 }
 
+void clean_last_sent(std::map<int, radarMqttObject> * last_sent_dict, unsigned long int current_time) {
+    for(auto it = last_sent_dict->begin(); it != last_sent_dict->end(); ) {
+        if (current_time - it->second.timestamp > 15000) {
+            it = last_sent_dict->erase(it);
+        } else {
+            ++it;
+        }
+    }
+}
+
 
 void on_message_dds(std::string topic, std::string message) {
-    std::cout << "Message: " << message << " RECEIVED FROM TOPIC" << topic << std::endl;
+    // std::cout << "Message: " << message << " RECEIVED FROM TOPIC" << topic << std::endl;
+    auto arrived_request = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - 1072915200000;
+    // cout << "arrived request: " << arrived_request << endl;
     if (topic == "to/adapters") {
-        std::cout << "Received request for adapters" << std::endl;
-        string reply = prepare_reply(message, &lock_mutex, &objects_to_send, &last_sent);
-//        std::cout << "reply: " << reply << std::endl;
-        dds_->publish("from/adapters", reply);
-        spdlog::info("Reply to {} sent.\n", message);
+        // auto start_prepareReply = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+        // string reply = prepare_reply(message, &lock_mutex, &objects_to_send, &last_sent);
+        // auto end_prepareReply = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+        
+        // spdlog::info("prepareReply: {} microseconds", end_prepareReply - start_prepareReply);
+
+
+        auto start_getReply = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
+        string reply2 = get_reply(message, &lock_mutex, &serialized_objects_to_send);
+
+        auto end_getReply = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+        spdlog::info("getReply: {} microseconds", end_getReply - start_getReply);
+
+        auto start_publish = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+        dds_->publish("from/adapters", reply2);
+        auto end_publish = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+        spdlog::info("publish: {} microseconds", end_publish - start_publish);
+        
         // clear "objects_to_send"
         std::lock_guard guard(lock_mutex);
         objects_to_send.clear();
+        serialized_objects_to_send.clear();
+
+        // clean "last_sent"
+        unsigned long int now = static_cast<unsigned long int>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - time2004ms);
+        clean_last_sent(&last_sent, now);
     }
 }
 
 void on_message_mqtt(std::string topic, std::string message) {
-//    std::cout << "Message: " << message << " RECEIVED." << std::endl;
-
+    // std::cout << "Message: " << message << " RECEIVED." << std::endl;
+    auto start_jsonToStruct = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     radarMqttObject obj = json_to_struct(message);
+    auto end_jsonToStruct = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
+    // spdlog::info("jsonToStruct: {} microseconds", end_jsonToStruct - start_jsonToStruct);
+
+
+    auto start_serializedObj = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    string serialized_obj = struct_to_string(obj);
+    auto end_serializedObj = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
+    // spdlog::info("serializedObj: {} microseconds", end_serializedObj - start_serializedObj);
+
+    auto start_calcIsNewInfo = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     bool is_newInfo = calc_is_new_info(&lock_mutex, &last_sent, obj);
+    auto end_calcIsNewInfo = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
+    // spdlog::info("calcIsNewInfo({}): {} microseconds", is_newInfo, end_calcIsNewInfo - start_calcIsNewInfo);
 
     if (is_newInfo) {
         // save to objects to send objects
+        auto start_saveToSend = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
         std::lock_guard guard(lock_mutex);
         objects_to_send[obj.objectID] = obj;
+        serialized_objects_to_send[obj.objectID] = serialized_obj;
+
+        auto end_saveToSend = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
+        // spdlog::info("saveToSend: {} microseconds", end_saveToSend - start_saveToSend);
+    
     }
 }
 

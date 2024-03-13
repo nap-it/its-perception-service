@@ -43,6 +43,6 @@ long int getTimestampIts(long int timestamp);
 
 std::pair<double, double> rotate_axes(int yaw, double x, double y);
 
-string process_cpm(Document &cpm);
+string process_cpm(std::string message);
 
 #endif //CPM_PROCESSING_C_CPM_PROCESSING_H

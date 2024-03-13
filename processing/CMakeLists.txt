@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(cpmProcessing)
+project(cpmGeneration)
 
 set(CMAKE_CXX_STANDARD 17)  
 
@@ -19,6 +19,13 @@ file(GLOB FASTDDS_SRC
     ${CMAKE_SOURCE_DIR}/fastdds/*.hpp
     ${CMAKE_SOURCE_DIR}/fastdds/*.cxx
 )
-add_executable(main main.cpp mqtt.cpp mqtt.h dds-sub.h dds-sub.cpp cpm-processing.h cpm-processing.cpp config_reader.hpp ${FASTDDS_SRC})
+add_executable(main 
+    main.cpp 
+    config_reader.hpp 
+    cpm-processing.cpp 
+    cpm-processing.h
+    mqttwrapper.cpp 
+    mqttwrapper.h 
+    ${FASTDDS_SRC})
 
-target_link_libraries(main pthread paho-mqttpp3 paho-mqtt3as ssl crypto fastcdr fastrtps) 
+target_link_libraries(main pthread ssl crypto fastcdr fastrtps paho-mqttpp3 paho-mqtt3as) 

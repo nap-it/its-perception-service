@@ -1,7 +1,7 @@
 FROM debian:bullseye-slim
 ENV TZ=Europe/Lisbon
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-#RUN printf "deb http://httpredir.debian.org/debian buster-backports main non-free\ndeb-src http://httpredir.debian.org/debian buster-backports main non-free\n" > /etc/apt/sources.list.d/backports.list
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
@@ -14,7 +14,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     ca-certificates
 WORKDIR /
-COPY . /radar-adapter
+
+RUN mkdir /radar-adapter
+
+COPY *.cpp /radar-adapter/
+COPY *.h /radar-adapter/
+COPY *.hpp /radar-adapter/
+COPY CMakeLists.txt /radar-adapter/
+COPY rapidjson /radar-adapter/rapidjson
+COPY spdlog /radar-adapter/spdlog
+COPY fastdds /radar-adapter/fastdds
 
 RUN git clone https://github.com/eclipse/paho.mqtt.c.git
 WORKDIR paho.mqtt.c
@@ -32,9 +41,9 @@ RUN cmake -Bbuild -H. -DPAHO_BUILD_STATIC=ON \
 RUN cmake --build build/ --target install
 RUN ldconfig
 
-WORKDIR /radar-adapter/vendor
-RUN git clone https://code.nap.av.it.pt/external-tools/rapidjson.git
-RUN git clone https://code.nap.av.it.pt/external-tools/spdlog.git
+# WORKDIR /radar-adapter
+# RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/rapidjson.git
+# RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/spdlog.git
 
 WORKDIR /radar-adapter
 RUN cmake .

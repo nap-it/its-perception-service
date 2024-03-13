@@ -15,15 +15,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates
 WORKDIR /
 
-RUN mkdir /camera-adapter
+RUN mkdir /cpm-processing
 
-COPY *.cpp /camera-adapter/
-COPY *.h /camera-adapter/
-COPY *.hpp /camera-adapter/
-COPY CMakeLists.txt /camera-adapter/
-COPY rapidjson /camera-adapter/rapidjson
-COPY spdlog /camera-adapter/spdlog
-COPY fastdds /camera-adapter/fastdds
+COPY *.cpp /cpm-processing/
+COPY *.h /cpm-processing/
+COPY *.hpp /cpm-processing/
+COPY CMakeLists.txt /cpm-processing/
+COPY rapidjson /cpm-processing/rapidjson
+COPY spdlog /cpm-processing/spdlog
+COPY fastdds /cpm-processing/fastdds
 
 RUN git clone https://github.com/eclipse/paho.mqtt.c.git
 WORKDIR paho.mqtt.c
@@ -41,15 +41,12 @@ RUN cmake -Bbuild -H. -DPAHO_BUILD_STATIC=ON \
 RUN cmake --build build/ --target install
 RUN ldconfig
 
-# WORKDIR /camera-adapter
-# RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/rapidjson.git
-# RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/spdlog.git
+#RUN git clone https://code.nap.av.it.pt/external-tools/rapidjson.git
+#RUN git clone https://code.nap.av.it.pt/external-tools/spdlog.git
 
-WORKDIR /camera-adapter
+WORKDIR /cpm-processing
 RUN cmake .
 RUN cmake --build .
 RUN chmod +x main
-ENTRYPOINT ["/camera-adapter/main"]
+ENTRYPOINT ["/cpm-processing/main"]
 
-#ENTRYPOINT ["sleep"]
-#CMD 50000

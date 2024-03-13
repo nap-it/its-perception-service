@@ -1,8 +1,12 @@
 #include "radar_data_management.h"
 
+const long int time2004ms = 1072915200000;
+const long M_PI180 = M_PI / 180.0;
+
 radarMqttObject json_to_struct(std::string mqtt_radar_object) {
     // Parse the JSON string
     rapidjson::Document document;
+
     document.Parse(mqtt_radar_object.c_str());
 
     // Check if parsing succeeded
@@ -21,37 +25,72 @@ radarMqttObject json_to_struct(std::string mqtt_radar_object) {
         obj.objectID = document["objectID"].GetInt();
         obj.receiverID = document["receiverID"].GetInt();
         obj.speed = document["speed"].GetDouble();
-        obj.timestamp = document["timestamp"].GetDouble();
-
-//        spdlog::info("radar mqtt obj: \"{}\"\n", obj.objectID);
+        unsigned long int timestamp = static_cast<unsigned long int>(document["timestamp"].GetDouble() * 1000) - time2004ms;
+        obj.timestamp = timestamp;
 
         return obj;
 
     } else {
         std::cerr << "Failed to parse JSON" << std::endl;
+        return {};
     }
 }
 
-bool calc_is_new_info(std::mutex* lock, std::map<int, radarMqttObject> *dict, radarMqttObject radar_object) {
+std::string struct_to_string(radarMqttObject radar_object){
+    rapidjson::Document document;
+    document.SetObject();
+    rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
+
+    document.AddMember("acceleration", radar_object.acceleration, allocator);
+    document.AddMember("heading", radar_object.heading, allocator);
+    document.AddMember("latitude", radar_object.latitude, allocator);
+    document.AddMember("longitude", radar_object.longitude, allocator);
+    document.AddMember("objID", radar_object.objectID, allocator);
+    document.AddMember("sensorID", 1, allocator);
+    document.AddMember("speed", radar_object.speed, allocator);
+    document.AddMember("timestamp", radar_object.timestamp, allocator);
+    document.AddMember("confidence", radar_object.confidence, allocator);
+
+    // Classification
+    rapidjson::Value classificationArray(rapidjson::kArrayType);
+    rapidjson::Value classificationObject(rapidjson::kObjectType);
+    rapidjson::Value objectClassObject(rapidjson::kObjectType);
+    objectClassObject.AddMember("vehicleSubClass", radar_object.classification, allocator);
+    classificationObject.AddMember("objectClass", objectClassObject, allocator);
+    classificationObject.AddMember("confidence", 101, allocator);   // unavailable (101)
+    classificationArray.PushBack(classificationObject, allocator);
+    document.AddMember("classification", classificationArray, allocator);
+
+
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    document.Accept(writer);
+    
+    return buffer.GetString();
+}
+
+bool calc_is_new_info(std::mutex* lock, std::map<int, radarMqttObject> *last_sent_dict, radarMqttObject radar_object) {
     std::lock_guard guard(*lock);
 
     // if not in "last_sent" is newInfo
-    if (dict->find(radar_object.objectID) == dict->end()) {
+    if (last_sent_dict->find(radar_object.objectID) == last_sent_dict->end()) {
         return true;
     }
 
     int obj_id  = radar_object.objectID;
 
-    double delta_timestamp = radar_object.timestamp - dict->at(obj_id).timestamp;
+    auto last_sent = last_sent_dict->at(obj_id);
+
+    double delta_timestamp = radar_object.timestamp - last_sent.timestamp;
 
     // Distance calculation between the present information and the last sent in a CPM
-    double delta_distance = calculateDistance(dict->at(obj_id).latitude, dict->at(obj_id).longitude, radar_object.latitude, radar_object.longitude);
+    double delta_distance = calculateDistance(last_sent.latitude, last_sent.longitude, radar_object.latitude, radar_object.longitude);
 
     // Speed variation between the present information and the last sent in a CPM
-    double delta_speed = fabs(dict->at(obj_id).speed - radar_object.speed);
+    double delta_speed = fabs(last_sent.speed - radar_object.speed);
 
     // Heading variation between the present information and the last sent in a CPM
-    double delta_heading = fabs(dict->at(obj_id).speed - radar_object.heading);
+    double delta_heading = fabs(last_sent.speed - radar_object.heading);
 
     // Calculation of newInfo (according to the CPM rules)
     if ((delta_timestamp > 1) or (delta_distance > 4) or (delta_speed > 0.5) or (delta_heading > 4)) {
@@ -86,12 +125,12 @@ double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
 
 // Convert degrees to radians
 double toRadians(double degrees) {
-    return degrees * M_PI / 180.0;
+    return degrees * M_PI180;
 }
-
 std::string prepare_reply(const std::string& request, std::mutex* lock, std::map<int, radarMqttObject> * objects, std::map<int, radarMqttObject> * dict_last_sent) {
     // parse request data
-    rapidjson::Document requestJson;
+    
+    rapidjson::Document requestJson;    
     requestJson.Parse(request.c_str());
 
     unsigned long int requestID = 0;
@@ -103,10 +142,6 @@ std::string prepare_reply(const std::string& request, std::mutex* lock, std::map
         numberObjects = requestJson["numberObjects"].GetInt();
     }
 
-//    spdlog::info("RequestID: \"{}\"\n", requestID);
-//    spdlog::info("numberObjects: \"{}\"\n", numberObjects);
-
-    // generate reply json
     rapidjson::Document replyJson = rapidjson::Document();
     replyJson.SetObject();
     rapidjson::Document::AllocatorType& allocator = replyJson.GetAllocator();
@@ -114,8 +149,9 @@ std::string prepare_reply(const std::string& request, std::mutex* lock, std::map
     replyJson.AddMember("numberObjects", numberObjects, allocator);
 
     rapidjson::Value objects_json(rapidjson::kArrayType);
-
+    
     std::lock_guard guard(*lock);
+
     for (auto const& [key, value] : *objects) {
         rapidjson::Value tmpObject(rapidjson::kObjectType);
         tmpObject.AddMember("acceleration", value.acceleration, allocator);
@@ -140,15 +176,46 @@ std::string prepare_reply(const std::string& request, std::mutex* lock, std::map
 
         objects_json.PushBack(tmpObject, allocator);
 
-        // update "last_sent" data
         dict_last_sent->insert_or_assign(key, value);
     }
 
     // add "objects_json" to "replyJson" document
     replyJson.AddMember("objects", objects_json, allocator);
 
-    return jsonToString(replyJson);
+    std::string reply = jsonToString(replyJson);
+
+    
+
+    return reply;
 }
+
+
+std::string get_reply(const std::string& request, std::mutex* lock, std::map<int, std::string> * serialized_objects){
+    std::lock_guard guard(*lock);
+    std::stringstream replyStream;
+
+    rapidjson::Document requestJson;    
+    requestJson.Parse(request.c_str());
+
+    unsigned long int requestID = 0;
+    int numberObjects = 0;
+    if (requestJson.HasMember("requestID")){
+        requestID = requestJson["requestID"].GetUint64();
+    }
+    if (requestJson.HasMember("numberObjects")){
+        numberObjects = requestJson["numberObjects"].GetInt();
+    }
+
+    replyStream << "{\"requestID\":" << requestID << ",\"numberObjects\":" << numberObjects << ",\"objects\":[";
+    for (auto const& [key, value] : *serialized_objects) {
+        replyStream << value << ",";
+    }
+    std::string reply = replyStream.str();
+    if (reply.back() == ',') reply.pop_back();
+    reply += "]}";
+    return reply;
+}
+
 
 // Convert RapidJSON document to string
 std::string jsonToString(const rapidjson::Document& d) {

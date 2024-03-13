@@ -30,12 +30,5 @@ add_executable(server
     mqttwrapper.h 
     ${FASTDDS_SRC})
 
-#add_executable(adapter1 adapter1.cpp config_reader.hpp sensor_info.hpp sensor_info.cpp cpm_builder.hpp cpm_builder.cpp ${FASTDDS_SRC})
-
-#add_executable(adapter2 adapter2.cpp config_reader.hpp sensor_info.hpp sensor_info.cpp cpm_builder.hpp cpm_builder.cpp ${FASTDDS_SRC})
-
 target_link_libraries(server pthread ssl crypto fastcdr fastrtps paho-mqttpp3 paho-mqtt3as) 
 
-#target_link_libraries(adapter1 pthread ssl crypto fastcdr fastrtps)
-
-#target_link_libraries(adapter2 pthread ssl crypto fastcdr fastrtps)

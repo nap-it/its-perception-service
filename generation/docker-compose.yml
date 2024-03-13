@@ -9,7 +9,7 @@ services:
       - ./config.ini:/cpm-generation/config.ini
     networks:
       vanetzalan0:
-        ipv4_address: 192.168.98.40
+        ipv4_address: 192.168.98.42
 
 networks:
   vanetzalan0:
