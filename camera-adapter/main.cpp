@@ -14,6 +14,8 @@ using namespace std;
 map<int, cameraMqttObject> objects_to_send;      // shared between threads
 map<int, cameraMqttObject> last_sent;            // save data of the last time the object was included in a CPM
 map<int, string> serialized_objects_to_send;    // shared between threads
+stringstream str_objects_to_send; 
+int n_objects_to_send = 0;                    // shared between threads
 std::mutex lock_mutex;
 Dds* dds_;
 const long int time2004ms = 1072915200000;
@@ -66,16 +68,38 @@ void on_message_dds(std::string topic, std::string message) {
 
         auto end_getReply = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
         spdlog::info("getReply: {} microseconds", end_getReply - start_getReply);
+
+        //third reply
+
+        // auto start_reply3 = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
+        // rapidjson::Document requestJson;
+        // requestJson.Parse(message.c_str());
+
+        // stringstream reply3;
+        // reply3  << "{\"requestID\":" << requestJson["requestID"].GetUint64() << ",\"numberObjects\":" << requestJson["numberObjects"].GetInt() << ",\"objects\":[";
+
+        // //remove last comma from str_objects_to_send
+        // string str_objects_to_send_str = str_objects_to_send.str();
+        
+        // if (str_objects_to_send_str.back() == ',') str_objects_to_send_str.pop_back();
+        // reply3 << str_objects_to_send_str << "]}";
+
+        // auto end_reply3 = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
+        // spdlog::info("reply3: {} microseconds", end_reply3 - start_reply3);
         
         auto start_publish = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
         dds_->publish("from/adapters", reply2);
         auto end_publish = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-        spdlog::info("publish: {} microseconds", end_publish - start_publish);
+        spdlog::info("publish {} objects: {} microseconds", n_objects_to_send, end_publish - start_publish);
         
         // clear "objects_to_send"
         std::lock_guard guard(lock_mutex);
         objects_to_send.clear();
         serialized_objects_to_send.clear();
+        str_objects_to_send.str("");
+        n_objects_to_send = 0;
 
         unsigned long int now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - time2004ms;
         clean_last_sent(&last_sent, now);
@@ -97,7 +121,12 @@ void on_message_mqtt(std::string topic, std::string message) {
             // save to objects to send objects
             std::lock_guard guard(lock_mutex);
             objects_to_send[obj.objectID] = obj;
-            serialized_objects_to_send[obj.objectID] = serialized_list.front();
+            auto first = serialized_list.front();
+            serialized_objects_to_send[obj.objectID] = first;
+
+            str_objects_to_send << first << ",";
+            n_objects_to_send++;
+
         }
 
         camera_objects.pop_front();
@@ -116,6 +145,7 @@ void on_message_mqtt(std::string topic, std::string message) {
 }
 
 int main() {
+    str_objects_to_send.str("");
 
     // Read config file
     mqtt_server mqttServerInfo = readConfigFile("/config.ini");

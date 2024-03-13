@@ -26,8 +26,8 @@ unordered_map<int, CpmObjectId> idMap = unordered_map<int, CpmObjectId>();
 int current_id = 1;
 
 //constants
-const int sensor_size = 10;
-const int object_size = 500;
+const float sensor_size = 7.941537;
+const float object_size = 26.35679;
 const int max_message_size = 1500;
 const int header_manag_stat_size = 38;
 const int R = 6371000;
@@ -453,8 +453,10 @@ vector<string> generateCPM(const vector<Document>& receivedObjs, float cam_latit
     if (message_size > max_message_size){
         cout << "Message size too big, need to segment" << endl;
         int max_objs_per_segment = (max_message_size - header_manag_stat_size) / object_size;
+        cout << "Max objects per segment: " << max_objs_per_segment << endl;
         vector<vector<Document>> segments;
         int size = perceivedObjectsList.size();
+        cout << "Total objects: " << size << endl;
         for(int i = 0; i < size; i += max_objs_per_segment){
             int end = min(i + max_objs_per_segment, size);
 
@@ -467,6 +469,7 @@ vector<string> generateCPM(const vector<Document>& receivedObjs, float cam_latit
             }
             
             segments.push_back(move(segmentObjs));
+            cout << "Segment " << i / max_objs_per_segment + 1 << " has " << segments[i / max_objs_per_segment].size() << " objects" << endl;
         }
 
         int sensor_segment = -1;
@@ -488,6 +491,7 @@ vector<string> generateCPM(const vector<Document>& receivedObjs, float cam_latit
         }
 
         for (int i = 0; i < segments.size(); i++){
+            cout << "Segmenting " << i + 1 << " of " << segments.size() << endl;
             Document cpm;
             if (i == sensor_segment - 1){
                 cpm = segment(deltaTime, managementContainer, segments[i], stationContainer, add_sensor_data, sensorArray, segments.size(), i+1);

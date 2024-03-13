@@ -44,7 +44,6 @@ Dds* server;
 int domain_id = 0;
 
 //MQTT variables
-MqttWrapper* mqtt_server;
 data_mqtt_server data_mqtt;
 bool mqtt_enable_publish = false;
 
@@ -82,7 +81,7 @@ void readConfigFile(const string& path){
     INIReader reader (path);
     sub_adapter_topic = reader.Get("dds", "topic_adapter_subscribe", "from/adapters");
     pub_adapter_topic = reader.Get("dds", "topic_adapter_publish", "to/adapters");
-    pub_cpm_topic = reader.Get("dds", "topic_cpm_publish", "in/cpm");
+    pub_cpm_topic = reader.Get("dds", "topic_cpm_publish", "vanetza/in/cpm");
     domain_id = reader.GetInteger("dds", "domain_id", 0);
 
     request_deadline = std::chrono::milliseconds(reader.GetInteger("dds", "request_deadline", 50));
@@ -101,12 +100,17 @@ data_mqtt_server readMqttData(const string& path){
 
     INIReader reader (path);
 
-    string host = reader.Get("mqtt", "host", "192.168.98.1");
+    string host = reader.Get("mqtt", "host", "atcll-p35-apu.nap.av.it.pt");
     int port = reader.GetInteger("mqtt", "port", 1883);
 
     data.address = "tcp://" + host + ":" + to_string(port);
     data.client_id = "server";
-    data.publish_topic = reader.Get("mqtt", "topic_cpm_publish", "in/cpm");
+    data.publish_topic = reader.Get("mqtt", "topic_cpm_publish", "vanetza/in/cpm");
+
+    string sub_topic = "vanetza/own/cam";
+    vector<string> topics;
+    topics.push_back(sub_topic);
+    data.subscription_topic = topics;
 
     return data;
 }
@@ -180,11 +184,10 @@ void adapter_handler(const string& response){
 
 }
 
-void inCam_handler(const string& response){
+void ownCam_handler(const string& response){
 
     Document doc;
     doc.Parse(response.c_str());
-    cout << "New CAM: " << response << endl;
     
     if (!doc.HasMember("longitude") || !doc["longitude"].IsFloat() || !doc.HasMember("latitude") || !doc["latitude"].IsFloat()) {
         cout << "Invalid CAM" << endl;
@@ -207,26 +210,24 @@ void inCam_handler(const string& response){
 
 }
 
-void ownCam_handler(const string& response){
-
-}
 
 void handle_response(string topic, const string& response){
 
     //topic handler
     if(topic == "from/adapters") {
         adapter_handler(response);
-    } else if (topic == "own/cam") {
-        ownCam_handler(response);
-    } else if (topic == "in/cam") {
-        inCam_handler(response);
     } else {
         cout << "Invalid topic" << endl;
         return;
     }
 }
 
-void mqtt_handle_response(string topic, const string msg){return;}
+void on_message_mqtt(std::string topic, std::string message) {
+    if(topic == "vanetza/own/cam"){
+        ownCam_handler(message);
+    }   
+    
+}
 
 void setup_dds(){
     server = new Dds("Generation", domain_id, handle_response);
@@ -240,13 +241,11 @@ void setup_dds(){
 int main() {
     cout << "Starting server..." << endl;
     readConfigFile("/config.ini");
-    if(mqtt_enable_publish) {
-        cout << "Setting up MQTT..." << endl;
-        data_mqtt = readMqttData("/config.ini");
-        mqtt_server = new MqttWrapper(data_mqtt);
-        while (!mqtt_server->is_connected()){
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        }
+    cout << "Setting up MQTT..." << endl;
+    data_mqtt = readMqttData("/config.ini");
+    MqttWrapper* mqtt_server = new MqttWrapper(data_mqtt, on_message_mqtt);
+    while (!mqtt_server->is_connected()){
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
     cout << "Setting up DDS..." << endl;
     setup_dds();

@@ -80,11 +80,9 @@ string valueToString(const Value& value)  {
     return buffer.GetString();
 }
 
-string process_cpm(std::string message){
+string process_cpm(Document& cpm){
 
-    Document cpm;
-    cpm.Parse(message.c_str());
-
+    
     unsigned long int localGenDeltaTime = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() - time2004ms;
 
     std::vector<object> perceived_objs;
