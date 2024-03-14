@@ -129,6 +129,10 @@ void dds_handler(string topic, const string& response){
         spdlog::error("Unknown topic {}", topic);
     }
 
+    if (cpmJson.compare("[]") == 0) {
+        return;
+    }
+
     spdlog::info("Processed message {}", cpmJson);
 
     if(dds_enable_publish){

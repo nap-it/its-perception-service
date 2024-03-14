@@ -192,6 +192,7 @@ string process_cpm(Document& cpm){
         json_obj.AddMember("id", perceivedObjectContainer["containerData"]["perceivedObjects"][i]["objectID"].GetInt(), objAlloc);
         json_obj.AddMember("age", ageCpm + perceivedObjectContainer["containerData"]["perceivedObjects"][i]["measurementDeltaTime"].GetInt64(), objAlloc);
         json_obj.AddMember("objectPerceptionQuality", perceivedObjectContainer["containerData"]["perceivedObjects"][i]["objectPerceptionQuality"].GetDouble(), objAlloc);
+        json_obj.AddMember("detectionStationType", sender_stationType, objAlloc);
 
         // spdlog::info("Object ID: {}", perceivedObjectContainer["containerData"]["perceivedObjects"][i]["objectID"].GetInt());
         
