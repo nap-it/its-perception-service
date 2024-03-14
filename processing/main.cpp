@@ -112,7 +112,7 @@ string json_to_string(Document& json){
 
 void dds_handler(string topic, const string& response){
 
-    // spdlog::info("DDS Received message {}", response);
+    spdlog::info("DDS Received message {}", response);
     Document cpm;
 
     string cpmJson;
@@ -129,7 +129,7 @@ void dds_handler(string topic, const string& response){
         spdlog::error("Unknown topic {}", topic);
     }
 
-    if (cpmJson.compare("[]") == 0) {
+    if (cpmJson.empty()){
         return;
     }
 

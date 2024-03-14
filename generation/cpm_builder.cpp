@@ -408,7 +408,7 @@ Document segment(unsigned long int timestampIts, const Document& managementConta
     return cpm;
 }
 
-vector<string> generateCPM(const vector<Document>& receivedObjs, float cam_latitude, float cam_longitude, float cam_altitude, int cam_altitude_conf, float cam_heading, bool add_sensor_data, vector<Document>& sensorArray){
+vector<string> generateCPM(const vector<Document>& receivedObjs, float cam_latitude, float cam_longitude, float cam_altitude, int cam_altitude_conf, float cam_heading, bool add_sensor_data, vector<Document>& sensorArray, int stationType){
 
     vector<string> cpmList;
 
@@ -436,10 +436,18 @@ vector<string> generateCPM(const vector<Document>& receivedObjs, float cam_latit
     Document stationContainer;
     stationContainer.SetObject();
     Document::AllocatorType& allocator = stationContainer.GetAllocator();
-    stationContainer.AddMember("containerId", 1, allocator);
-    Value stationContainerData(kObjectType);
-    stationContainerData.AddMember("orientationAngle", cam_heading, allocator);
-    stationContainer.AddMember("containerData", stationContainerData, allocator);
+
+    if(stationType == 5){
+        stationContainer.AddMember("containerId", 1, allocator);
+        Value stationContainerData(kObjectType);
+        stationContainerData.AddMember("orientationAngle", cam_heading, allocator);
+        stationContainer.AddMember("containerData", stationContainerData, allocator);
+    } else {
+        stationContainer.AddMember("containerId", 2, allocator);
+        Value stationContainerData(kObjectType);
+        stationContainer.AddMember("containerData", stationContainerData, allocator);
+    }
+   
 
 
     int message_size = 0;

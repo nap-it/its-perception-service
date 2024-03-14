@@ -63,6 +63,7 @@ unsigned long int timestamp_milliseconds = 0;
 unsigned long int request_instance = 0;
 unsigned long int reply_instance = 0;
 int maxObjectAge = 0;
+int stationType = 0;
 
 //CAM variables
 float cam_latitude = 40.63028;
@@ -93,6 +94,8 @@ void readConfigFile(const string& path){
     mqtt_enable_publish = reader.GetBoolean("mqtt", "enable_publish", false);
 
     exptected_responses = reader.GetInteger("general", "expected_responses", 2);
+
+    stationType = reader.GetInteger("general", "station_type", 15);
 }
 
 data_mqtt_server readMqttData(const string& path){
@@ -306,7 +309,7 @@ int main() {
                 auto starting_time_before_processing = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
                 //Received objects processing
-                vector<string> cpmList = generateCPM(received_objects, cam_latitude, cam_longitude, cam_altitude, cam_alitude_conf, cam_heading, add_sensor_data, sensorInfo);
+                vector<string> cpmList = generateCPM(received_objects, cam_latitude, cam_longitude, cam_altitude, cam_alitude_conf, cam_heading, add_sensor_data, sensorInfo, stationType);
                 
                 auto ending_time_after_processing = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 

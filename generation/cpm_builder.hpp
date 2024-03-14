@@ -18,6 +18,6 @@ CpmObjectId createCpmId(int sensorId, int objectId);
 CpmObjectId getCpmId(int sensorId, int objectId);
 
 
-vector<string> generateCPM(const vector<Document>& receivedObjs, float cam_latitude, float cam_longitude, float cam_altitude, int cam_altitude_conf, float cam_heading, bool add_sensor_data, vector<Document>& sensorArray);
+vector<string> generateCPM(const vector<Document>& receivedObjs, float cam_latitude, float cam_longitude, float cam_altitude, int cam_altitude_conf, float cam_heading, bool add_sensor_data, vector<Document>& sensorArray, int stationType);
 void cleanOldObjects(int maxTime);
 #endif // CPM_BUILDER_HPP

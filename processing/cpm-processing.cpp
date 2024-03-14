@@ -6,19 +6,39 @@ const int   R = 6371000; // earth radius
 const double PI = 3.141592653589793238463;
 const long int time2004ms = 1072915200000;
 
-map<int,string> vehicleSubclassType = {
+map<int,string> napClassType = {
         {0, "unknown"},
-        {1, "moped"},
-        {2, "motorcycle"},
-        {3, "passengerCar"},
-        {4, "bus"},
-        {5, "lightTruck"},
-        {6, "heavyTruck"},
-        {7, "trailer"},
-        {8, "specialVehicles"},
-        {9, "tram"},
-        {10, "emergencyVehicle"},
-        {11, "agricultural"}
+        {1, "pedestrian"},
+        {2, "cyclist"},
+        {3, "moped"},
+        {4, "motorcycle"},
+        {5, "passangerCar"},
+        {6, "bus"},
+        {7, "lightTruck"},
+        {8, "heavyTruck"},
+        {9, "trailer"},
+        {10, "specialVehicles"},
+        {11, "tram"},
+        {15, "roadSideUnit"},
+        {16, "SafetyApp"},
+        {17, "Moliceiro"},
+        {18, "Test Device"},
+        {19, "others"}
+};
+
+map<int,int> vehicleSubclassType = {
+        {0, 0},
+        {1, 3},
+        {2, 4},
+        {3, 5},
+        {4, 6},
+        {5, 7},
+        {6, 8},
+        {7, 9},
+        {8, 10},
+        {9, 11},
+        {10, 10},
+        {11, 8}
 };
 
 map<int, string> personSubclassType = {
@@ -39,14 +59,7 @@ map<int, string> otherSubclassType = {
 map<int,string> sensorType = {
         {0, "undefined"},
         {1, "radar"},
-        {2, "lidar"},
-        {3, "monovideo"},
-        {4, "stereovision"},
-        {5, "nightvision"},
-        {6, "ultrasonic"},
-        {7, "pmd"},
-        {8, "fusion"},
-        {9, "inductionloop"},
+        {2, "camera"},
         {10, "sphericalCamera"},
         {11, "itssaggregation"},
         {12, "deviceDetection"}
@@ -96,7 +109,7 @@ string process_cpm(Document& cpm){
 
     if (number_containers == 0) {
         spdlog::error("No containers received!");
-        return "[]";
+        return "";
     }
 
     // look for the perceivedObjectContainer and sensorInformationContainer
@@ -124,7 +137,7 @@ string process_cpm(Document& cpm){
 
     if (!hasPerceivedObjectContainer) {
         spdlog::info("No objects received!");
-        return "[]";
+        return "";
     }
 
     if (ageCpm < 0) {
@@ -155,6 +168,11 @@ string process_cpm(Document& cpm){
     int number_objects = perceivedObjectContainer["containerData"]["numberOfPerceivedObjects"].GetInt();
     
     spdlog::info("Number of objects: {}", number_objects);
+
+    if (number_objects == 0) {
+        spdlog::info("No objects received!");
+        return "";
+    }
 
 
     // map<int, string> sensor_info;
@@ -264,7 +282,8 @@ string process_cpm(Document& cpm){
         string obj_type;
         if (perceivedObjectContainer["containerData"]["perceivedObjects"][i]["classification"][0]["objectClass"].HasMember("vehicleSubClass")) {
             try {
-                classification = vehicleSubclassType.at(perceivedObjectContainer["containerData"]["perceivedObjects"][i]["classification"][0]["objectClass"]["vehicleSubClass"].GetInt());
+                int napId = vehicleSubclassType.at(perceivedObjectContainer["containerData"]["perceivedObjects"][i]["classification"][0]["objectClass"]["vehicleSubClass"].GetInt());
+                classification = vehicleSubclassType.at(napId);
             }
             catch(...){
                 classification = "unclassified";
