@@ -81,7 +81,7 @@ void readConfigFile(const string& path){
     INIReader reader (path);
     sub_adapter_topic = reader.Get("dds", "topic_adapter_subscribe", "from/adapters");
     pub_adapter_topic = reader.Get("dds", "topic_adapter_publish", "to/adapters");
-    pub_cpm_topic = reader.Get("dds", "topic_cpm_publish", "vanetza/in/cpm");
+    pub_cpm_topic = reader.Get("general", "topic_cpm_publish", "cps-v2/in/cpm");
     domain_id = reader.GetInteger("dds", "domain_id", 0);
 
     request_deadline = std::chrono::milliseconds(reader.GetInteger("dds", "request_deadline", 50));

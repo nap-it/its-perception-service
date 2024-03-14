@@ -17,8 +17,12 @@ map<int, string> serialized_objects_to_send;    // shared between threads
 stringstream str_objects_to_send;                     // shared between threads
 int n_objects_to_send = 0;                    // shared between threads
 std::mutex lock_mutex;
-Dds* dds_;
 const long int time2004ms = 1072915200000;
+
+//DDS
+Dds* dds_;
+int domain_id = 0;
+
 
 mqtt_server readConfigFile(const std::string& path)
 {
@@ -40,6 +44,8 @@ mqtt_server readConfigFile(const std::string& path)
     std::cout << "Subscription topic: " << mqttInfo.subscription_topic << std::endl;
     mqttInfo.qos= reader.GetInteger("mqtt", "qos", 1);
     mqttInfo.n_retry_attempts= reader.GetInteger("mqtt", "n_retry_attempts", 5);
+
+    domain_id = reader.GetInteger("dds", "domain_id", 0);
 
     return mqttInfo;
 }
@@ -165,7 +171,7 @@ int main() {
     }
 
     // DDS
-    dds_ = new Dds("RadarAdapter", 0, on_message_dds);
+    dds_ = new Dds("RadarAdapter", domain_id, on_message_dds);
     dds_->provision_publisher("from/adapters");
     dds_->subscribe("to/adapters");
 

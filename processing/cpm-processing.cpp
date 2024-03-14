@@ -97,8 +97,6 @@ string process_cpm(Document& cpm){
     if (number_containers == 0) {
         spdlog::error("No containers received!");
         return "[]";
-    } else {
-        spdlog::warn("Number of containers: {}", number_containers);
     }
 
     // look for the perceivedObjectContainer and sensorInformationContainer

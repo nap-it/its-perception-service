@@ -43,6 +43,7 @@ string dds_pub_topic;
 vector<string> dds_sub_topics; 
 bool dds_enable_publish;
 bool dds_enable_subscribe;
+int domain_id = 0;
 
 //MQTT variables
 MqttWrapper* mqtt_server;
@@ -62,7 +63,8 @@ void readConfigFile(const string& path){
     dds_enable_publish = reader.GetBoolean("dds-processing", "enable_publisher", true);
     dds_enable_subscribe = reader.GetBoolean("dds-processing", "enable_subscriber", true);
     dds_pub_topic = reader.Get("general", "topic_objects_publish", "objects");
-    string dds_sub_topic = reader.Get("general", "topic_cpm_subscribe", "vanetza/in/cpm,vanetza/out/cpm");
+    string dds_sub_topic = reader.Get("general", "topic_cpm_subscribe", "cps-v2/out/cpm,cps-v2/in/cpm");
+    domain_id = reader.GetInteger("dds", "domain_id", 0);
 
     // Split the string by comma to get individual topics
     std::string topic;
@@ -77,19 +79,19 @@ void readConfigFile(const string& path){
     //MQTT
     mqtt_enable_publish = reader.GetBoolean("mqtt-processing", "enable_publisher", true);
     mqtt_enable_subscribe = reader.GetBoolean("mqtt-processing", "enable_subscriber", false);
-    mqtt_pub_topic = reader.Get("mqtt-processing", "topic_objects_publish", "objects");
-    mqtt_sub_topic = reader.Get("mqtt-processing", "topic_cpm_subscribe", "vanetza/in/cpm");
+    mqtt_pub_topic = reader.Get("general", "topic_objects_publish", "objects");
+    mqtt_sub_topic = reader.Get("general", "topic_cpm_subscribe", "vanetza/in/cpm");
 }
 
 data_mqtt_server getMqttData(const string& path, bool mqtt_enable_subscribe){
     data_mqtt_server data_mqtt;
     INIReader reader (path);
 
-    string host = reader.Get("mqtt-processing", "host", "atcll-p35-apu.nap.av.it.pt");
-    int port = reader.GetInteger("mqtt-processing", "port", 1883);
+    string host = reader.Get("mqtt-processing", "host", "localhost");
+    int port = reader.GetInteger("mqtt", "port", 1883);
 
     data_mqtt.address = "tcp://" + host + ":" + to_string(port);
-    data_mqtt.client_id = "sever-processing";
+    data_mqtt.client_id = "cpm-processing";
     data_mqtt.publish_topic = mqtt_pub_topic;
     if (mqtt_enable_subscribe) {
         string sub_topic = mqtt_sub_topic;
@@ -115,12 +117,12 @@ void dds_handler(string topic, const string& response){
 
     string cpmJson;
 
-    if(topic == "vanetza/out/cpm"){
+    if(topic == "cps-v2/out/cpm"){
         cpm.Parse(response.c_str());
         Document innerCpm;
         innerCpm.CopyFrom(cpm["fields"]["cpm"], innerCpm.GetAllocator());
         cpmJson = process_cpm(innerCpm);
-    } else if(topic == "vanetza/in/cpm"){
+    } else if(topic == "cps-v2/in/cpm"){
         cpm.Parse(response.c_str());
         cpmJson = process_cpm(cpm);
     } else {
@@ -128,6 +130,17 @@ void dds_handler(string topic, const string& response){
     }
 
     spdlog::info("Processed message {}", cpmJson);
+
+    if(dds_enable_publish){
+        server->publish(dds_pub_topic, cpmJson);
+        spdlog::info("Published message to DDS topic {} ", dds_pub_topic);
+    }
+
+    if(mqtt_enable_publish){
+        mqtt_server->publish(mqtt_pub_topic, cpmJson);
+        spdlog::info("Published message to MQTT topic {} on host {} ", mqtt_pub_topic, data_mqtt.address);
+    }
+
 }
 
 
@@ -139,7 +152,7 @@ void mqtt_handler(std::string topic, std::string message) {
 
 
 void setup_dds(){
-    server = new Dds("ProcessingServer", 0, dds_handler);
+    server = new Dds("Processing", domain_id, dds_handler);
     server->provision_publisher(dds_pub_topic);
     for (auto& dds_sub_topic : dds_sub_topics){
         server->subscribe(dds_sub_topic);
