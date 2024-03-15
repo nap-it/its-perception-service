@@ -136,7 +136,7 @@ string process_cpm(Document& cpm){
     }
 
     if (!hasPerceivedObjectContainer) {
-        spdlog::info("No objects received!");
+        spdlog::info("No perceived object received!");
         return "";
     }
 
@@ -282,8 +282,9 @@ string process_cpm(Document& cpm){
         string obj_type;
         if (perceivedObjectContainer["containerData"]["perceivedObjects"][i]["classification"][0]["objectClass"].HasMember("vehicleSubClass")) {
             try {
-                int napId = vehicleSubclassType.at(perceivedObjectContainer["containerData"]["perceivedObjects"][i]["classification"][0]["objectClass"]["vehicleSubClass"].GetInt());
-                classification = vehicleSubclassType.at(napId);
+                int napId = perceivedObjectContainer["containerData"]["perceivedObjects"][i]["classification"][0]["objectClass"]["vehicleSubClass"].GetInt();
+                // cout << "IncomingID " << perceivedObjectContainer["containerData"]["perceivedObjects"][i]["classification"][0]["objectClass"]["vehicleSubClass"].GetInt() << ", napId " << napId << " = " << napClassType.at(napId) << endl;
+                classification = napClassType.at(napId);
             }
             catch(...){
                 classification = "unclassified";

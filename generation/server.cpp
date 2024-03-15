@@ -95,7 +95,7 @@ void readConfigFile(const string& path){
 
     exptected_responses = reader.GetInteger("general", "expected_responses", 2);
 
-    stationType = reader.GetInteger("general", "station_type", 15);
+    stationType = reader.GetInteger("general", "stationType", 15);
 }
 
 data_mqtt_server readMqttData(const string& path){
@@ -107,7 +107,7 @@ data_mqtt_server readMqttData(const string& path){
     int port = reader.GetInteger("mqtt", "port", 1883);
 
     data.address = "tcp://" + host + ":" + to_string(port);
-    data.client_id = "server";
+    data.client_id = "cpm-generation";
     data.publish_topic = reader.Get("mqtt", "topic_cpm_publish", "vanetza/in/cpm");
 
     string sub_topic = "vanetza/own/cam";
