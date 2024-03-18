@@ -124,7 +124,10 @@ void on_message_mqtt(std::string topic, std::string message) {
     radarMqttObject obj = json_to_struct(message);
     auto end_jsonToStruct = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
-    // spdlog::info("jsonToStruct: {} microseconds", end_jsonToStruct - start_jsonToStruct);
+    //error in json_to_struct
+    if (obj.objectID == -101) {
+        return;
+    }
 
 
     auto start_serializedObj = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();

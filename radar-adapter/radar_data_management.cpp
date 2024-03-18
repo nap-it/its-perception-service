@@ -14,17 +14,17 @@ radarMqttObject json_to_struct(std::string mqtt_radar_object) {
 
         radarMqttObject obj;
 
-        obj.acceleration = document["acceleration"].GetDouble();
-        obj.classification = document["classification"].GetInt();
-        obj.confidence = document["confidence"].GetInt();
-        obj.heading = document["heading"].GetDouble();
-        obj.latitude = document["latitude"].GetDouble();
-        obj.length = document["length"].GetDouble();
-        obj.longitude = document["longitude"].GetDouble();
-        obj.cloudPersist = document["cloudPersist"].GetBool();
-        obj.objectID = document["objectID"].GetInt();
-        obj.receiverID = document["receiverID"].GetInt();
-        obj.speed = document["speed"].GetDouble();
+        try { obj.acceleration = document["acceleration"].GetDouble(); } catch (std::exception e) { obj.acceleration = 0; }
+        try { obj.classification = document["classification"].GetInt(); } catch (std::exception e) { obj.classification = 0; }
+        try { obj.confidence = document["confidence"].GetInt(); } catch (std::exception e) { obj.confidence = 0; }
+        try { obj.heading = document["heading"].GetDouble(); } catch (std::exception e) { obj.heading = 0; }
+        try { obj.latitude = document["latitude"].GetDouble(); } catch (std::exception e) { obj.latitude = 0; }
+        try { obj.length = document["length"].GetDouble(); } catch (std::exception e) { obj.length = 0; }
+        try { obj.longitude = document["longitude"].GetDouble(); } catch (std::exception e) { obj.longitude = 0; }
+        try { obj.cloudPersist = document["cloudPersist"].GetBool(); } catch (std::exception e) { obj.cloudPersist = false; }
+        try { obj.objectID = document["objectID"].GetInt(); } catch (std::exception e) { obj.objectID = -101; }
+        try { obj.receiverID = document["receiverID"].GetInt(); } catch (std::exception e) { obj.receiverID = -1; }
+        try { obj.speed = document["speed"].GetDouble(); } catch (std::exception e) { obj.speed = 0; }
         unsigned long int timestamp = static_cast<unsigned long int>(document["timestamp"].GetDouble() * 1000) - time2004ms;
         obj.timestamp = timestamp;
 
