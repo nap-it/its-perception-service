@@ -14,9 +14,6 @@
 //struct
 #include "cpm_builder.hpp"
 
-//sensor information
-#include "sensor_info.hpp"
-
 using namespace std;
 using namespace rapidjson;
 
@@ -59,7 +56,7 @@ CpmObjectId getCpmId(int sensorId, int objectId){
     }
 }
 
-void cleanOldObjects(int maxTime){
+void cleanOldObjectsIDs(int maxTime){
     auto currentTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     for (auto it = idMap.begin(); it != idMap.end();){
         if (currentTime - it->second.timestamp > maxTime){
@@ -243,18 +240,20 @@ Document getPerceivedObject(int objectId, vector<int> sensorIDList, int deltaTim
     return perceivedObject;
 }
 
-vector<Document> getPerceivedObjectsList(unsigned long int timestampIts, const vector<Document>& receivedObjs, float cam_latitude, float cam_longitude){
+vector<Document> getPerceivedObjectsList(unsigned long int timestampIts, const map<int, Document>& receivedObjs, float cam_latitude, float cam_longitude, std::mutex& cpmMutex){
+
+    std::lock_guard<std::mutex> lock(cpmMutex);
     vector<Document> perceivedObjectsList;
 
     float multConst = (M_PI / 180);
     float multConst2 = R * cos(cam_latitude * M_PI / 180);
 
-    for (int i = 0; i < receivedObjs.size(); i++){
+    for (auto const& [key, value] : receivedObjs){
 
         auto initialTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
         Document receivedObj;
-        receivedObj.CopyFrom(receivedObjs[i], receivedObj.GetAllocator());
+        receivedObj.CopyFrom(receivedObjs.at(key), receivedObj.GetAllocator());
 
         //received object data variables
         int objectId;
@@ -401,14 +400,14 @@ Document segment(unsigned long int timestampIts, const Document& managementConta
         wrappedCpmContainer.PushBack(containerId2, allocator);
     }
 
-    cpmParameters.AddMember("wrappedCpmContainer", wrappedCpmContainer, allocator);
+    cpmParameters.AddMember("cpmContainers", wrappedCpmContainer, allocator);
 
     cpm.AddMember("cpmParameters", cpmParameters, allocator);
 
     return cpm;
 }
 
-vector<string> generateCPM(const vector<Document>& receivedObjs, float cam_latitude, float cam_longitude, float cam_altitude, int cam_altitude_conf, float cam_heading, bool add_sensor_data, vector<Document>& sensorArray, int stationType){
+vector<string> generateCPM(const map<int, Document>& receivedObjs, float cam_latitude, float cam_longitude, float cam_altitude, int cam_altitude_conf, float cam_heading, bool add_sensor_data, vector<Document>& sensorArray, int stationType, std::mutex& cpmMutex){
 
     vector<string> cpmList;
 
@@ -423,7 +422,7 @@ vector<string> generateCPM(const vector<Document>& receivedObjs, float cam_latit
 
     unsigned long int deltaTime = deltaTime1970 - time2004ms;
 
-    vector<Document> perceivedObjectsList = getPerceivedObjectsList(deltaTime, receivedObjs, cam_latitude, cam_longitude);
+    vector<Document> perceivedObjectsList = getPerceivedObjectsList(deltaTime, receivedObjs, cam_latitude, cam_longitude, cpmMutex);
 
     auto time_after_objs = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 

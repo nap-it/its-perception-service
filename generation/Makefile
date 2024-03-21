@@ -273,30 +273,6 @@ mqttwrapper.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/server.dir/build.make CMakeFiles/server.dir/mqttwrapper.cpp.s
 .PHONY : mqttwrapper.cpp.s
 
-sensor_info.o: sensor_info.cpp.o
-.PHONY : sensor_info.o
-
-# target to build an object file
-sensor_info.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/server.dir/build.make CMakeFiles/server.dir/sensor_info.cpp.o
-.PHONY : sensor_info.cpp.o
-
-sensor_info.i: sensor_info.cpp.i
-.PHONY : sensor_info.i
-
-# target to preprocess a source file
-sensor_info.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/server.dir/build.make CMakeFiles/server.dir/sensor_info.cpp.i
-.PHONY : sensor_info.cpp.i
-
-sensor_info.s: sensor_info.cpp.s
-.PHONY : sensor_info.s
-
-# target to generate assembly for a file
-sensor_info.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/server.dir/build.make CMakeFiles/server.dir/sensor_info.cpp.s
-.PHONY : sensor_info.cpp.s
-
 server.o: server.cpp.o
 .PHONY : server.o
 
@@ -348,9 +324,6 @@ help:
 	@echo "... mqttwrapper.o"
 	@echo "... mqttwrapper.i"
 	@echo "... mqttwrapper.s"
-	@echo "... sensor_info.o"
-	@echo "... sensor_info.i"
-	@echo "... sensor_info.s"
 	@echo "... server.o"
 	@echo "... server.i"
 	@echo "... server.s"

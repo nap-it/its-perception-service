@@ -103,13 +103,15 @@ string process_cpm(Document& cpm){
     // calculate cpm age
     int ageCpm = localGenDeltaTime - cpm["generationDeltaTime"].GetInt64();
 
-    spdlog::info("localGenDeltaTime {} - generationDeltaTime {} = ageCpm {}", localGenDeltaTime, cpm["generationDeltaTime"].GetInt64(), ageCpm);
+    // spdlog::info("localGenDeltaTime {} - generationDeltaTime {} = ageCpm {}", localGenDeltaTime, cpm["generationDeltaTime"].GetInt64(), ageCpm);
 
-    int number_containers = cpm["cpmParameters"]["wrappedCpmContainer"].GetArray().Size();
+    int number_containers = cpm["cpmParameters"]["cpmContainers"].GetArray().Size();
 
     if (number_containers == 0) {
         spdlog::error("No containers received!");
         return "";
+    } else {
+        // spdlog::info("Number of containers: {}", number_containers);
     }
 
     // look for the perceivedObjectContainer and sensorInformationContainer
@@ -119,19 +121,19 @@ string process_cpm(Document& cpm){
     auto allocator = perceivedObjectContainer.GetAllocator();
     
     for (int i = 0; i < number_containers; i++) {
-        if (cpm["cpmParameters"]["wrappedCpmContainer"][i]["containerId"].GetInt() == 5) {
-            perceivedObjectContainer.CopyFrom(cpm["cpmParameters"]["wrappedCpmContainer"][i], allocator);
+        if (cpm["cpmParameters"]["cpmContainers"][i]["containerId"].GetInt() == 5) {
+            perceivedObjectContainer.CopyFrom(cpm["cpmParameters"]["cpmContainers"][i], allocator);
             hasPerceivedObjectContainer = true;
-            spdlog::info("PerceivedObjectContainer found!");
+            // spdlog::info("PerceivedObjectContainer found!");
         }
-        if (cpm["cpmParameters"]["wrappedCpmContainer"][i]["containerId"].GetInt() == 2) {
+        if (cpm["cpmParameters"]["cpmContainers"][i]["containerId"].GetInt() == 2) {
             isRSU = true;
 
         }
-        if (cpm["cpmParameters"]["wrappedCpmContainer"][i]["containerId"].GetInt() == 3) {
-            sensorInformationContainer.CopyFrom(cpm["cpmParameters"]["wrappedCpmContainer"][i], sensorInformationContainer.GetAllocator());
+        if (cpm["cpmParameters"]["cpmContainers"][i]["containerId"].GetInt() == 3) {
+            sensorInformationContainer.CopyFrom(cpm["cpmParameters"]["cpmContainers"][i], sensorInformationContainer.GetAllocator());
             hasSensorInformationContainer = true;
-            spdlog::info("SensorInformationContainer found!");
+            // spdlog::info("SensorInformationContainer found!");
         }
     }
 
@@ -174,32 +176,6 @@ string process_cpm(Document& cpm){
         return "";
     }
 
-
-    // map<int, string> sensor_info;
-    // if (hasSensorInformationContainer) {
-    //     spdlog::warn("SensorInformationContainer processing...");
-    //     int size = sensorInformationContainer["containerData"].GetArray().Size();
-    //     //cout << size << flush << endl;
-    //     for (int i = 0; i < size; i++) {
-    //         //cout << "dentro do for" << endl;
-    //         int sensor_id = sensorInformationContainer["containerData"][i]["sensorID"].GetInt();
-    //         //cout << "ID " << sensor_id << endl;
-    //         int sensor_type = sensorInformationContainer["containerData"][i]["type"].GetInt();
-    //         //cout << "Type " << sensor_type << endl;
-    //         try {
-    //             //cout << "Type " << sensor_type << endl;
-    //             sensor_info.insert(pair<int,string>(sensor_id, sensorType[sensor_type]));
-    //             //cout << "sensorType  " << sensor_info[sensor_id] << endl;
-    //         }
-    //         catch (int n) {
-    //             spdlog::error("Unknown sensor type");
-    //         }
-    //     }
-    // }
-
-    
-    spdlog::info("Processing perceived objects...");
-
     string cpm_objects_str = "[";
 
     for(int i=0; i<number_objects; i++)
@@ -208,7 +184,7 @@ string process_cpm(Document& cpm){
         Document json_obj(rapidjson::kObjectType);
         auto objAlloc = json_obj.GetAllocator();
         json_obj.AddMember("id", perceivedObjectContainer["containerData"]["perceivedObjects"][i]["objectID"].GetInt(), objAlloc);
-        json_obj.AddMember("age", ageCpm + perceivedObjectContainer["containerData"]["perceivedObjects"][i]["measurementDeltaTime"].GetInt64(), objAlloc);
+        json_obj.AddMember("age", ageCpm + abs(perceivedObjectContainer["containerData"]["perceivedObjects"][i]["measurementDeltaTime"].GetInt64()), objAlloc);
         json_obj.AddMember("objectPerceptionQuality", perceivedObjectContainer["containerData"]["perceivedObjects"][i]["objectPerceptionQuality"].GetDouble(), objAlloc);
         json_obj.AddMember("detectionStationType", sender_stationType, objAlloc);
 

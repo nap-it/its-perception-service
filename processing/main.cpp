@@ -112,7 +112,7 @@ string json_to_string(Document& json){
 
 void dds_handler(string topic, const string& response){
 
-    spdlog::info("DDS Received message {}", response);
+    // spdlog::info("DDS Received message {}", response);
     Document cpm;
 
     string cpmJson;
@@ -189,11 +189,7 @@ int main() {
     }
 
     while (1){
-        // string temp = R"({"generationDeltaTime":637329278612,"cpmParameters":{"managementContainer":{"referenceTime":637329278612,"referencePosition":{"latitude":40.630279541015625,"longitude":-8.654230117797852,"altitude":{"altitudeValue":63.79999923706055,"altitudeConfidence":9},"positionConfidenceEllipse":{"semiMajorConfidence":4095,"semiMinorConfidence":4095,"semiMajorOrientation":0.0}}},"wrappedCpmContainer":[{"containerId":1,"containerData":{"orientationAngle":9.100000381469727}},{"containerId":5,"containerData":{"numberOfPerceivedObjects":1,"perceivedObjects":[{"objectID":2,"sensorIDList":[2],"measurementDeltaTime":129,"objectPerceptionQuality":82,"position":{"xCoordinate":{"value":18.83220100402832,"confidence":1},"yCoordinate":{"value":1.2725249528884888,"confidence":1}},"xSpeed":{"value":16383.0,"confidence":1},"ySpeed":{"value":16383.0,"confidence":1},"xAcceleration":{"longitudinalAccelerationValue":161.0,"longitudinalAccelerationConfidence":102},"yAcceleration":{"lateralAccelerationValue":161.0,"lateralAccelerationConfidence":102},"classification":[{"objectClass":{"vehicleSubClass":5},"confidence":101}]}]}}]}})";
 
-        // processed_cpm = process_cpm(temp);
-
-        // spdlog::info("Processed message {}", processed_cpm);
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 

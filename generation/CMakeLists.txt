@@ -22,8 +22,6 @@ file(GLOB FASTDDS_SRC
 add_executable(server 
     server.cpp 
     config_reader.hpp 
-    sensor_info.hpp 
-    sensor_info.cpp 
     cpm_builder.hpp 
     cpm_builder.cpp 
     mqttwrapper.cpp 

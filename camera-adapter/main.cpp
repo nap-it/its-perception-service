@@ -50,7 +50,9 @@ mqtt_server readConfigFile(const std::string& path)
 }
 
 void clean_last_sent(std::map<int, cameraMqttObject> * last_sent_dict, unsigned long int current_time) {
+    // cout << "Cleaning last_sent_dict..." << endl;
     for(auto it = last_sent_dict->begin(); it != last_sent_dict->end(); ) {
+        // cout << "id: " << it->first << " timestamp: " << it->second.timestamp << endl;
         if (current_time - it->second.timestamp > 15000) {
             it = last_sent_dict->erase(it);
         } else {
@@ -59,57 +61,8 @@ void clean_last_sent(std::map<int, cameraMqttObject> * last_sent_dict, unsigned 
     }
 }
 
+//unused
 void on_message_dds(std::string topic, std::string message) {
-    // std::cout << "Message: " << message << " RECEIVED FROM TOPIC " << topic << std::endl;
-    if (topic == "to/adapters") {
-        // auto start_prepareReply = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-        // string reply = prepare_reply(message, &lock_mutex, &objects_to_send, &last_sent);
-
-        // auto end_prepareReply = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-        // spdlog::info("prepareReply: {} microseconds", end_prepareReply - start_prepareReply);
-
-        auto start_getReply = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-
-        string reply2 = get_reply(message, &lock_mutex, &serialized_objects_to_send);
-
-        auto end_getReply = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-        spdlog::info("getReply: {} microseconds", end_getReply - start_getReply);
-
-        //third reply
-
-        // auto start_reply3 = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-
-        // rapidjson::Document requestJson;
-        // requestJson.Parse(message.c_str());
-
-        // stringstream reply3;
-        // reply3  << "{\"requestID\":" << requestJson["requestID"].GetUint64() << ",\"numberObjects\":" << requestJson["numberObjects"].GetInt() << ",\"objects\":[";
-
-        // //remove last comma from str_objects_to_send
-        // string str_objects_to_send_str = str_objects_to_send.str();
-        
-        // if (str_objects_to_send_str.back() == ',') str_objects_to_send_str.pop_back();
-        // reply3 << str_objects_to_send_str << "]}";
-
-        // auto end_reply3 = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-
-        // spdlog::info("reply3: {} microseconds", end_reply3 - start_reply3);
-        
-        auto start_publish = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-        dds_->publish("from/adapters", reply2);
-        auto end_publish = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-        spdlog::info("publish {} objects: {} microseconds", n_objects_to_send, end_publish - start_publish);
-        
-        // clear "objects_to_send"
-        std::lock_guard guard(lock_mutex);
-        objects_to_send.clear();
-        serialized_objects_to_send.clear();
-        str_objects_to_send.str("");
-        n_objects_to_send = 0;
-
-        unsigned long int now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - time2004ms;
-        clean_last_sent(&last_sent, now);
-    }
 }
 
 void on_message_mqtt(std::string topic, std::string message) {
@@ -124,37 +77,72 @@ void on_message_mqtt(std::string topic, std::string message) {
         bool is_newInfo = calc_is_new_info(&lock_mutex, &last_sent, obj);
 
         if (is_newInfo) {
-            // save to objects to send objects
-            std::lock_guard guard(lock_mutex);
-            objects_to_send[obj.objectID] = obj;
             auto first = serialized_list.front();
-            serialized_objects_to_send[obj.objectID] = first;
+            last_sent.insert_or_assign(obj.objectID, obj);
 
-            str_objects_to_send << first << ",";
-            n_objects_to_send++;
+            try{
+                dds_->publish("from/adapters", first);
+                spdlog::info("Object with ID {} published", obj.objectID);
+            } catch (std::exception& e) {
+                spdlog::error("Error publishing to DDS: {}", e.what());
+            }
 
-        }
-
+        } 
+        
         camera_objects.pop_front();
         serialized_list.pop_front();
     }
 
-    // for(auto obj : camera_objects) {
-    //     bool is_newInfo = calc_is_new_info(&lock_mutex, &last_sent, obj);
-
-    //     if (is_newInfo) {
-    //         // save to objects to send objects
-    //         std::lock_guard guard(lock_mutex);
-    //         objects_to_send[obj.objectID] = obj;
-    //     }
-    // }
+    unsigned long int now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - time2004ms;
+    clean_last_sent(&last_sent, now);
 }
 
 int main() {
-    str_objects_to_send.str("");
 
     // Read config file
     mqtt_server mqttServerInfo = readConfigFile("/config.ini");
+
+    // DDS
+    cout << "Setting up DDS..." << endl;
+    dds_ = new Dds("RadarAdapter", domain_id, on_message_dds);
+    dds_->provision_publisher("from/adapters");
+    // dds_->subscribe("to/adapters");
+    //wait half a second for the subscriber to be ready
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    cout << "Domain ID: " << domain_id << ", publishing to 'from/adapters'" << endl;
+    cout << "DDS set up" << endl;
+    
+    cout << "Sending sensor data to DDS..."<< endl;
+
+    // Send sensor data to DDS
+    rapidjson::Document sensorInfo;
+    sensorInfo.SetObject();
+
+    rapidjson::Document::AllocatorType& allocator = sensorInfo.GetAllocator();
+
+    sensorInfo.AddMember("sensorID", 2, allocator);
+    sensorInfo.AddMember("sensorType", 12, allocator);
+    sensorInfo.AddMember("shadowingApplies", false, allocator);
+
+    rapidjson::Value perceptionRegionShapeObj(rapidjson::kObjectType);  
+    perceptionRegionShapeObj.AddMember("semiMajorRangeLength", 0, allocator);
+    perceptionRegionShapeObj.AddMember("semiMinorRangeLength", 0, allocator);
+    perceptionRegionShapeObj.AddMember("semiMajorRangeOrientation", 0, allocator);
+    perceptionRegionShapeObj.AddMember("range", 10, allocator);
+    perceptionRegionShapeObj.AddMember("stationaryHorizontalOpeningAngleStart", 3601, allocator);
+    perceptionRegionShapeObj.AddMember("stationaryHorizontalOpeningAngleEnd", 3601, allocator);
+
+    sensorInfo.AddMember("perceptionRegionShape", perceptionRegionShapeObj, allocator);
+
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    sensorInfo.Accept(writer);
+
+    dds_->publish("from/adapters", buffer.GetString());
+
+    cout << "Sensor data sent to DDS" << endl;
+
+    cout << "Setting up MQTT..." << endl;
 
     MqttWrapper * mqtt_wrapper = new MqttWrapper(mqttServerInfo, on_message_mqtt);
 
@@ -163,11 +151,7 @@ int main() {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
-    // DDS
-    dds_ = new Dds("CameraAdapter", domain_id, on_message_dds);
-    dds_->provision_publisher("from/adapters");
-    dds_->subscribe("to/adapters");
-
+    //Keep the main thread alive
     while (1) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
