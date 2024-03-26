@@ -17,6 +17,9 @@ services:
       deploymentslan:
 
   radar-adapter:
+    depends_on:
+      cpm-generation:
+        condition: service_started
     image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/radar-adapter:latest
     restart: always
     volumes:
@@ -25,6 +28,9 @@ services:
       deploymentslan:
 
   camera-adapter:
+    depends_on:
+      cpm-generation:
+        condition: service_started
     image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/camera-adapter:latest
     restart: always
     volumes:

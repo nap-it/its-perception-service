@@ -21,8 +21,8 @@ COPY *.cpp /camera-adapter/
 COPY *.h /camera-adapter/
 COPY *.hpp /camera-adapter/
 COPY CMakeLists.txt /camera-adapter/
-COPY rapidjson /camera-adapter/rapidjson
-COPY spdlog /camera-adapter/spdlog
+# COPY rapidjson /camera-adapter/rapidjson
+# COPY spdlog /camera-adapter/spdlog
 COPY fastdds /camera-adapter/fastdds
 
 RUN git clone https://github.com/eclipse/paho.mqtt.c.git
@@ -41,11 +41,10 @@ RUN cmake -Bbuild -H. -DPAHO_BUILD_STATIC=ON \
 RUN cmake --build build/ --target install
 RUN ldconfig
 
-# WORKDIR /camera-adapter
-# RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/rapidjson.git
-# RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/spdlog.git
-
 WORKDIR /camera-adapter
+RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/rapidjson.git
+RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/spdlog.git
+
 RUN cmake .
 RUN cmake --build .
 RUN chmod +x main
