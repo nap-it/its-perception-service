@@ -29,6 +29,8 @@ const int max_message_size = 1500;
 const int header_manag_stat_size = 38;
 const int R = 6371000;
 const long int time2004ms = 1072915200000;
+const double multConst = (M_PI / 180);
+
 
 CpmObjectId createCpmId(int combinedId){
     CpmObjectId cpm_id;
@@ -240,20 +242,18 @@ Document getPerceivedObject(int objectId, vector<int> sensorIDList, int deltaTim
     return perceivedObject;
 }
 
-vector<Document> getPerceivedObjectsList(unsigned long int timestampIts, const map<int, Document>& receivedObjs, float cam_latitude, float cam_longitude, std::mutex& cpmMutex){
+vector<Document> getPerceivedObjectsList(unsigned long int timestampIts, const vector<Document>& receivedObjs, float cam_latitude, float cam_longitude){
 
-    std::lock_guard<std::mutex> lock(cpmMutex);
     vector<Document> perceivedObjectsList;
 
-    float multConst = (M_PI / 180);
-    float multConst2 = R * cos(cam_latitude * M_PI / 180);
+    double multConst2 = R * cos(cam_latitude * M_PI / 180);
 
-    for (auto const& [key, value] : receivedObjs){
+    for (int i = 0; i < receivedObjs.size(); i++){
 
         auto initialTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
         Document receivedObj;
-        receivedObj.CopyFrom(receivedObjs.at(key), receivedObj.GetAllocator());
+        receivedObj.CopyFrom(receivedObjs[i], receivedObj.GetAllocator());
 
         //received object data variables
         int objectId;
@@ -407,8 +407,9 @@ Document segment(unsigned long int timestampIts, const Document& managementConta
     return cpm;
 }
 
-vector<string> generateCPM(const map<int, Document>& receivedObjs, float cam_latitude, float cam_longitude, float cam_altitude, int cam_altitude_conf, float cam_heading, bool add_sensor_data, vector<Document>& sensorArray, int stationType, std::mutex& cpmMutex){
+vector<string> generateCPM(const vector<Document>& receivedObjs, float cam_latitude, float cam_longitude, float cam_altitude, int cam_altitude_conf, float cam_heading, bool add_sensor_data, vector<Document>& sensorArray, int stationType, std::mutex& cpmMutex){
 
+    // std::lock_guard<std::mutex> lock(cpmMutex);
     vector<string> cpmList;
 
     Document cpm;
@@ -422,7 +423,9 @@ vector<string> generateCPM(const map<int, Document>& receivedObjs, float cam_lat
 
     unsigned long int deltaTime = deltaTime1970 - time2004ms;
 
-    vector<Document> perceivedObjectsList = getPerceivedObjectsList(deltaTime, receivedObjs, cam_latitude, cam_longitude, cpmMutex);
+
+    
+    vector<Document> perceivedObjectsList = getPerceivedObjectsList(deltaTime, receivedObjs, cam_latitude, cam_longitude);
 
     auto time_after_objs = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 

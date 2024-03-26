@@ -100,7 +100,7 @@ bool calc_is_new_info(std::mutex* lock, std::map<int, cameraMqttObject> *dict, c
     double delta_speed = fabs(dict->at(obj_id).speed - camera_object.speed);
 
     // Heading variation between the present information and the last sent in a CPM
-    double delta_heading = fabs(dict->at(obj_id).heading - camera_object.heading);
+    double delta_heading = fabs(dict->at(obj_id).speed - camera_object.heading);
 
     // Calculation of newInfo (according to the CPM rules)
     if ((delta_timestamp > 1000) or (delta_distance > 4) or (delta_speed > 0.5) or (delta_heading > 4)) {
@@ -138,6 +138,91 @@ double toRadians(double degrees) {
     return degrees * M_PI180;
 }
 
+std::string prepare_reply(const std::string& request, std::mutex* lock, std::map<int, cameraMqttObject> * objects, std::map<int, cameraMqttObject> * dict_last_sent) {
+    // parse request data
+    rapidjson::Document requestJson;
+    requestJson.Parse(request.c_str());
+
+    unsigned long int requestID = 0;
+    int numberObjects = 0;
+    if (requestJson.HasMember("requestID")){
+        requestID = requestJson["requestID"].GetUint64();
+    }
+    if (requestJson.HasMember("numberObjects")){
+        numberObjects = requestJson["numberObjects"].GetInt();
+    }
+
+//    spdlog::info("RequestID: \"{}\"\n", requestID);
+//    spdlog::info("numberObjects: \"{}\"\n", numberObjects);
+
+    // generate reply json
+    rapidjson::Document replyJson = rapidjson::Document();
+    replyJson.SetObject();
+    rapidjson::Document::AllocatorType& allocator = replyJson.GetAllocator();
+    replyJson.AddMember("requestID", requestID, allocator);
+    replyJson.AddMember("numberObjects", numberObjects, allocator);
+
+    rapidjson::Value objects_json(rapidjson::kArrayType);
+
+    std::lock_guard guard(*lock);
+    for (auto const& [key, value] : *objects) {
+        rapidjson::Value tmpObject(rapidjson::kObjectType);
+        tmpObject.AddMember("heading", value.heading, allocator);
+        tmpObject.AddMember("latitude", value.latitude, allocator);
+        tmpObject.AddMember("longitude", value.longitude, allocator);
+        tmpObject.AddMember("objID", value.objectID, allocator);
+        tmpObject.AddMember("sensorID", 2, allocator);
+        tmpObject.AddMember("speed", value.speed, allocator);
+        tmpObject.AddMember("timestamp", value.timestamp, allocator);
+        tmpObject.AddMember("confidence", value.confidence, allocator);
+
+        // Classification
+        rapidjson::Value classificationArray(rapidjson::kArrayType);
+        rapidjson::Value classificationObject(rapidjson::kObjectType);
+        rapidjson::Value objectClassObject(rapidjson::kObjectType);
+        objectClassObject.AddMember("vehicleSubClass", value.classification, allocator);
+        classificationObject.AddMember("objectClass", objectClassObject, allocator);
+        classificationObject.AddMember("confidence", 101, allocator);   // unavailable (101)
+        classificationArray.PushBack(classificationObject, allocator);
+        tmpObject.AddMember("classification", classificationArray, allocator);
+
+        objects_json.PushBack(tmpObject, allocator);
+
+        // update "last_sent" data
+        dict_last_sent->insert_or_assign(key, value);
+    }
+
+    // add "objects_json" to "replyJson" document
+    replyJson.AddMember("objects", objects_json, allocator);
+
+    return jsonToString(replyJson);
+}
+
+std::string get_reply(const std::string& request, std::mutex* lock, std::map<int, std::string> * serialized_objects){
+    std::lock_guard guard(*lock);
+    std::stringstream replyStream;
+
+    rapidjson::Document requestJson;
+    requestJson.Parse(request.c_str());
+
+    unsigned long int requestID = 0;
+    int numberObjects = 0;
+    if (requestJson.HasMember("requestID")){
+        requestID = requestJson["requestID"].GetUint64();
+    }
+    if (requestJson.HasMember("numberObjects")){
+        numberObjects = requestJson["numberObjects"].GetInt();
+    }
+
+    replyStream << "{\"requestID\":" << requestID << ",\"numberObjects\":" << numberObjects << ",\"objects\":[";
+    for(auto const& [key, value] : *serialized_objects) {
+        replyStream << value << ",";
+    }
+    std::string reply = replyStream.str();
+    if (reply.back() == ',') reply.pop_back();
+    reply += "]}";
+    return reply;
+}
 // Convert RapidJSON document to string
 std::string jsonToString(const rapidjson::Document& d) {
     rapidjson::StringBuffer buffer;

@@ -31,4 +31,7 @@ bool calc_is_new_info(std::mutex* lock, std::map<int, cameraMqttObject> * dict, 
 double calculateDistance(double lat1, double lon1, double lat2, double lon2);
 double toRadians(double degrees);
 std::string jsonToString(const rapidjson::Document& d);
+std::string prepare_reply(const std::string& request, std::mutex* lock, std::map<int, cameraMqttObject> * objects, std::map<int, cameraMqttObject> * dict_last_sent);
+std::string get_reply(const std::string& request, std::mutex* lock, std::map<int, std::string> * serialized_objects);
+
 #endif //CAMERA_ADAPTER_CAMERA_DATA_MANAGEMENT_H
