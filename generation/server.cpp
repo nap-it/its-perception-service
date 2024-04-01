@@ -44,6 +44,13 @@ int domain_id = 0;
 data_mqtt_server data_mqtt;
 bool mqtt_enable_publish = false;
 
+//CAM variables
+float cam_latitude = 40.63028;
+float cam_longitude =  -8.65423;
+float cam_altitude = 63.8;
+int cam_alitude_conf = 9;
+float cam_heading = 9.1;
+
 //globals
 int exptected_responses = 0;
 int received_responses = 0;
@@ -62,13 +69,9 @@ unsigned long int reply_instance = 0;
 int maxObjectAge = 0;
 int stationType = 0;
 vector<Document> sensorInfo = vector<Document>();
+int debug = 0;
 
-//CAM variables
-float cam_latitude = 40.63028;
-float cam_longitude =  -8.65423;
-float cam_altitude = 63.8;
-int cam_alitude_conf = 9;
-float cam_heading = 9.1;
+
 
 vector<Document> received_objects = vector<Document>();
 
@@ -94,6 +97,8 @@ void readConfigFile(const string& path){
     exptected_responses = reader.GetInteger("general", "expected_responses", 2);
 
     stationType = reader.GetInteger("general", "stationType", 15);
+    debug = reader.GetInteger("general", "debug", 0);
+
 }
 
 data_mqtt_server readMqttData(const string& path){
@@ -141,14 +146,14 @@ void adapter_handler(const string& response){
 
     unsigned long int total = reply_instance - request_instance;
 
-    spdlog::warn("Time waiting for reply: {}", (total));
+    // spdlog::warn("Time waiting for reply: {}", (total));
 
     Document doc;
-    // spdlog::info("Received response from adapter: {}", response);
     doc.Parse(response.c_str());
 
     if (doc.HasMember("sensorType") && doc["sensorType"].IsInt()) {
         sensorInfo.push_back(move(doc));
+        printJsonVector(sensorInfo);
         return;
     }
     
@@ -186,7 +191,7 @@ void adapter_handler(const string& response){
     cv.notify_all();
 
     auto end_handle_adapter = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-    spdlog::info("Time to handle adapter response: {}", (end_handle_adapter - start_handle_adapter));
+    // spdlog::info("Time to handle adapter response: {}", (end_handle_adapter - start_handle_adapter));
 
 }
 
@@ -214,6 +219,8 @@ void ownCam_handler(const string& response){
         cam_heading = doc["heading"].GetFloat();
     }
 
+    spdlog::debug("CAM: latitude: {}, longitude: {}, altitude: {}, altitudeConf: {}, heading: {}", cam_latitude, cam_longitude, cam_altitude, cam_alitude_conf, cam_heading);
+
 }
 
 
@@ -229,7 +236,7 @@ void handle_response(string topic, const string& response){
 }
 
 void on_message_mqtt(std::string topic, std::string message) {
-    spdlog::info("Received CAM");
+    spdlog::debug("Received CAM");
     if(topic == "vanetza/own/cam"){
         ownCam_handler(message);
     }   
@@ -246,15 +253,20 @@ void setup_dds(){
 
 
 int main() {
-    spdlog::set_level(spdlog::level::debug); // Set global log level to debug
+    
     cout << "Starting server..." << endl;
     readConfigFile("/config.ini");
-    cout << "Setting up MQTT..." << endl;
-    data_mqtt = readMqttData("/config.ini");
-    MqttWrapper* mqtt_server = new MqttWrapper(data_mqtt, on_message_mqtt);
-    while (!mqtt_server->is_connected()){
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    if(debug) {
+        spdlog::set_level(spdlog::level::debug);
+    } else {
+        spdlog::set_level(spdlog::level::info);
     }
+    // cout << "Setting up MQTT..." << endl;
+    // data_mqtt = readMqttData("/config.ini");
+    // MqttWrapper* mqtt_server = new MqttWrapper(data_mqtt, on_message_mqtt);
+    // while (!mqtt_server->is_connected()){
+    //     std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    // }
     cout << "Setting up DDS..." << endl;
     setup_dds();
     cout << "Expected responses: " << exptected_responses << endl;
@@ -262,13 +274,16 @@ int main() {
     last_request = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()) - request_interval;
     last_sensor = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()) - add_sensor_interval;
     bool add_sensor_data = true;
+    vector<string> cpmList = vector<string>();
+
+    
     while(1) {
         try {
             auto current_request = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
 
             //Check if it is time to request data
             if (current_request - last_request >= request_interval) {
-                spdlog::info("-------------------- New request --------------------");
+                spdlog::debug("-------------------- New request --------------------");
 
                 last_request = current_request;
 
@@ -287,11 +302,11 @@ int main() {
 
                 // spdlog::warn("Published request in instant: {}", ending_time_after_publish);
 
-                spdlog::info("Time to publish request: {}us with ID {}", (ending_time_after_publish - starting_time_before_request), timestamp_milliseconds);
+                spdlog::debug("Time to publish request: {}us with ID {}", (ending_time_after_publish - starting_time_before_request), timestamp_milliseconds);
 
                 std::unique_lock<std::mutex> lk(mtx);
                 if (!cv.wait_for(lk, request_deadline, []{return received_responses >= exptected_responses;})) {
-                    spdlog::error("Request deadline reached or received responses: {}", received_responses);
+                    spdlog::warn("Request deadline reached or received responses: {}", received_responses);
                 }  
 
                 // //Wait for responses or deadline
@@ -316,9 +331,10 @@ int main() {
                 //Received objects processing
                 vector<string> cpmList = generateCPM(received_objects, cam_latitude, cam_longitude, cam_altitude, cam_alitude_conf, cam_heading, add_sensor_data, sensorInfo, stationType, mtx);
                 
+                
                 auto ending_time_after_processing = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
-                spdlog::info("FULL time to generate CPM: {}", (ending_time_after_processing - starting_time_before_processing));
+                spdlog::debug("FULL time to generate CPM: {}", (ending_time_after_processing - starting_time_before_processing));
 
 
                 for (const auto& cpm_str : cpmList) {
@@ -329,26 +345,31 @@ int main() {
 
                     auto ending_time_after_publish_dds = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
-                    spdlog::info("Time to publish to DDS: {}", (ending_time_after_publish_dds - starting_time_before_publish_dds));
+                    spdlog::debug("Time to publish to DDS: {}", (ending_time_after_publish_dds - starting_time_before_publish_dds));
 
-                    // spdlog::info("CPM: {}", cpm_str);
+                    spdlog::debug("CPM: {}", cpm_str);
 
                     //Publish CPM to MQTT
 
-                    auto starting_time_before_publish_mqtt = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-                    if (mqtt_enable_publish) { 
-                        mqtt_server->publish(data_mqtt.publish_topic, cpm_str);
-                        auto ending_time_after_publish_mqtt = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-                        spdlog::info("Time to publish to MQTT: {}", (ending_time_after_publish_mqtt - starting_time_before_publish_mqtt));
-                    }
+                    // auto starting_time_before_publish_mqtt = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+                    // if (mqtt_enable_publish) { 
+                    //     mqtt_server->publish(data_mqtt.publish_topic, cpm_str);
+                    //     auto ending_time_after_publish_mqtt = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+                    //     spdlog::debug("Time to publish to MQTT: {}", (ending_time_after_publish_mqtt - starting_time_before_publish_mqtt));
+                    // }
                 }
+
+                //Clean and reset everything
+
                 received_objects.clear();
+
+                cpmList.clear();
 
                 cleanOldObjectsIDs(maxObjectAge);
 
                 auto ending_time = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
-                spdlog::info("Total time: {}", (ending_time - starting_time_before_request));
+                spdlog::info("Total time to publish CPM: {} with ID {}", (ending_time - starting_time_before_request), timestamp_milliseconds);
 
                 //Sleep for the rest of the interval until next request to avoid busy waiting
                 auto now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());

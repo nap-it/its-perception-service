@@ -21,8 +21,8 @@ COPY *.cpp /radar-adapter/
 COPY *.h /radar-adapter/
 COPY *.hpp /radar-adapter/
 COPY CMakeLists.txt /radar-adapter/
-# COPY rapidjson /radar-adapter/rapidjson
-# COPY spdlog /radar-adapter/spdlog
+COPY rapidjson /radar-adapter/rapidjson
+COPY spdlog /radar-adapter/spdlog
 COPY fastdds /radar-adapter/fastdds
 
 RUN git clone https://github.com/eclipse/paho.mqtt.c.git
@@ -41,10 +41,11 @@ RUN cmake -Bbuild -H. -DPAHO_BUILD_STATIC=ON \
 RUN cmake --build build/ --target install
 RUN ldconfig
 
-WORKDIR /radar-adapter
-RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/rapidjson.git
-RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/spdlog.git
+# WORKDIR /radar-adapter
+# RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/rapidjson.git
+# RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/spdlog.git
 
+WORKDIR /radar-adapter
 RUN cmake .
 RUN cmake --build .
 RUN chmod +x main

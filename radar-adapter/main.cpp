@@ -18,6 +18,7 @@ stringstream str_objects_to_send;                     // shared between threads
 int n_objects_to_send = 0;                    // shared between threads
 std::mutex lock_mutex;
 const long int time2004ms = 1072915200000;
+int debug = 0;
 
 //DDS
 Dds* dds_;
@@ -46,6 +47,8 @@ mqtt_server readConfigFile(const std::string& path)
     mqttInfo.n_retry_attempts= reader.GetInteger("mqtt", "n_retry_attempts", 5);
 
     domain_id = reader.GetInteger("dds", "domain_id", 0);
+
+    debug = reader.GetInteger("general", "debug", 0);
 
     return mqttInfo;
 }
@@ -80,7 +83,7 @@ void on_message_dds(std::string topic, std::string message) {
         string reply2 = get_reply(message, &lock_mutex, &serialized_objects_to_send);
 
         auto end_getReply = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-        spdlog::info("getReply: {} microseconds", end_getReply - start_getReply);
+        spdlog::debug("getReply: {} microseconds", end_getReply - start_getReply);
 
         //third reply
 
@@ -165,9 +168,13 @@ void on_message_mqtt(std::string topic, std::string message) {
 }
 
 int main() {
-    spdlog::set_level(spdlog::level::debug); // Set global log level to debug
     // Read config file
     mqtt_server mqttServerInfo = readConfigFile("/config.ini");
+    if(debug) {
+        spdlog::set_level(spdlog::level::debug); // Set global log level to debug
+    } else {
+        spdlog::set_level(spdlog::level::info); // Set global log level to info
+    }
 
     // DDS
     cout << "Setting up DDS..." << endl;

@@ -103,7 +103,7 @@ string process_cpm(Document& cpm){
     // calculate cpm age
     int ageCpm = localGenDeltaTime - cpm["generationDeltaTime"].GetInt64();
 
-    spdlog::info("localGenDeltaTime {} - generationDeltaTime {} = ageCpm {}", localGenDeltaTime, cpm["generationDeltaTime"].GetInt64(), ageCpm);
+    spdlog::debug("localGenDeltaTime {} - generationDeltaTime {} = ageCpm {}", localGenDeltaTime, cpm["generationDeltaTime"].GetInt64(), ageCpm);
 
     int number_containers = cpm["cpmParameters"]["cpmContainers"].GetArray().Size();
 
@@ -122,7 +122,7 @@ string process_cpm(Document& cpm){
         if (cpm["cpmParameters"]["cpmContainers"][i]["containerId"].GetInt() == 5) {
             perceivedObjectContainer.CopyFrom(cpm["cpmParameters"]["cpmContainers"][i], allocator);
             hasPerceivedObjectContainer = true;
-            spdlog::info("PerceivedObjectContainer found!");
+            spdlog::debug("PerceivedObjectContainer found!");
         }
         if (cpm["cpmParameters"]["cpmContainers"][i]["containerId"].GetInt() == 2) {
             isRSU = true;
@@ -131,12 +131,12 @@ string process_cpm(Document& cpm){
         if (cpm["cpmParameters"]["cpmContainers"][i]["containerId"].GetInt() == 3) {
             sensorInformationContainer.CopyFrom(cpm["cpmParameters"]["cpmContainers"][i], sensorInformationContainer.GetAllocator());
             hasSensorInformationContainer = true;
-            spdlog::info("SensorInformationContainer found!");
+            spdlog::debug("SensorInformationContainer found!");
         }
     }
 
     if (!hasPerceivedObjectContainer) {
-        spdlog::info("No perceived object received!");
+        spdlog::debug("No perceived object received!");
         return "";
     }
 
@@ -167,10 +167,10 @@ string process_cpm(Document& cpm){
     //cout << "lon " << lon << endl;
     int number_objects = perceivedObjectContainer["containerData"]["numberOfPerceivedObjects"].GetInt();
     
-    spdlog::info("Number of objects: {}", number_objects);
+    spdlog::debug("Number of objects: {}", number_objects);
 
     if (number_objects == 0) {
-        spdlog::info("No objects received!");
+        spdlog::debug("No objects received!");
         return "";
     }
 
@@ -198,7 +198,7 @@ string process_cpm(Document& cpm){
     // }
 
     
-    spdlog::info("Processing perceived objects...");
+    spdlog::debug("Processing perceived objects...");
 
     string cpm_objects_str = "[";
 

@@ -67,6 +67,8 @@ void cleanOldObjectsIDs(int maxTime){
             ++it;
         }
     }
+
+    spdlog::debug("Number of objects in map: {}", idMap.size());
 }
 
 Document getManagementContainer(long unsigned int timestamp, float latitude, float longitude, float altitude, int altitudeConfidence){
@@ -242,7 +244,7 @@ Document getPerceivedObject(int objectId, vector<int> sensorIDList, int deltaTim
     return perceivedObject;
 }
 
-vector<Document> getPerceivedObjectsList(unsigned long int timestampIts, const vector<Document>& receivedObjs, float cam_latitude, float cam_longitude){
+vector<Document> getPerceivedObjectsList(unsigned long int timestampIts, vector<Document>& receivedObjs, float cam_latitude, float cam_longitude){
 
     vector<Document> perceivedObjectsList;
 
@@ -349,7 +351,7 @@ Document segment(unsigned long int timestampIts, const Document& managementConta
 
     //ManagementContainer
     Value managementContainerVal(kObjectType);
-    managementContainerVal.CopyFrom(managementContainer, allocator);
+    managementContainerVal.CopyFrom(move(managementContainer), allocator);
 
 
     if (totalSegments > 1){
@@ -363,7 +365,7 @@ Document segment(unsigned long int timestampIts, const Document& managementConta
     Value wrappedCpmContainer(kArrayType);
     //containerId 1 (stationDataContainer)
     Value containerId1(kObjectType);
-    containerId1.CopyFrom(stationContainer, allocator);
+    containerId1.CopyFrom(move(stationContainer), allocator);
 
     wrappedCpmContainer.PushBack(containerId1, allocator);
 
@@ -376,7 +378,7 @@ Document segment(unsigned long int timestampIts, const Document& managementConta
     Value perceivedObjects(kArrayType);
     for (int i = 0; i < perceivedObjectsList.size(); i++){
         Value perceivedObjectVal(kObjectType);
-        perceivedObjectVal.CopyFrom(perceivedObjectsList[i], allocator);
+        perceivedObjectVal.CopyFrom(move(perceivedObjectsList[i]), allocator);
         perceivedObjects.PushBack(perceivedObjectVal, allocator);
     }
     containerData3.AddMember("perceivedObjects", perceivedObjects, allocator);
@@ -407,7 +409,7 @@ Document segment(unsigned long int timestampIts, const Document& managementConta
     return cpm;
 }
 
-vector<string> generateCPM(const vector<Document>& receivedObjs, float cam_latitude, float cam_longitude, float cam_altitude, int cam_altitude_conf, float cam_heading, bool add_sensor_data, vector<Document>& sensorArray, int stationType, std::mutex& cpmMutex){
+vector<string> generateCPM(vector<Document>& receivedObjs, float cam_latitude, float cam_longitude, float cam_altitude, int cam_altitude_conf, float cam_heading, bool add_sensor_data, vector<Document>& sensorArray, int stationType, std::mutex& cpmMutex){
 
     // std::lock_guard<std::mutex> lock(cpmMutex);
     vector<string> cpmList;
@@ -415,7 +417,7 @@ vector<string> generateCPM(const vector<Document>& receivedObjs, float cam_latit
     Document cpm;
 
     int numObjs = receivedObjs.size();
-    spdlog::info("Number of objects: {}", numObjs);
+    spdlog::debug("Number of objects: {}", numObjs);
 
     auto time_before_objs = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
@@ -427,9 +429,11 @@ vector<string> generateCPM(const vector<Document>& receivedObjs, float cam_latit
     
     vector<Document> perceivedObjectsList = getPerceivedObjectsList(deltaTime, receivedObjs, cam_latitude, cam_longitude);
 
+    receivedObjs.clear();
+
     auto time_after_objs = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
-    spdlog::info("Time to process objects: {} microseconds", time_after_objs - time_before_objs);
+    spdlog::debug("Time to process objects: {} microseconds", time_after_objs - time_before_objs);
 
 
     Document managementContainer = getManagementContainer(deltaTime, cam_latitude, cam_longitude, cam_altitude, cam_altitude_conf);
@@ -518,16 +522,20 @@ vector<string> generateCPM(const vector<Document>& receivedObjs, float cam_latit
 
         auto time_after_cpm = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
-        // spdlog::info("Time to create CPM: {} microseconds", time_after_cpm - time_before_cpm);
+        // spdlog::debug("Time to create CPM: {} microseconds", time_after_cpm - time_before_cpm);
 
         string cpmString = docToString(cpm);
 
         auto time_after_cpm_to_string = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
-        // spdlog::info("Time to convert CPM to string: {} microseconds", time_after_cpm_to_string - time_after_cpm);
+        // spdlog::debug("Time to convert CPM to string: {} microseconds", time_after_cpm_to_string - time_after_cpm);
 
         cpmList.push_back(cpmString);
     }
+
+    // managementContainer.RemoveAllMembers();
+    perceivedObjectsList.clear();
+    // stationContainer.RemoveAllMembers();
 
     return cpmList;
 }

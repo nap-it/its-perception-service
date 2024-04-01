@@ -21,8 +21,8 @@ COPY *.cpp /cpm-processing/
 COPY *.h /cpm-processing/
 COPY *.hpp /cpm-processing/
 COPY CMakeLists.txt /cpm-processing/
-# COPY rapidjson /cpm-processing/rapidjson
-# COPY spdlog /cpm-processing/spdlog
+COPY rapidjson /cpm-processing/rapidjson
+COPY spdlog /cpm-processing/spdlog
 COPY fastdds /cpm-processing/fastdds
 
 RUN git clone https://github.com/eclipse/paho.mqtt.c.git
@@ -41,9 +41,8 @@ RUN cmake -Bbuild -H. -DPAHO_BUILD_STATIC=ON \
 RUN cmake --build build/ --target install
 RUN ldconfig
 
-WORKDIR /cpm-processing
-RUN git clone https://code.nap.av.it.pt/external-tools/rapidjson.git
-RUN git clone https://code.nap.av.it.pt/external-tools/spdlog.git
+#RUN git clone https://code.nap.av.it.pt/external-tools/rapidjson.git
+#RUN git clone https://code.nap.av.it.pt/external-tools/spdlog.git
 
 WORKDIR /cpm-processing
 RUN cmake .

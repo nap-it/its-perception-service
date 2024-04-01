@@ -21,8 +21,8 @@ COPY *.cpp /cpm-generation/
 COPY *.h /cpm-generation/
 COPY *.hpp /cpm-generation/
 COPY CMakeLists.txt /cpm-generation/
-# COPY rapidjson /cpm-generation/rapidjson
-# COPY spdlog /cpm-generation/spdlog
+COPY rapidjson /cpm-generation/rapidjson
+COPY spdlog /cpm-generation/spdlog
 COPY fastdds /cpm-generation/fastdds
 
 RUN git clone https://github.com/eclipse/paho.mqtt.c.git
@@ -41,11 +41,12 @@ RUN cmake -Bbuild -H. -DPAHO_BUILD_STATIC=ON \
 RUN cmake --build build/ --target install
 RUN ldconfig
 
-WORKDIR /cpm-generation
-RUN git clone https://code.nap.av.it.pt/external-tools/rapidjson.git
-RUN git clone https://code.nap.av.it.pt/external-tools/spdlog.git
+#RUN git clone https://code.nap.av.it.pt/external-tools/rapidjson.git
+#RUN git clone https://code.nap.av.it.pt/external-tools/spdlog.git
 
+WORKDIR /cpm-generation
 RUN cmake .
 RUN cmake --build .
 RUN chmod +x server
 ENTRYPOINT ["/cpm-generation/server"]
+

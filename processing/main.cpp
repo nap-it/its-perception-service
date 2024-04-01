@@ -55,6 +55,7 @@ bool mqtt_enable_publish;
 
 //global variables
 string processed_cpm;
+int debug = 0;
 
 void readConfigFile(const string& path){
     INIReader reader (path);
@@ -81,6 +82,8 @@ void readConfigFile(const string& path){
     mqtt_enable_subscribe = reader.GetBoolean("mqtt-processing", "enable_subscriber", false);
     mqtt_pub_topic = reader.Get("general", "topic_objects_publish", "objects");
     mqtt_sub_topic = reader.Get("general", "topic_cpm_subscribe", "vanetza/in/cpm");
+
+    debug = reader.GetInteger("general", "debug", 0);
 }
 
 data_mqtt_server getMqttData(const string& path, bool mqtt_enable_subscribe){
@@ -133,7 +136,7 @@ void dds_handler(string topic, const string& response){
         return;
     }
 
-    spdlog::info("Processed message {}", cpmJson);
+    spdlog::info("Processed message: {}", cpmJson);
 
     if(dds_enable_publish){
         server->publish(dds_pub_topic, cpmJson);
@@ -167,6 +170,12 @@ void setup_dds(){
 int main() {
     spdlog::info("Starting server...");
     readConfigFile("/config.ini");
+
+    if(debug) {
+        spdlog::set_level(spdlog::level::debug);
+    } else {
+        spdlog::set_level(spdlog::level::info);
+    }
 
     if(dds_enable_subscribe == mqtt_enable_subscribe){
         spdlog::error("DDS and MQTT cannot be both enabled or disabled");
