@@ -12,7 +12,7 @@ map<int,string> napClassType = {
         {2, "cyclist"},
         {3, "moped"},
         {4, "motorcycle"},
-        {5, "passangerCar"},
+        {5, "passengerCar"},
         {6, "bus"},
         {7, "lightTruck"},
         {8, "heavyTruck"},
@@ -279,12 +279,14 @@ string process_cpm(Document& cpm){
         json_obj.AddMember("acceleration", acceleration, objAlloc);
 
         string classification;
+        int classificationID = 0;
         string obj_type;
         if (perceivedObjectContainer["containerData"]["perceivedObjects"][i]["classification"][0]["objectClass"].HasMember("vehicleSubClass")) {
             try {
                 int napId = perceivedObjectContainer["containerData"]["perceivedObjects"][i]["classification"][0]["objectClass"]["vehicleSubClass"].GetInt();
                 // cout << "IncomingID " << perceivedObjectContainer["containerData"]["perceivedObjects"][i]["classification"][0]["objectClass"]["vehicleSubClass"].GetInt() << ", napId " << napId << " = " << napClassType.at(napId) << endl;
                 classification = napClassType.at(napId);
+                classificationID = napId;
             }
             catch(...){
                 classification = "unclassified";
@@ -310,6 +312,7 @@ string process_cpm(Document& cpm){
         // spdlog::info("Classification: {}", classification);
 
         json_obj.AddMember("classification", rapidjson::Value(classification.c_str(), objAlloc).Move(), objAlloc);
+        json_obj.AddMember("classificationID", classificationID, objAlloc);
 
         string objStr = docToString(json_obj);
 

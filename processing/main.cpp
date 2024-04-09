@@ -71,6 +71,8 @@ void readConfigFile(const string& path){
     std::string topic;
     std::istringstream iss(dds_sub_topic);
     while (std::getline(iss, topic, ',')) {
+        //remove whitespace
+        topic.erase(std::remove(topic.begin(), topic.end(), ' '), topic.end());
         dds_sub_topics.push_back(topic);
         spdlog::info("Subscription topic {}", topic);
     }
