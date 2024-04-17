@@ -31,7 +31,7 @@ mqtt_server readConfigFile(const std::string& path)
 
     INIReader reader (path);
 
-    std::string host = reader.Get("mqtt", "host", "atcll-p35-jetson.nap.av.it.pt");
+    std::string host = reader.Get("mqtt", "host", "atcll-p33-jetson.nap.av.it.pt");
     std::cout << "Host: " << host << std::endl;
     long port = reader.GetInteger("mqtt", "port", 1883);
 
@@ -48,7 +48,7 @@ mqtt_server readConfigFile(const std::string& path)
 
     domain_id = reader.GetInteger("dds", "domain_id", 0);
 
-    debug = reader.GetInteger("general", "debug", 0);
+    debug = reader.GetInteger("general", "debug", 1);
 
     return mqttInfo;
 }
@@ -83,7 +83,7 @@ void on_message_dds(std::string topic, std::string message) {
         string reply2 = get_reply(message, &lock_mutex, &serialized_objects_to_send);
 
         auto end_getReply = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-        spdlog::debug("getReply: {} microseconds", end_getReply - start_getReply);
+        spdlog::debug("getReply: {}, in {} microseconds", reply2, end_getReply - start_getReply);
 
         //third reply
 
@@ -145,7 +145,7 @@ void on_message_mqtt(std::string topic, std::string message) {
     {
         std::lock_guard guard(lock_mutex);
         if (objects_to_send.find(obj.objectID) != objects_to_send.end()) {
-            spdlog::debug("Object {} already in objects_to_send", obj.objectID);
+            // spdlog::debug("Object {} already in objects_to_send", obj.objectID);
             //update object in objects_to_send
             objects_to_send[obj.objectID] = obj;
             serialized_objects_to_send[obj.objectID] = serialized_obj;
@@ -157,7 +157,7 @@ void on_message_mqtt(std::string topic, std::string message) {
 
     if (is_newInfo) {
         // save to objects to send objects
-        spdlog::debug("Object {} is new", obj.objectID);
+        // spdlog::debug("Object {} is new", obj.objectID);
         std::lock_guard guard(lock_mutex);
         objects_to_send[obj.objectID] = obj;
         serialized_objects_to_send[obj.objectID] = serialized_obj;

@@ -77,6 +77,10 @@ void on_message_dds(std::string topic, std::string message) {
 
         string reply2 = get_reply(message, &lock_mutex, &serialized_objects_to_send);
 
+        if(reply2.empty()) {
+            return;
+        }
+
         auto end_getReply = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
         spdlog::debug("getReply: {} microseconds", end_getReply - start_getReply);
 
