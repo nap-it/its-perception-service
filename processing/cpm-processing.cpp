@@ -17,8 +17,11 @@ map<int,string> napClassType = {
         {7, "lightTruck"},
         {8, "heavyTruck"},
         {9, "trailer"},
-        {10, "specialVehicles"},
+        {10, "Ambulance"},
         {11, "tram"},
+        {12, "VRU"},
+        {13, "animal"},
+        {14, "agricultural vehicles"},
         {15, "roadSideUnit"},
         {16, "SafetyApp"},
         {17, "Moliceiro"},
@@ -26,20 +29,20 @@ map<int,string> napClassType = {
         {19, "others"}
 };
 
-map<int,int> vehicleSubclassType = {
-        {0, 0},
-        {1, 3},
-        {2, 4},
-        {3, 5},
-        {4, 6},
-        {5, 7},
-        {6, 8},
-        {7, 9},
-        {8, 10},
-        {9, 11},
-        {10, 10},
-        {11, 8}
-};
+// map<int,int> vehicleSubclassType = {
+//         {0, 0},
+//         {1, 3},
+//         {2, 4},
+//         {3, 5},
+//         {4, 6},
+//         {5, 7},
+//         {6, 8},
+//         {7, 9},
+//         {8, 10},
+//         {9, 11},
+//         {10, 10},
+//         {11, 8}
+// };
 
 map<int, string> personSubclassType = {
         {0, "unknown"},
@@ -281,15 +284,24 @@ string process_cpm(Document& cpm){
         string classification;
         int classificationID = 0;
         string obj_type;
+        cout << "------------------- " << sensor << " -------------------" << endl; 
         if (perceivedObjectContainer["containerData"]["perceivedObjects"][i]["classification"][0]["objectClass"].HasMember("vehicleSubClass")) {
+            Value &vehicleSubClass = perceivedObjectContainer["containerData"]["perceivedObjects"][i]["classification"][0]["objectClass"]["vehicleSubClass"];
+            cout << "Has member subclass -> " << valueToString(vehicleSubClass) <<  " ;" << endl;
+            spdlog::debug("VehicleSubClass found");
             try {
                 int napId = perceivedObjectContainer["containerData"]["perceivedObjects"][i]["classification"][0]["objectClass"]["vehicleSubClass"].GetInt();
+                spdlog::debug("IncomingID {} = {}", napId, napClassType.at(napId));
                 // cout << "IncomingID " << perceivedObjectContainer["containerData"]["perceivedObjects"][i]["classification"][0]["objectClass"]["vehicleSubClass"].GetInt() << ", napId " << napId << " = " << napClassType.at(napId) << endl;
                 classification = napClassType.at(napId);
                 classificationID = napId;
+                if(napId == 0){
+                    spdlog::error("Classficication ID 0");
+                }
             }
             catch(...){
                 classification = "unclassified";
+                spdlog::error("No classification found");
             }
         }
         else if (perceivedObjectContainer["containerData"]["perceivedObjects"][i]["classification"][0]["objectClass"].HasMember("vruSubClass")) {

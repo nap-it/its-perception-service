@@ -85,7 +85,7 @@ void readConfigFile(const string& path){
     mqtt_pub_topic = reader.Get("general", "topic_objects_publish", "objects");
     mqtt_sub_topic = reader.Get("general", "topic_cpm_subscribe", "vanetza/in/cpm");
 
-    debug = reader.GetInteger("general", "debug", 0);
+    debug = reader.GetInteger("general", "debug", 1);
 }
 
 data_mqtt_server getMqttData(const string& path, bool mqtt_enable_subscribe){
@@ -146,8 +146,13 @@ void dds_handler(string topic, const string& response){
     }
 
     if(mqtt_enable_publish){
-        mqtt_server->publish(mqtt_pub_topic, cpmJson);
-        spdlog::info("Published message to MQTT topic {} on host {} ", mqtt_pub_topic, data_mqtt.address);
+        try{
+            mqtt_server->publish(mqtt_pub_topic, cpmJson);
+            spdlog::info("Published message to MQTT topic {} on host {} ", mqtt_pub_topic, data_mqtt.address);
+        } catch (const mqtt::exception& exc) {
+            spdlog::error("Error publishing to MQTT: ", exc.what());
+        }
+        
     }
 
 }
