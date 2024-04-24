@@ -2,7 +2,8 @@ version: '2.4'
 services:
   radar:
     hostname: radar
-    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/radar-adapter:latest
+#    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/radar-adapter:latest
+    image: radar-adapter:test
     cap_add:
       - "NET_ADMIN"
     volumes:

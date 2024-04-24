@@ -18,8 +18,8 @@
 #include <rapidjson/prettywriter.h>
 
 //DDS
-#include "fastdds/dds.hpp"
-#include "fastdds/MQTTMessagePubSubTypes.h"
+#include "fastdds-cpp-wrapper/dds.hpp"
+#include "fastdds-cpp-wrapper/JSONMessagePubSubTypes.h"
 
 //MQTT
 #include "mqttwrapper.h"

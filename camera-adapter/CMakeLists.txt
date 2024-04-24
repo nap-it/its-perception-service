@@ -6,19 +6,20 @@ set(CMAKE_CXX_STANDARD 17)
 include_directories(${CMAKE_SOURCE_DIR})
 include_directories(${CMAKE_SOURCE_DIR}/spdlog/include)
 include_directories(${CMAKE_SOURCE_DIR}/rapidjson)
-include_directories(${CMAKE_SOURCE_DIR}/fastdds)
+include_directories(${CMAKE_SOURCE_DIR}/fastdds-cpp-wrapper)
 
 find_package(Threads REQUIRED)
 find_package(Fastcdr REQUIRED)
 find_package(Fastrtps REQUIRED)
 
 file(GLOB FASTDDS_SRC
-        ${CMAKE_SOURCE_DIR}/fastdds/*.cpp
-        ${CMAKE_SOURCE_DIR}/fastdds/*.c
-        ${CMAKE_SOURCE_DIR}/fastdds/*.h
-        ${CMAKE_SOURCE_DIR}/fastdds/*.hpp
-        ${CMAKE_SOURCE_DIR}/fastdds/*.cxx
+        ${CMAKE_SOURCE_DIR}/fastdds-cpp-wrapper/*.cpp
+        ${CMAKE_SOURCE_DIR}/fastdds-cpp-wrapper/*.c
+        ${CMAKE_SOURCE_DIR}/fastdds-cpp-wrapper/*.h
+        ${CMAKE_SOURCE_DIR}/fastdds-cpp-wrapper/*.hpp
+        ${CMAKE_SOURCE_DIR}/fastdds-cpp-wrapper/*.cxx
 )
+
 add_executable(main main.cpp ${FASTDDS_SRC}
         mqtt.cpp
         mqtt.h

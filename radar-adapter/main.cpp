@@ -3,10 +3,12 @@
 #include <vector>
 #include <boost/asio.hpp>
 #include <thread>
-#include "fastdds/dds.hpp"
+#include "fastdds-cpp-wrapper/dds.hpp"
 #include "mqtt.h"
 #include "config_reader.h"
 #include "radar_data_management.h"
+#include <cstdlib>
+#include <time.h>
 
 using namespace std;
 
@@ -37,7 +39,12 @@ mqtt_server readConfigFile(const std::string& path)
 
     mqttInfo.address = "tcp://" + host + ":" + std::to_string(port);
     std::cout << "Address: " << mqttInfo.address << std::endl;
-    string client = reader.Get("mqtt", "client_id", "client") + "-radar";
+
+    // Set random client id
+    srand(time(0));
+    int randomNum = rand();
+    string client = reader.Get("mqtt", "client_id", "client") + "-radar-" + std::to_string(randomNum);
+
     cout << "Client: " << client << endl;
     mqttInfo.client_id = client;
     mqttInfo.subscription_topic = reader.Get("mqtt", "radar_topic", "jetson/radar-plus");
@@ -128,7 +135,7 @@ void on_message_dds(std::string topic, std::string message) {
 }
 
 void on_message_mqtt(std::string topic, std::string message) {
-    // std::cout << "Message: " << message << " RECEIVED." << std::endl;
+//    std::cout << "Message: " << message << " RECEIVED." << std::endl;
     auto start_jsonToStruct = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     radarMqttObject obj = json_to_struct(message);
     auto end_jsonToStruct = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
