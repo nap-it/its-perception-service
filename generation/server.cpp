@@ -94,10 +94,10 @@ void readConfigFile(const string& path){
 
     mqtt_enable_publish = reader.GetBoolean("mqtt", "enable_publish", false);
 
-    exptected_responses = reader.GetInteger("general", "expected_responses", 2);
+    exptected_responses = reader.GetInteger("general", "expected_responses", 1);
 
     stationType = reader.GetInteger("general", "stationType", 15);
-    debug = reader.GetInteger("general", "debug", 0);
+    debug = reader.GetInteger("general", "debug", 1);
 
 }
 
@@ -162,11 +162,13 @@ void adapter_handler(const string& response){
     if (doc.HasMember("requestID") && doc["requestID"].IsUint64()) {
         unsigned long int receivedRequestID = doc["requestID"].GetUint64();
         if (receivedRequestID != timestamp_milliseconds) {
-            cout << "Invalid requestID (expected: " << timestamp_milliseconds << ", received: " << receivedRequestID << ")" << endl;
+            // cout << "Invalid requestID (expected: " << timestamp_milliseconds << ", received: " << receivedRequestID << ")" << endl;
+            spdlog::error("Invalid requestID (expected: {}, received: {})", timestamp_milliseconds, receivedRequestID);
             return;
         }
     } else {
-        cout << "No requestID on response" << endl;
+        // cout << "No requestID on response" << endl;
+        spdlog::error("No requestID on response");
         return;
     }
 
@@ -177,10 +179,12 @@ void adapter_handler(const string& response){
         for (auto& obj : objs.GetArray()) {
             Document copyDoc;
             copyDoc.CopyFrom(obj, copyDoc.GetAllocator());
+            std::lock_guard<std::mutex> lock(mtx);
             received_objects.push_back(move(copyDoc));
         }
     } else {
-        cout << "No objects on response" << endl;
+        // cout << "No objects on response" << endl;
+        spdlog::error("No objects on response");
     }
 
     
@@ -269,7 +273,7 @@ int main() {
     // }
     cout << "Setting up DDS..." << endl;
     setup_dds();
-    cout << "Expected responses: " << exptected_responses << endl;
+    cout << "DDS setup completed" << endl;
     // vector<Document> sensorInfo = initSensorInformation();
     last_request = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()) - request_interval;
     last_sensor = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()) - add_sensor_interval;
@@ -345,7 +349,7 @@ int main() {
 
                     auto ending_time_after_publish_dds = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
-                    spdlog::debug("Time to publish to DDS: {}", (ending_time_after_publish_dds - starting_time_before_publish_dds));
+                    spdlog::debug("Time to publish to DDS on topic {}: {}", pub_cpm_topic, (ending_time_after_publish_dds - starting_time_before_publish_dds));
 
                     spdlog::debug("CPM: {}", cpm_str);
 
@@ -361,11 +365,13 @@ int main() {
 
                 //Clean and reset everything
 
+
                 received_objects.clear();
-
                 cpmList.clear();
-
                 cleanOldObjectsIDs(maxObjectAge);
+                
+
+                
 
                 auto ending_time = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 

@@ -195,38 +195,46 @@ std::string struct_to_string(radarMqttObject radar_object)
     return buffer.GetString();
 }
 
-bool calc_is_new_info(std::mutex *lock, std::map<int, radarMqttObject> *last_sent_dict, radarMqttObject radar_object)
+bool calc_is_new_info(std::mutex *lock, std::map<int, radarMqttObject> *last_sent_dict, std::map<int, radarMqttObject> *objects_to_send, radarMqttObject radar_object)
 {
-    std::lock_guard guard(*lock);
+    std::lock_guard<std::mutex> guard(*lock);
 
-    // if not in "last_sent" is newInfo
-    if (last_sent_dict->find(radar_object.objectID) == last_sent_dict->end())
-    {
+    //if object is already in objects_to_send, update object
+    if (objects_to_send->find(radar_object.objectID) != objects_to_send->end()) {
+        spdlog::debug ("Object {} already in objects_to_send, updating ...", radar_object.objectID);
         return true;
     }
 
-    int obj_id = radar_object.objectID;
-
-    auto last_sent = last_sent_dict->at(obj_id);
-
-    double delta_timestamp = radar_object.timestamp - last_sent.timestamp;
-
-    // Distance calculation between the present information and the last sent in a CPM
-    double delta_distance = calculateDistance(last_sent.latitude, last_sent.longitude, radar_object.latitude, radar_object.longitude);
-
-    // Speed variation between the present information and the last sent in a CPM
-    double delta_speed = fabs(last_sent.speed - radar_object.speed);
-
-    // Heading variation between the present information and the last sent in a CPM
-    double delta_heading = fabs(last_sent.speed - radar_object.heading);
-
-    // Calculation of newInfo (according to the CPM rules)
-    if ((delta_timestamp > 1000) or (delta_distance > 4) or (delta_speed > 0.5) or (delta_heading > 4))
-    {
-        spdlog::debug("Object {} should be sent (CPM rules)", obj_id);
+    // if object is not in "last_sent" 
+    if (last_sent_dict->find(radar_object.objectID) == last_sent_dict->end()) {
+        spdlog::debug("Object {} should be added (not in last_sent)", radar_object.objectID);
         return true;
+    } else {
+        // if object is in "last_sent" and the object is not in "objects_to_send"
+        int obj_id = radar_object.objectID;
+
+        auto last_sent = last_sent_dict->at(obj_id);
+
+        double delta_timestamp = radar_object.timestamp - last_sent.timestamp;
+
+        // Distance calculation between the present information and the last sent in a CPM
+        double delta_distance = calculateDistance(last_sent.latitude, last_sent.longitude, radar_object.latitude, radar_object.longitude);
+
+        // Speed variation between the present information and the last sent in a CPM
+        double delta_speed = fabs(last_sent.speed - radar_object.speed);
+
+        // Heading variation between the present information and the last sent in a CPM
+        double delta_heading = fabs(last_sent.speed - radar_object.heading);
+
+        // Calculation of newInfo (according to the CPM rules)
+        if ((delta_timestamp > 1000) or (delta_distance > 4) or (delta_speed > 0.5) or (delta_heading > 4))
+        {
+            spdlog::debug("Object {} should be added (CPM rules)", obj_id);
+            return true;
+        }
     }
 
+    spdlog::debug("Object {} should not be added (info too similar to last sent)", radar_object.objectID);
     return false;
 }
 
@@ -258,73 +266,73 @@ double calculateDistance(double lat1, double lon1, double lat2, double lon2)
 double toRadians(double degrees) {
     return degrees * M_PI180;
 }
-std::string prepare_reply(const std::string &request, std::mutex *lock, std::map<int, radarMqttObject> *objects, std::map<int, radarMqttObject> *dict_last_sent)
-{
-    // parse request data
+// std::string prepare_reply(const std::string &request, std::mutex *lock, std::map<int, radarMqttObject> *objects, std::map<int, radarMqttObject> *dict_last_sent)
+// {
+//     // parse request data
 
-    rapidjson::Document requestJson;
-    requestJson.Parse(request.c_str());
+//     rapidjson::Document requestJson;
+//     requestJson.Parse(request.c_str());
 
-    unsigned long int requestID = 0;
-    int numberObjects = 0;
-    if (requestJson.HasMember("requestID"))
-    {
-        requestID = requestJson["requestID"].GetUint64();
-    }
-    if (requestJson.HasMember("numberObjects"))
-    {
-        numberObjects = requestJson["numberObjects"].GetInt();
-    }
+//     unsigned long int requestID = 0;
+//     int numberObjects = 0;
+//     if (requestJson.HasMember("requestID"))
+//     {
+//         requestID = requestJson["requestID"].GetUint64();
+//     }
+//     if (requestJson.HasMember("numberObjects"))
+//     {
+//         numberObjects = requestJson["numberObjects"].GetInt();
+//     }
 
-    rapidjson::Document replyJson = rapidjson::Document();
-    replyJson.SetObject();
-    rapidjson::Document::AllocatorType &allocator = replyJson.GetAllocator();
-    replyJson.AddMember("requestID", requestID, allocator);
-    replyJson.AddMember("numberObjects", numberObjects, allocator);
+//     rapidjson::Document replyJson = rapidjson::Document();
+//     replyJson.SetObject();
+//     rapidjson::Document::AllocatorType &allocator = replyJson.GetAllocator();
+//     replyJson.AddMember("requestID", requestID, allocator);
+//     replyJson.AddMember("numberObjects", numberObjects, allocator);
 
-    rapidjson::Value objects_json(rapidjson::kArrayType);
+//     rapidjson::Value objects_json(rapidjson::kArrayType);
 
-    std::lock_guard guard(*lock);
+//     std::lock_guard<std::mutex> guard(*lock);
 
-    for (auto const &[key, value] : *objects)
-    {
-        rapidjson::Value tmpObject(rapidjson::kObjectType);
-        tmpObject.AddMember("acceleration", value.acceleration, allocator);
-        tmpObject.AddMember("heading", value.heading, allocator);
-        tmpObject.AddMember("latitude", value.latitude, allocator);
-        tmpObject.AddMember("longitude", value.longitude, allocator);
-        tmpObject.AddMember("objID", value.objectID, allocator);
-        tmpObject.AddMember("sensorID", 1, allocator);
-        tmpObject.AddMember("speed", value.speed, allocator);
-        tmpObject.AddMember("timestamp", value.timestamp, allocator);
-        tmpObject.AddMember("confidence", value.confidence, allocator);
+//     for (auto const &[key, value] : *objects)
+//     {
+//         rapidjson::Value tmpObject(rapidjson::kObjectType);
+//         tmpObject.AddMember("acceleration", value.acceleration, allocator);
+//         tmpObject.AddMember("heading", value.heading, allocator);
+//         tmpObject.AddMember("latitude", value.latitude, allocator);
+//         tmpObject.AddMember("longitude", value.longitude, allocator);
+//         tmpObject.AddMember("objID", value.objectID, allocator);
+//         tmpObject.AddMember("sensorID", 1, allocator);
+//         tmpObject.AddMember("speed", value.speed, allocator);
+//         tmpObject.AddMember("timestamp", value.timestamp, allocator);
+//         tmpObject.AddMember("confidence", value.confidence, allocator);
 
-        // Classification
-        rapidjson::Value classificationArray(rapidjson::kArrayType);
-        rapidjson::Value classificationObject(rapidjson::kObjectType);
-        rapidjson::Value objectClassObject(rapidjson::kObjectType);
-        objectClassObject.AddMember("vehicleSubClass", value.classification, allocator);
-        classificationObject.AddMember("objectClass", objectClassObject, allocator);
-        classificationObject.AddMember("confidence", 101, allocator); // unavailable (101)
-        classificationArray.PushBack(classificationObject, allocator);
-        tmpObject.AddMember("classification", classificationArray, allocator);
+//         // Classification
+//         rapidjson::Value classificationArray(rapidjson::kArrayType);
+//         rapidjson::Value classificationObject(rapidjson::kObjectType);
+//         rapidjson::Value objectClassObject(rapidjson::kObjectType);
+//         objectClassObject.AddMember("vehicleSubClass", value.classification, allocator);
+//         classificationObject.AddMember("objectClass", objectClassObject, allocator);
+//         classificationObject.AddMember("confidence", 101, allocator); // unavailable (101)
+//         classificationArray.PushBack(classificationObject, allocator);
+//         tmpObject.AddMember("classification", classificationArray, allocator);
 
-        objects_json.PushBack(tmpObject, allocator);
+//         objects_json.PushBack(tmpObject, allocator);
 
-        dict_last_sent->insert_or_assign(key, value);
-    }
+//         dict_last_sent->insert_or_assign(key, value);
+//     }
 
-    // add "objects_json" to "replyJson" document
-    replyJson.AddMember("objects", objects_json, allocator);
+//     // add "objects_json" to "replyJson" document
+//     replyJson.AddMember("objects", objects_json, allocator);
 
-    std::string reply = jsonToString(replyJson);
+//     std::string reply = jsonToString(replyJson);
 
-    return reply;
-}
+//     return reply;
+// }
 
 std::string get_reply(const std::string &request, std::mutex *lock, std::map<int, std::string> *serialized_objects)
 {
-    std::lock_guard guard(*lock);
+    std::lock_guard<std::mutex> guard(*lock);
     std::stringstream replyStream;
 
     rapidjson::Document requestJson;

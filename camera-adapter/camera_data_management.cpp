@@ -130,6 +130,7 @@ bool calc_is_new_info(std::mutex* lock, std::map<int, cameraMqttObject> *dict, c
 
     // if not in "last_sent" is newInfo
     if (dict->find(camera_object.objectID) == dict->end()) {
+        spdlog::debug("Object {} should be sent (not in last_sent)", camera_object.objectID);
         return true;
     }
 
@@ -148,10 +149,11 @@ bool calc_is_new_info(std::mutex* lock, std::map<int, cameraMqttObject> *dict, c
 
     // Calculation of newInfo (according to the CPM rules)
     if ((delta_timestamp > 1000) or (delta_distance > 4) or (delta_speed > 0.5) or (delta_heading > 4)) {
-        spdlog::debug("Object {} should be sent (CPM rules)", obj_id);
+        spdlog::debug("Object {} should be sent (CPM rules: delta_timestamp {}, delta_distance {}, delta_speed {}, delta_heading {})", obj_id, delta_timestamp, delta_distance, delta_speed, delta_heading);
         return true;
     }
 
+    spdlog::debug("Object {} should not be sent", obj_id);
     return false;
 }
 

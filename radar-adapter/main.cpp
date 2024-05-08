@@ -4,11 +4,9 @@
 #include <boost/asio.hpp>
 #include <thread>
 #include "fastdds-cpp-wrapper/dds.hpp"
-#include "mqtt.h"
+#include "mqttwrapper.h"
 #include "config_reader.h"
 #include "radar_data_management.h"
-#include <cstdlib>
-#include <time.h>
 
 using namespace std;
 
@@ -27,31 +25,25 @@ Dds* dds_;
 int domain_id = 0;
 
 
-mqtt_server readConfigFile(const std::string& path)
+data_mqtt_server readConfigFile(const std::string& path)
 {
-    mqtt_server mqttInfo;
+    data_mqtt_server mqttInfo;
 
     INIReader reader (path);
 
-    std::string host = reader.Get("mqtt", "host", "atcll-p33-jetson.nap.av.it.pt");
+    std::string host = reader.Get("mqtt", "host", "atcll-p35-jetson.nap.av.it.pt");
     std::cout << "Host: " << host << std::endl;
     long port = reader.GetInteger("mqtt", "port", 1883);
 
     mqttInfo.address = "tcp://" + host + ":" + std::to_string(port);
     std::cout << "Address: " << mqttInfo.address << std::endl;
-
-    // Set random client id
-    srand(time(0));
-    int randomNum = rand();
-    string client = reader.Get("mqtt", "client_id", "client") + "-radar-" + std::to_string(randomNum);
-
+    string client = reader.Get("mqtt", "client_id", "client") + "-radar";
     cout << "Client: " << client << endl;
     mqttInfo.client_id = client;
-    mqttInfo.subscription_topic = reader.Get("mqtt", "radar_topic", "jetson/radar-plus");
-
-    std::cout << "Subscription topic: " << mqttInfo.subscription_topic << std::endl;
-    mqttInfo.qos= reader.GetInteger("mqtt", "qos", 1);
-    mqttInfo.n_retry_attempts= reader.GetInteger("mqtt", "n_retry_attempts", 5);
+    string sub_topic = reader.Get("mqtt", "radar_topic", "jetson/radar-plus");
+    vector<string> topics;
+    topics.push_back(sub_topic);
+    mqttInfo.subscription_topic = topics;
 
     domain_id = reader.GetInteger("dds", "domain_id", 0);
 
@@ -118,7 +110,7 @@ void on_message_dds(std::string topic, std::string message) {
         spdlog::info("publish {} objects: {} microseconds", n_objects_to_send, end_publish - start_publish);
 
         //update last_sent
-        std::lock_guard guard(lock_mutex);
+        std::lock_guard<std::mutex> guard(lock_mutex);
         for(auto const& [key, value] : objects_to_send) {
             last_sent.insert_or_assign(key, value);
         }
@@ -135,7 +127,7 @@ void on_message_dds(std::string topic, std::string message) {
 }
 
 void on_message_mqtt(std::string topic, std::string message) {
-//    std::cout << "Message: " << message << " RECEIVED." << std::endl;
+    // std::cout << "Message: " << message << " RECEIVED." << std::endl;
     auto start_jsonToStruct = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     radarMqttObject obj = json_to_struct(message);
     auto end_jsonToStruct = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
@@ -150,7 +142,7 @@ void on_message_mqtt(std::string topic, std::string message) {
 
     //check if object is in objects_to_send
     {
-        std::lock_guard guard(lock_mutex);
+        std::lock_guard<std::mutex> guard(lock_mutex);
         if (objects_to_send.find(obj.objectID) != objects_to_send.end()) {
             // spdlog::debug("Object {} already in objects_to_send", obj.objectID);
             //update object in objects_to_send
@@ -160,12 +152,12 @@ void on_message_mqtt(std::string topic, std::string message) {
         }
     }
 
-    bool is_newInfo = calc_is_new_info(&lock_mutex, &last_sent, obj);
+    bool is_newInfo = calc_is_new_info(&lock_mutex, &last_sent, &objects_to_send, obj);
 
     if (is_newInfo) {
         // save to objects to send objects
         // spdlog::debug("Object {} is new", obj.objectID);
-        std::lock_guard guard(lock_mutex);
+        std::lock_guard<std::mutex> guard(lock_mutex);
         objects_to_send[obj.objectID] = obj;
         serialized_objects_to_send[obj.objectID] = serialized_obj;
 
@@ -176,7 +168,7 @@ void on_message_mqtt(std::string topic, std::string message) {
 
 int main() {
     // Read config file
-    mqtt_server mqttServerInfo = readConfigFile("/config.ini");
+    data_mqtt_server mqttServerInfo = readConfigFile("/config.ini");
     if(debug) {
         spdlog::set_level(spdlog::level::debug); // Set global log level to debug
     } else {

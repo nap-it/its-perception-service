@@ -7,8 +7,6 @@
 #include "mqtt.h"
 #include "config_reader.h"
 #include "camera_data_management.h"
-#include <cstdlib>
-#include <time.h>
 
 using namespace std;
 
@@ -33,18 +31,13 @@ mqtt_server readConfigFile(const std::string& path)
 
     INIReader reader (path);
 
-    std::string host = reader.Get("mqtt", "host", "atcll-p35-jetson.nap.av.it.pt");
+    std::string host = reader.Get("mqtt", "host", "atcll-p25-jetson.nap.av.it.pt");
     std::cout << "Host: " << host << std::endl;
     long port = reader.GetInteger("mqtt", "port", 1883);
 
     mqttInfo.address = "tcp://" + host + ":" + std::to_string(port);
     std::cout << "Address: " << mqttInfo.address << std::endl;
-
-    // Set random client id
-    srand(time(0));
-    int randomNum = rand();
-
-    string client = reader.Get("mqtt", "client_id", "client") + "-camera-" + std::to_string(randomNum);
+    string client = reader.Get("mqtt", "client_id", "client") + "-camera";
     mqttInfo.client_id = client;
     mqttInfo.subscription_topic = reader.Get("mqtt", "camera_topic", "jetson/camera/tracking/objects");
 
@@ -89,7 +82,7 @@ void on_message_dds(std::string topic, std::string message) {
         }
 
         auto end_getReply = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-        spdlog::debug("getReply: {} microseconds", end_getReply - start_getReply);
+        spdlog::debug("getReply: {} microseconds", reply2, end_getReply - start_getReply);
 
         //third reply
 
@@ -115,9 +108,10 @@ void on_message_dds(std::string topic, std::string message) {
         dds_->publish("from/adapters", reply2);
         auto end_publish = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
         spdlog::info("publish {} objects: {} microseconds", n_objects_to_send, end_publish - start_publish);
+        spdlog::debug("Published message: {}", reply2);
 
         //update last_sent
-        std::lock_guard guard(lock_mutex);
+        std::lock_guard<std::mutex> guard(lock_mutex);
         for(auto const& [key, value] : objects_to_send) {
             last_sent.insert_or_assign(key, value);
         }
@@ -140,14 +134,16 @@ void on_message_mqtt(std::string topic, std::string message) {
 
     std::list<string> serialized_list = structs_to_string(camera_objects);
 
-    for(int i = 0; i < serialized_list.size(); i++) {
+    spdlog::debug("Received {},{} objects", camera_objects.size(), serialized_list.size());
+    int n_objects = camera_objects.size();
+    for(int i = 0; i < n_objects; i++) {
         cameraMqttObject obj = camera_objects.front();
 
         //ceck if obj is in objects_to_send
         if (objects_to_send.find(obj.objectID) != objects_to_send.end()) {
-            spdlog::debug("Object {} already in objects_to_send", obj.objectID);
+            spdlog::debug("Object {} already in objects_to_send, updating info...", obj.objectID);
             //update object in objects_to_send
-            std::lock_guard guard(lock_mutex);
+            std::lock_guard<std::mutex> guard(lock_mutex);
             objects_to_send[obj.objectID] = obj;
             serialized_objects_to_send[obj.objectID] = serialized_list.front();
             camera_objects.pop_front();
@@ -155,12 +151,12 @@ void on_message_mqtt(std::string topic, std::string message) {
             continue;
         }
 
+        spdlog::debug("Checking if object {} is new...", obj.objectID);
         bool is_newInfo = calc_is_new_info(&lock_mutex, &last_sent, obj);
 
         if (is_newInfo) {
             // save to objects to send objects
-            spdlog::debug("Object {} is new", obj.objectID);
-            std::lock_guard guard(lock_mutex);
+            std::lock_guard<std::mutex> guard(lock_mutex);
             objects_to_send[obj.objectID] = obj;
 
 

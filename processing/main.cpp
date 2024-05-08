@@ -40,7 +40,7 @@ std::condition_variable cv;
 //DDS variables
 Dds* server;
 string dds_pub_topic;
-vector<string> dds_sub_topics; 
+vector<string> dds_sub_topics = {};
 bool dds_enable_publish;
 bool dds_enable_subscribe;
 int domain_id = 0;
@@ -167,8 +167,11 @@ void mqtt_handler(std::string topic, std::string message) {
 
 void setup_dds(){
     server = new Dds("Processing", domain_id, dds_handler);
+    cout << "Provisioning publisher for " << dds_pub_topic << endl;
     server->provision_publisher(dds_pub_topic);
+    cout << "Provisioned publisher for " << dds_pub_topic << endl;
     for (auto& dds_sub_topic : dds_sub_topics){
+        cout << "Subscribing to " << dds_sub_topic << endl;
         server->subscribe(dds_sub_topic);
         cout << "Subscribed to " << dds_sub_topic << endl;
     }

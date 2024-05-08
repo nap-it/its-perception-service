@@ -236,8 +236,8 @@ string process_cpm(Document& cpm){
         json_obj.AddMember("sensorID", sensorID, objAlloc);
 
 
-        double xDistance = perceivedObjectContainer["containerData"]["perceivedObjects"][i]["position"]["xCoordinate"]["value"].GetDouble();
-        double yDistance = perceivedObjectContainer["containerData"]["perceivedObjects"][i]["position"]["yCoordinate"]["value"].GetDouble();
+        double xDistance = perceivedObjectContainer["containerData"]["perceivedObjects"][i]["position"]["xCoordinate"]["value"].GetInt() / 100.0;
+        double yDistance = perceivedObjectContainer["containerData"]["perceivedObjects"][i]["position"]["yCoordinate"]["value"].GetInt() / 100.0;
 
         // spdlog::info("xDistance: {} yDistance: {}", xDistance, yDistance);
 

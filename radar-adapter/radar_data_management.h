@@ -31,7 +31,7 @@ struct radarMqttObject {
 
 struct radarMqttObject json_to_struct(std::string mqtt_radar_object);
 std::string struct_to_string(radarMqttObject radar_object);
-bool calc_is_new_info(std::mutex* lock, std::map<int, radarMqttObject> * dict, radarMqttObject radar_object);
+bool calc_is_new_info(std::mutex *lock, std::map<int, radarMqttObject> *last_sent_dict, std::map<int, radarMqttObject> *objects_to_send, radarMqttObject radar_object);
 double calculateDistance(double lat1, double lon1, double lat2, double lon2);
 double toRadians(double degrees);
 std::string jsonToString(const rapidjson::Document& d);
