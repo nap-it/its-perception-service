@@ -287,12 +287,16 @@ vector<Document> getPerceivedObjectsList(unsigned long int timestampIts, vector<
                 x = 1310.72;
             } else if(x < -1310.72){
                 x = -1310.72;
+                spdlog::debug("X out of bounds");
+                continue;
             }
 
             if(y > 1310.72){
                 y = 1310.72;
             } else if(y < -1310.72){
                 y = -1310.72;
+                spdlog::debug("Y out of bounds");
+                continue;
             }
             
         } else {
