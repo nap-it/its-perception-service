@@ -124,8 +124,8 @@ int getMessageEncodedSize(int numObjects, int numSensors){
 }
 
 tuple<float,float> gpsToLocal(float obj_lat, float obj_lon, float cam_lat, float cam_lon, float multConst, float multConst2){
-    float north = ((obj_lat - cam_lat) * R) * multConst * 100.0;
-    float east = ((obj_lon - cam_lon) * multConst2) * multConst * 100.0;
+    float north = ((obj_lat - cam_lat) * R) * multConst;
+    float east = ((obj_lon - cam_lon) * multConst2) * multConst;
 
     return make_tuple(north, east);
 }
@@ -170,7 +170,7 @@ string docToString(const Document& value) {
     return buffer.GetString();
 }
 
-Document getPerceivedObject(int objectId, vector<int> sensorIDList, int deltaTimeMilliSecondSigned, int perceptionQuality, int x, int y, float x_speed, float y_speed, float x_acc, float y_acc, Document& objClassification){
+Document getPerceivedObject(int objectId, vector<int> sensorIDList, int deltaTimeMilliSecondSigned, int perceptionQuality, float x, float y, float x_speed, float y_speed, float x_acc, float y_acc, Document& objClassification){
 
     Document perceivedObject;
     perceivedObject.SetObject();
@@ -272,9 +272,6 @@ vector<Document> getPerceivedObjectsList(unsigned long int timestampIts, vector<
         //final variables
         float x, y, xSpeed, ySpeed, xAcc, yAcc;
 
-        int x_int, y_int; //unit is cm
-
-
         //Extract object data to variables
         objectId = receivedObj["objID"].GetInt();
         obj_timestamp = receivedObj["timestamp"].GetInt64();
@@ -285,29 +282,22 @@ vector<Document> getPerceivedObjectsList(unsigned long int timestampIts, vector<
 
             tie(y, x) = gpsToLocal(obj_lat, obj_lon, cam_latitude, cam_longitude, multConst, multConst2);
 
-            x_int = static_cast<int>(x);
-            y_int = static_cast<int>(y);
 
-            if(x_int > 131072){
-                x_int = 131072;
-            } else if(x_int < -131072){
-                x_int = -131072;
+            if(x > 1310.72){
+                x = 1310.72;
+            } else if(x < -1310.72){
+                x = -1310.72;
             }
 
-            if(y_int > 131072){
-                y_int = 131072;
-            } else if(y_int < -131072){
-                y_int = -131072;
+            if(y > 1310.72){
+                y = 1310.72;
+            } else if(y < -1310.72){
+                y = -1310.72;
             }
-
-            spdlog::debug("Object {} at x: {} y: {}", objectId, x_int, y_int);
             
         } else {
             x = 0.0;
             y = 0.0;
-            x_int = -131072;
-            y_int = -131072;
-            // cout << "No latitude/longitude OR error" << endl;
         } 
 
         if(receivedObj.HasMember("heading") && receivedObj.HasMember("speed") && receivedObj.HasMember("acceleration")){
@@ -348,7 +338,7 @@ vector<Document> getPerceivedObjectsList(unsigned long int timestampIts, vector<
 
         vector<int> sensorIDList = {sensorId};
 
-        Document perceivedObject = getPerceivedObject(cpmObjectId, sensorIDList, deltaTimeMilliSecondSigned, confidence, x_int, y_int, xSpeed, ySpeed, xAcc, yAcc, classification);
+        Document perceivedObject = getPerceivedObject(cpmObjectId, sensorIDList, deltaTimeMilliSecondSigned, confidence, x, y, xSpeed, ySpeed, xAcc, yAcc, classification);
 
         perceivedObjectsList.push_back(move(perceivedObject));
 

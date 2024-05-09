@@ -47,9 +47,9 @@ bool mqtt_enable_publish = false;
 //CAM variables
 float cam_latitude = 40.63028;
 float cam_longitude =  -8.65423;
-float cam_altitude = 63.8;
-int cam_alitude_conf = 9;
-float cam_heading = 9.1;
+float cam_altitude = 0;
+int cam_alitude_conf = 0;
+float cam_heading = 0;
 
 //globals
 int exptected_responses = 0;
@@ -99,6 +99,8 @@ void readConfigFile(const string& path){
     stationType = reader.GetInteger("general", "stationType", 15);
     debug = reader.GetInteger("general", "debug", 1);
 
+    cam_latitude = reader.GetReal("general", "latitude", 40.63028);
+    cam_longitude = reader.GetReal("general", "longitude", -8.65423);
 }
 
 data_mqtt_server readMqttData(const string& path){
@@ -106,7 +108,7 @@ data_mqtt_server readMqttData(const string& path){
 
     INIReader reader (path);
 
-    string host = reader.Get("mqtt", "host", "atcll-p35-apu.nap.av.it.pt");
+    string host = reader.Get("mqtt", "host", "atcll-p30-apu.nap.av.it.pt");
     int port = reader.GetInteger("mqtt", "port", 1883);
 
     data.address = "tcp://" + host + ":" + to_string(port);
@@ -265,12 +267,12 @@ int main() {
     } else {
         spdlog::set_level(spdlog::level::info);
     }
-    // cout << "Setting up MQTT..." << endl;
-    // data_mqtt = readMqttData("/config.ini");
-    // MqttWrapper* mqtt_server = new MqttWrapper(data_mqtt, on_message_mqtt);
-    // while (!mqtt_server->is_connected()){
-    //     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    // }
+    cout << "Setting up MQTT..." << endl;
+    data_mqtt = readMqttData("/config.ini");
+    MqttWrapper* mqtt_server = new MqttWrapper(data_mqtt, on_message_mqtt);
+    while (!mqtt_server->is_connected()){
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
     cout << "Setting up DDS..." << endl;
     setup_dds();
     cout << "DDS setup completed" << endl;
