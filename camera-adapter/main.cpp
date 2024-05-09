@@ -4,7 +4,7 @@
 #include <thread>
 #include <list>
 #include "fastdds-cpp-wrapper/dds.hpp"
-#include "mqtt.h"
+#include "mqttwrapper.h"
 #include "config_reader.h"
 #include "camera_data_management.h"
 
@@ -25,25 +25,24 @@ Dds* dds_;
 int domain_id = 0;
 
 
-mqtt_server readConfigFile(const std::string& path)
+data_mqtt_server readConfigFile(const std::string& path)
 {
-    mqtt_server mqttInfo;
+    data_mqtt_server mqttInfo;
 
     INIReader reader (path);
 
-    std::string host = reader.Get("mqtt", "host", "atcll-p25-jetson.nap.av.it.pt");
+    std::string host = reader.Get("mqtt-camera", "host", "atcll-p25-jetson.nap.av.it.pt");
     std::cout << "Host: " << host << std::endl;
-    long port = reader.GetInteger("mqtt", "port", 1883);
+    long port = reader.GetInteger("mqtt-camera", "port", 1883);
 
     mqttInfo.address = "tcp://" + host + ":" + std::to_string(port);
     std::cout << "Address: " << mqttInfo.address << std::endl;
-    string client = reader.Get("mqtt", "client_id", "client") + "-camera";
+    string client = reader.Get("mqtt-camera", "client_id", "mqtt-adapter-camera");
     mqttInfo.client_id = client;
-    mqttInfo.subscription_topic = reader.Get("mqtt", "camera_topic", "jetson/camera/tracking/objects");
-
-    std::cout << "Subscription topic: " << mqttInfo.subscription_topic << std::endl;
-    mqttInfo.qos= reader.GetInteger("mqtt", "qos", 1);
-    mqttInfo.n_retry_attempts= reader.GetInteger("mqtt", "n_retry_attempts", 5);
+    string sub_topic = reader.Get("mqtt-camera", "camera_topic", "jetson/camera/tracking/objects");
+    vector<string> topics;
+    topics.push_back(sub_topic);
+    mqttInfo.subscription_topic = topics;
 
     domain_id = reader.GetInteger("dds", "domain_id", 0);
 
@@ -176,7 +175,7 @@ void on_message_mqtt(std::string topic, std::string message) {
 
 int main() {
     // Read config file
-    mqtt_server mqttServerInfo = readConfigFile("/config.ini");
+    data_mqtt_server mqttServerInfo = readConfigFile("/config.ini");
     if(debug) {
         spdlog::set_level(spdlog::level::debug); // Set global log level to debug
     } else {

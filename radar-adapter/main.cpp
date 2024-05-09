@@ -31,16 +31,16 @@ data_mqtt_server readConfigFile(const std::string& path)
 
     INIReader reader (path);
 
-    std::string host = reader.Get("mqtt", "host", "atcll-p35-jetson.nap.av.it.pt");
+    std::string host = reader.Get("mqtt-radar", "host", "atcll-p35-jetson.nap.av.it.pt");
     std::cout << "Host: " << host << std::endl;
-    long port = reader.GetInteger("mqtt", "port", 1883);
+    long port = reader.GetInteger("mqtt-radar", "port", 1883);
 
     mqttInfo.address = "tcp://" + host + ":" + std::to_string(port);
     std::cout << "Address: " << mqttInfo.address << std::endl;
-    string client = reader.Get("mqtt", "client_id", "client") + "-radar";
+    string client = reader.Get("mqtt-radar", "client_id", "mqtt-adapter-radar");
     cout << "Client: " << client << endl;
     mqttInfo.client_id = client;
-    string sub_topic = reader.Get("mqtt", "radar_topic", "jetson/radar-plus");
+    string sub_topic = reader.Get("mqtt-radar", "radar_topic", "jetson/radar-plus");
     vector<string> topics;
     topics.push_back(sub_topic);
     mqttInfo.subscription_topic = topics;
