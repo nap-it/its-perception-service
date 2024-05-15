@@ -98,13 +98,18 @@ string valueToString(const Value& value)  {
 
 string process_cpm(Document& cpm){
 
+    unsigned long int timestamp = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
     
-    unsigned long int localGenDeltaTime = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() - time2004ms;
+    unsigned long int localGenDeltaTime = timestamp - time2004ms;
 
     std::vector<object> perceived_objs;
 
     // calculate cpm age
     int ageCpm = localGenDeltaTime - cpm["generationDeltaTime"].GetInt64();
+
+    if (ageCpm < 0) {
+        ageCpm = (65536 + localGenDeltaTime) - cpm["generationDeltaTime"].GetInt64();
+    }
 
     spdlog::debug("localGenDeltaTime {} - generationDeltaTime {} = ageCpm {}", localGenDeltaTime, cpm["generationDeltaTime"].GetInt64(), ageCpm);
 
@@ -142,12 +147,6 @@ string process_cpm(Document& cpm){
         spdlog::debug("No perceived object received!");
         return "";
     }
-
-    if (ageCpm < 0) {
-        ageCpm = (65536 + localGenDeltaTime) - cpm["generationDeltaTime"].GetInt64();
-    }
-    //sender_stationType == 15 -> RSU
-    //sender_stationType == 5 -> OBU
 
     int sender_stationType;
     if (isRSU) {
@@ -211,16 +210,24 @@ string process_cpm(Document& cpm){
         Document json_obj(rapidjson::kObjectType);
         auto objAlloc = json_obj.GetAllocator();
         json_obj.AddMember("id", perceivedObjectContainer["containerData"]["perceivedObjects"][i]["objectID"].GetInt(), objAlloc);
-        json_obj.AddMember("age", ageCpm + perceivedObjectContainer["containerData"]["perceivedObjects"][i]["measurementDeltaTime"].GetInt64(), objAlloc);
+
+        unsigned long int objAge = ageCpm + perceivedObjectContainer["containerData"]["perceivedObjects"][i]["measurementDeltaTime"].GetInt64();
+        unsigned long int objTimestamp = timestamp - objAge; // timestamp of the object in milliseconds (integer 64)
+
+        double objTimestampSec = 0.0;
+
+        try {
+            objTimestampSec = static_cast<double>(objTimestamp) / 1000.0;
+        } catch(...) {
+            spdlog::error("Error converting timestamp to seconds");
+        }
+    
+        json_obj.AddMember("age", objAge, objAlloc);
+        json_obj.AddMember("objectTimestamp", objTimestampSec, objAlloc);
         json_obj.AddMember("objectPerceptionQuality", perceivedObjectContainer["containerData"]["perceivedObjects"][i]["objectPerceptionQuality"].GetDouble(), objAlloc);
         json_obj.AddMember("detectionStationType", sender_stationType, objAlloc);
 
-        // spdlog::info("Object ID: {}", perceivedObjectContainer["containerData"]["perceivedObjects"][i]["objectID"].GetInt());
-        
-
         int sensorID = perceivedObjectContainer["containerData"]["perceivedObjects"][i]["sensorIDList"][0].GetInt();
-
-        // spdlog::info("Sensor ID: {}", sensorID);
 
         string sensor;
         try{
@@ -230,15 +237,12 @@ string process_cpm(Document& cpm){
             sensor = "unknown";
         }
 
-        // spdlog::info("Sensor: {}", sensor);
-
         json_obj.AddMember("sensor", rapidjson::Value(sensor.c_str(), objAlloc).Move(), objAlloc);
         json_obj.AddMember("sensorID", sensorID, objAlloc);
 
 
         double xDistance = perceivedObjectContainer["containerData"]["perceivedObjects"][i]["position"]["xCoordinate"]["value"].GetDouble();
         double yDistance = perceivedObjectContainer["containerData"]["perceivedObjects"][i]["position"]["yCoordinate"]["value"].GetDouble();
-        // spdlog::info("xDistance: {} yDistance: {}", xDistance, yDistance);
 
         double latitude;
         double longitude;
@@ -255,8 +259,6 @@ string process_cpm(Document& cpm){
         double xSpeed = perceivedObjectContainer["containerData"]["perceivedObjects"][i]["xSpeed"]["value"].GetDouble();
         double ySpeed = perceivedObjectContainer["containerData"]["perceivedObjects"][i]["ySpeed"]["value"].GetDouble();
 
-        // spdlog::info("xSpeed: {} ySpeed: {}", xSpeed, ySpeed);
-
         double speed;
         if ((xSpeed != 16383) && (ySpeed != 16383)) {
             speed = std::sqrt(std::pow(xSpeed, 2) + std::pow(ySpeed, 2));
@@ -268,8 +270,6 @@ string process_cpm(Document& cpm){
 
         double xAcceleration = perceivedObjectContainer["containerData"]["perceivedObjects"][i]["xAcceleration"]["longitudinalAccelerationValue"].GetDouble();
         double yAcceleration = perceivedObjectContainer["containerData"]["perceivedObjects"][i]["yAcceleration"]["lateralAccelerationValue"].GetDouble();
-
-        // spdlog::info("xAcceleration: {} yAcceleration: {}", xAcceleration, yAcceleration);
 
         double acceleration;
         if ((xAcceleration != 161) && (yAcceleration != 161)) {
