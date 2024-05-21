@@ -62,10 +62,18 @@ map<int, string> otherSubclassType = {
 map<int,string> sensorType = {
         {0, "undefined"},
         {1, "radar"},
-        {2, "camera"},
-        {10, "sphericalCamera"},
-        {11, "itssaggregation"},
-        {12, "deviceDetection"}
+        {2, "lidar"},
+        {3, "monovideo"},
+        {4, "stereovision"},
+        {5, "nightvision"},
+        {6, "ultrasonic"},
+        {7, "pmd"},
+        {8, "inductionLoop"},
+        {9, "sphericalCamera"},
+        {10, "uwb"},
+        {11, "acoustic"},
+        {12, "localAggregation"},
+        {13, "itsAggregation"}
 };
 
 std::pair<double, double> rotate_axes(int yaw, double x, double y) {

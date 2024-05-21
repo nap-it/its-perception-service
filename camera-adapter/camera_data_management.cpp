@@ -105,7 +105,7 @@ std::list<std::string> structs_to_string(std::list<cameraMqttObject> camera_obje
         document.AddMember("latitude", obj.latitude, allocator);
         document.AddMember("longitude", obj.longitude, allocator);
         document.AddMember("objID", obj.objectID, allocator);
-        document.AddMember("sensorID", 2, allocator);
+        document.AddMember("sensorID", 3, allocator);
         document.AddMember("speed", obj.speed, allocator);
         document.AddMember("timestamp", obj.timestamp, allocator);
         document.AddMember("confidence", obj.confidence, allocator);
@@ -221,7 +221,7 @@ std::string prepare_reply(const std::string& request, std::mutex* lock, std::map
         tmpObject.AddMember("latitude", value.latitude, allocator);
         tmpObject.AddMember("longitude", value.longitude, allocator);
         tmpObject.AddMember("objID", value.objectID, allocator);
-        tmpObject.AddMember("sensorID", 2, allocator);
+        tmpObject.AddMember("sensorID", 3, allocator);
         tmpObject.AddMember("speed", value.speed, allocator);
         tmpObject.AddMember("timestamp", value.timestamp, allocator);
         tmpObject.AddMember("confidence", value.confidence, allocator);
