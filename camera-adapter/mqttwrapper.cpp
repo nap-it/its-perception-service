@@ -1,4 +1,4 @@
-#include "mqtt.h"
+#include "mqttwrapper.h"
 
 action_listener::action_listener(std::string name) : name_(std::move(name)) {}
 
@@ -22,7 +22,7 @@ void action_listener::on_success(const mqtt::token& tok) {
 action_listener::~action_listener() {
 }
 
-MqttWrapper::MqttWrapper(mqtt_server data, std::function<void(std::string, std::string)> on_message_received)
+MqttWrapper::MqttWrapper(data_mqtt_server data, std::function<void(std::string, std::string)> on_message_received)
         : client_(data.address, data.client_id), listener_("YourListenerName"), connOpts_(), data_server(std::move(data)){
 
     this->connOpts_.set_clean_session(false);
@@ -40,10 +40,33 @@ MqttWrapper::MqttWrapper(mqtt_server data, std::function<void(std::string, std::
         spdlog::error("Unable to connect to MQTT server: ", exc.what());
         exit(1);
     }
-    std::thread mqtt_th(&MqttWrapper::from_mqtt_thread, this);
+
+    std::thread mqtt_th(&MqttWrapper::mqtt_thread, this);
     mqtt_th.detach();
+
 }
 
+MqttWrapper::MqttWrapper(data_mqtt_server data)
+        : client_(data.address, data.client_id), listener_("YourListenerName"), connOpts_(), data_server(std::move(data)){
+
+    this->connOpts_.set_clean_session(false);
+    this->connOpts_.set_automatic_reconnect(true);
+
+    this->client_.set_callback(*this);
+
+    // Start the connection
+    try {
+        spdlog::info("Connecting to the MQTT server...");
+        this->client_.connect();
+    } catch (const mqtt::exception& exc) {
+        spdlog::error("Unable to connect to MQTT server: ", exc.what());
+        exit(1);
+    }
+
+    std::thread mqtt_th(&MqttWrapper::mqtt_thread, this);
+    mqtt_th.detach();
+
+}
 
 MqttWrapper::~MqttWrapper() {
 }
@@ -57,12 +80,6 @@ void MqttWrapper::connect() {
         exit(1);
     }
 
-}
-
-void  MqttWrapper::from_mqtt_thread() {
-    while (true) {
-        std::this_thread::sleep_for(std::chrono::seconds(100));
-    }
 }
 
 void MqttWrapper::on_success(const mqtt::token &tok) { }
@@ -83,10 +100,16 @@ void MqttWrapper::connection_lost(const std::string &cause) {
 
 void MqttWrapper::connected(const std::string &cause) {
     spdlog::info("Connection success");
-    this->subscribe();
+
+    // Subscribe to the list of topic passed in the constructor
+    for (int i=0; i<this->data_server.subscription_topic.size(); i++) {
+        this->subscribe(data_server.subscription_topic.at(i));
+        spdlog::info("Subscribing to topic {}", this->data_server.subscription_topic.at(i));
+    }
+
 }
 
-bool MqttWrapper::is_connected() {
+bool MqttWrapper::is_connected(){
     return this->client_.is_connected();
 }
 
@@ -95,8 +118,8 @@ void MqttWrapper::reconnect() {
     this->connect();
 }
 
-void MqttWrapper::subscribe() {
-    this->client_.subscribe(data_server.subscription_topic, data_server.qos, nullptr, this->listener_);
+void MqttWrapper::subscribe(const std::string topic) {
+    this->client_.subscribe(topic, 0, nullptr, this->listener_);
 }
 
 
@@ -130,4 +153,10 @@ void MqttWrapper::disconnect(){
         exit(1);
     }
 
+}
+
+void  MqttWrapper::mqtt_thread() {
+    while (true) {
+        std::this_thread::sleep_for(std::chrono::seconds(100));
+    }
 }

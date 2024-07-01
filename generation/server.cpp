@@ -87,7 +87,7 @@ void readConfigFile(const string& path){
     domain_id = reader.GetInteger("dds", "domain_id", 0);
 
     request_deadline = std::chrono::milliseconds(reader.GetInteger("dds", "request_deadline", 50));
-    request_interval = std::chrono::milliseconds(reader.GetInteger("dds", "request_interval", 100));
+    request_interval = std::chrono::milliseconds(reader.GetInteger("dds", "request_interval", 1000));
     add_sensor_interval = std::chrono::milliseconds(reader.GetInteger("dds", "add_sensor_interval", 1000));
     max_interval = std::chrono::milliseconds(reader.GetInteger("dds", "max_interval", 1000));
     maxObjectAge = reader.GetInteger("general", "clean_object_interval", 15000);
@@ -108,7 +108,7 @@ data_mqtt_server readMqttData(const string& path){
 
     INIReader reader (path);
 
-    string host = reader.Get("mqtt", "host", "atcll-p30-apu.nap.av.it.pt");
+    string host = reader.Get("mqtt", "host", "localhost");
     int port = reader.GetInteger("mqtt", "port", 1883);
 
     data.address = "tcp://" + host + ":" + to_string(port);
@@ -148,7 +148,7 @@ void adapter_handler(const string& response){
 
     unsigned long int total = reply_instance - request_instance;
 
-    // spdlog::warn("Time waiting for reply: {}", (total));
+    cout << response << endl;
 
     Document doc;
     doc.Parse(response.c_str());
@@ -251,6 +251,7 @@ void on_message_mqtt(std::string topic, std::string message) {
 
 void setup_dds(){
     server = new Dds("Generation", domain_id, handle_response);
+    cout << "Domain ID: " << domain_id << endl;
     server->provision_publisher(pub_adapter_topic);
     server->provision_publisher(pub_cpm_topic);
     server->subscribe(sub_adapter_topic);

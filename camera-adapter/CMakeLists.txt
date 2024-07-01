@@ -12,17 +12,16 @@ find_package(Threads REQUIRED)
 find_package(Fastcdr REQUIRED)
 find_package(Fastrtps REQUIRED)
 
-file(GLOB FASTDDS_SRC
+file(GLOB fastdds-cpp-wrapper_SRC
         ${CMAKE_SOURCE_DIR}/fastdds-cpp-wrapper/*.cpp
         ${CMAKE_SOURCE_DIR}/fastdds-cpp-wrapper/*.c
         ${CMAKE_SOURCE_DIR}/fastdds-cpp-wrapper/*.h
         ${CMAKE_SOURCE_DIR}/fastdds-cpp-wrapper/*.hpp
         ${CMAKE_SOURCE_DIR}/fastdds-cpp-wrapper/*.cxx
 )
-
-add_executable(main main.cpp ${FASTDDS_SRC}
-        mqtt.cpp
-        mqtt.h
+add_executable(main main.cpp ${fastdds-cpp-wrapper_SRC}
+        mqttwrapper.cpp
+        mqttwrapper.h
         config_reader.h
         camera_data_management.cpp
         camera_data_management.h

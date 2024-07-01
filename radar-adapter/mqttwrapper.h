@@ -6,20 +6,17 @@
 #include <mqtt/async_client.h>
 #include <mqtt/callback.h>
 #include <mqtt/iaction_listener.h>
+#include <spdlog/spdlog.h>
 #include "mqtt/async_client.h"
-#include "spdlog/spdlog.h"
 
 /** @struct data_mqtt_server
  *  @brief Represents the MQTT server data.
  */
-struct mqtt_server {
+struct data_mqtt_server {
     std::string address;         /**< Server address: IP + Port */
     std::string client_id;       /**< Client ID for MQTT connection (must be unique) */
-    std::string subscription_topic;
+    std::vector<std::string> subscription_topic; /**< List of topics to subscribe to */
     std::string publish_topic;   /**< Topic for publishing messages */
-    long qos;
-    long n_retry_attempts;
-
 };
 
 /** @class action_listener
@@ -54,11 +51,16 @@ public:
  */
 class MqttWrapper : public virtual mqtt::callback, public virtual mqtt::iaction_listener {
 public:
-    /** @brief Constructor.
+    /** @brief Constructor Publish and Subscribe
      *  @param data MQTT server data. Must contain the server address (IP + Port), the client ID (unique) and the list of topics to subscribe (It can be an empty list if you don't want to subscribe to any topic)
      *  @param on_message_received Callback function for handling received messages.
      */
-    MqttWrapper(mqtt_server data, std::function<void(std::string, std::string)> on_message_received);
+    MqttWrapper(data_mqtt_server data, std::function<void(std::string, std::string)> on_message_received);
+
+    /** @brief Constructor Publish
+     *  @param data MQTT server data. Must contain the server address (IP + Port), the client ID (unique) and the list of topics to subscribe (It can be an empty list if you don't want to subscribe to any topic)
+     */
+    MqttWrapper(data_mqtt_server data);
 
     /** @brief Virtual destructor.
      */
@@ -114,7 +116,7 @@ private:
     /** @brief Subscribes to a specific MQTT topic.
      *  @param topic The topic to subscribe to.
      */
-    void subscribe();
+    void subscribe(const std::string topic);
 
     /** @brief Callback on receiving an MQTT message.
      *  @param msg The received MQTT message.
@@ -126,17 +128,18 @@ private:
      */
     void delivery_complete(mqtt::delivery_token_ptr token) override;
 
-    void from_mqtt_thread();
+    /** @brief Creates a forever loop.
+    */
+    void mqtt_thread();
+
 
     action_listener listener_; /**< Action listener instance. */
     mqtt::connect_options connOpts_; /**< MQTT connection options. */
     std::function<void(std::string, std::string)> on_message_function; /**< Callback function for received messages. */
-    mqtt_server data_server; /**< MQTT server data. */
+    data_mqtt_server data_server; /**< MQTT server data. */
 
 };
 
-/** @brief Creates a forever loop.
-*/
-[[noreturn]] void loop_forever ();
+
 
 #endif //DCC_FACILITIES_MQTTWRAPPER_H
