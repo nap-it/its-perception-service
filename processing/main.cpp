@@ -181,7 +181,7 @@ data_mqtt_server getRemoteMqttData(const string& path){
     if(stationType == 5){
         remote_pub_topic = "obu" + to_string(domain_id) + "/objects";
     } else {
-        remote_pub_topic = "rsu" + to_string(domain_id) + "/objects";
+        remote_pub_topic = "p" + to_string(domain_id) + "/objects";
     }
     remote_data_mqtt.publish_topic = remote_pub_topic;
 
