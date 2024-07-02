@@ -219,7 +219,6 @@ data_mqtt_server getRemoteMqttData(const string& path){
         remote_pub_topic = "obu" + to_string(id) + "/objects";
     }
     remote_data_mqtt.publish_topic = remote_pub_topic;
-
     string sub_topic = mqtt_sub_topic;
     vector<string> topics;
     topics.push_back(sub_topic);
