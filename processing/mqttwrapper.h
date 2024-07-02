@@ -17,6 +17,8 @@ struct data_mqtt_server {
     std::string client_id;       /**< Client ID for MQTT connection (must be unique) */
     std::vector<std::string> subscription_topic; /**< List of topics to subscribe to */
     std::string publish_topic;   /**< Topic for publishing messages */
+    std::string username;        /**< Username for MQTT connection */
+    std::string password;        /**< Password for MQTT connection */
 };
 
 /** @class action_listener
