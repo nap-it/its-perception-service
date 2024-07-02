@@ -20,8 +20,8 @@ file(GLOB FASTDDS_SRC
         ${CMAKE_SOURCE_DIR}/fastdds-cpp-wrapper/*.cxx
 )
 add_executable(main main.cpp ${FASTDDS_SRC}
-        mqtt.cpp
-        mqtt.h
+        mqttwrapper.cpp
+        mqttwrapper.h
         config_reader.h
         radar_data_management.cpp
         radar_data_management.h
