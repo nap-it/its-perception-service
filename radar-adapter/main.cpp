@@ -3,6 +3,8 @@
 #include <vector>
 #include <boost/asio.hpp>
 #include <thread>
+#include <random>
+#include <functional>
 #include "fastdds-cpp-wrapper/dds.hpp"
 #include "mqttwrapper.h"
 #include "config_reader.h"
@@ -14,8 +16,8 @@ using namespace std;
 map<int, radarMqttObject> objects_to_send;      // shared between threads
 map<int, radarMqttObject> last_sent;            // save data of the last time the object was included in a CPM
 map<int, string> serialized_objects_to_send;    // shared between threads
-stringstream str_objects_to_send;                     // shared between threads
-int n_objects_to_send = 0;                    // shared between threads
+stringstream str_objects_to_send;               // shared between threads
+int n_objects_to_send = 0;                      // shared between threads
 std::mutex lock_mutex;
 const long int time2004ms = 1072915200000;
 int debug = 0;
@@ -23,6 +25,30 @@ int debug = 0;
 //DDS
 Dds* dds_;
 int domain_id = 0;
+
+
+string getRandomNumberString() {
+    // Use the address of a local variable as a unique identifier
+    int uniqueVar;
+    std::size_t uniqueId = reinterpret_cast<std::size_t>(&uniqueVar);
+
+    // Get the current time
+    std::time_t currentTime_randomGenerator = std::time(0);
+    // Combine the current time and the unique identifier using a hash function
+    std::size_t seed = std::hash<std::size_t>{}(currentTime_randomGenerator) ^ uniqueId;
+
+    // Create a random number engine and seed it with the combined seed
+    std::default_random_engine generator(static_cast<unsigned int>(seed));
+    std::uniform_int_distribution<int> distribution(0, 10000); // Define range
+
+    // Create random interval at the beginning
+    int random_number = distribution(generator);       // Random value 
+
+    // Convert the random number to a string
+    string random_number_string = std::to_string(random_number);
+
+    return random_number_string;
+}
 
 
 data_mqtt_server readConfigFile(const std::string& path)
@@ -38,8 +64,9 @@ data_mqtt_server readConfigFile(const std::string& path)
     mqttInfo.address = "tcp://" + host + ":" + std::to_string(port);
     std::cout << "Address: " << mqttInfo.address << std::endl;
     string client = reader.Get("mqtt-radar", "client_id", "mqtt-adapter-radar");
-    cout << "Client: " << client << endl;
-    mqttInfo.client_id = client;
+    string rnd = getRandomNumberString();
+    mqttInfo.client_id = client + "-" + to_string(domain_id) + rnd;
+    cout << "Client: " << mqttInfo.client_id << endl;
     string sub_topic = reader.Get("mqtt-radar", "radar_topic", "jetson/radar-plus");
     vector<string> topics;
     topics.push_back(sub_topic);
@@ -51,6 +78,7 @@ data_mqtt_server readConfigFile(const std::string& path)
 
     return mqttInfo;
 }
+
 
 void clean_last_sent(std::map<int, radarMqttObject> * last_sent_dict, unsigned long int current_time) {
     // cout << "Cleaning last_sent_dict..." << endl;
@@ -126,6 +154,7 @@ void on_message_dds(std::string topic, std::string message) {
     }
 }
 
+
 void on_message_mqtt(std::string topic, std::string message) {
     // std::cout << "Message: " << message << " RECEIVED." << std::endl;
     auto start_jsonToStruct = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
@@ -165,6 +194,7 @@ void on_message_mqtt(std::string topic, std::string message) {
         n_objects_to_send++;    
     }
 }
+
 
 int main() {
     // Read config file

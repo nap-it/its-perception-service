@@ -3,6 +3,8 @@
 #include <boost/asio.hpp>
 #include <thread>
 #include <list>
+#include <random>
+#include <functional>
 #include "fastdds-cpp-wrapper/dds.hpp"
 #include "mqttwrapper.h"
 #include "config_reader.h"
@@ -25,6 +27,30 @@ Dds* dds_;
 int domain_id = 0;
 
 
+string getRandomNumberString() {
+    // Use the address of a local variable as a unique identifier
+    int uniqueVar;
+    std::size_t uniqueId = reinterpret_cast<std::size_t>(&uniqueVar);
+
+    // Get the current time
+    std::time_t currentTime_randomGenerator = std::time(0);
+    // Combine the current time and the unique identifier using a hash function
+    std::size_t seed = std::hash<std::size_t>{}(currentTime_randomGenerator) ^ uniqueId;
+
+    // Create a random number engine and seed it with the combined seed
+    std::default_random_engine generator(static_cast<unsigned int>(seed));
+    std::uniform_int_distribution<int> distribution(0, 10000); // Define range
+
+    // Create random interval at the beginning
+    int random_number = distribution(generator);       // Random value 
+
+    // Convert the random number to a string
+    string random_number_string = std::to_string(random_number);
+
+    return random_number_string;
+}
+
+
 data_mqtt_server readConfigFile(const std::string& path)
 {
     data_mqtt_server mqttInfo;
@@ -38,7 +64,8 @@ data_mqtt_server readConfigFile(const std::string& path)
     mqttInfo.address = "tcp://" + host + ":" + std::to_string(port);
     std::cout << "Address: " << mqttInfo.address << std::endl;
     string client = reader.Get("mqtt-camera", "client_id", "mqtt-adapter-camera");
-    mqttInfo.client_id = client;
+    string rnd = getRandomNumberString();
+    mqttInfo.client_id = client + "-" + to_string(domain_id) + rnd;
     string sub_topic = reader.Get("mqtt-camera", "camera_topic", "jetson/camera/tracking/objects");
     vector<string> topics;
     topics.push_back(sub_topic);
@@ -50,6 +77,7 @@ data_mqtt_server readConfigFile(const std::string& path)
 
     return mqttInfo;
 }
+
 
 void clean_last_sent(std::map<int, cameraMqttObject> * last_sent_dict, unsigned long int current_time) {
     // cout << "Cleaning last_sent_dict..." << endl;

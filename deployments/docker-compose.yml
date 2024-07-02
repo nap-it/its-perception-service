@@ -13,6 +13,7 @@ services:
     restart: always
     volumes:
       - /services/cps/config.ini:/config.ini
+      - /services/info.ini:/services/info.ini
     networks:
       deploymentslan:
 

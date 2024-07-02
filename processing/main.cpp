@@ -10,7 +10,8 @@
 #include <sys/msg.h>
 #include <thread>
 #include <signal.h>
-
+#include <random>
+#include <functional>
 //json
 #include "rapidjson/document.h"
 #include "rapidjson/writer.h"
@@ -102,6 +103,7 @@ class Callback : public virtual mqtt::callback, public virtual mqtt::iaction_lis
     }
 };
 
+
 void readConfigFile(const string& path){
     INIReader reader (path);
 
@@ -122,17 +124,47 @@ void readConfigFile(const string& path){
         spdlog::info("Subscription topic {}", topic);
     }
 
-
-
     //MQTT
     mqtt_enable_publish = reader.GetBoolean("mqtt-processing", "enable_publisher", true);
     mqtt_enable_subscribe = reader.GetBoolean("mqtt-processing", "enable_subscriber", false);
     mqtt_pub_topic = reader.Get("general", "topic_objects_publish", "objects");
     mqtt_sub_topic = reader.Get("general", "topic_cpm_subscribe", "vanetza/in/cpm");
-    enable_remote_mqtt = reader.GetBoolean("mqtt-processing", "enable_remote_mqtt", true);
+    enable_remote_mqtt = reader.GetBoolean("mqtt-processing", "enable_remote_mqtt", false);
 
     debug = reader.GetInteger("general", "debug", 1);
 }
+
+
+string getRandomNumberString() {
+    // Use the address of a local variable as a unique identifier
+    int uniqueVar;
+    std::size_t uniqueId = reinterpret_cast<std::size_t>(&uniqueVar);
+
+    // Get the current time
+    std::time_t currentTime_randomGenerator = std::time(0);
+    // Combine the current time and the unique identifier using a hash function
+    std::size_t seed = std::hash<std::size_t>{}(currentTime_randomGenerator) ^ uniqueId;
+
+    // Create a random number engine and seed it with the combined seed
+    std::default_random_engine generator(static_cast<unsigned int>(seed));
+    std::uniform_int_distribution<int> distribution(0, 10000); // Define range
+
+    // Create random interval at the beginning
+    int random_number = distribution(generator);       // Random value 
+
+    // Convert the random number to a string
+    string random_number_string = std::to_string(random_number);
+
+    return random_number_string;
+}
+
+
+int getDeviceID(const string& path){
+    INIReader reader (path);
+    int id = reader.GetInteger("general", "id", 0);
+    return id;
+}
+
 
 data_mqtt_server getMqttData(const string& path, bool mqtt_enable_subscribe){
     data_mqtt_server data_mqtt;
@@ -140,9 +172,9 @@ data_mqtt_server getMqttData(const string& path, bool mqtt_enable_subscribe){
 
     string host = reader.Get("mqtt-processing", "host", "localhost");
     int port = reader.GetInteger("mqtt", "port", 1883);
-
     data_mqtt.address = "tcp://" + host + ":" + to_string(port);
-    data_mqtt.client_id = "cpm-processing-227";
+    string rnd = getRandomNumberString();
+    data_mqtt.client_id = "cpm-processing-" + to_string(domain_id) + "-" + rnd;
     data_mqtt.publish_topic = mqtt_pub_topic;
     if (mqtt_enable_subscribe) {
         string sub_topic = mqtt_sub_topic;
@@ -154,6 +186,7 @@ data_mqtt_server getMqttData(const string& path, bool mqtt_enable_subscribe){
     return data_mqtt;
 }
 
+
 data_mqtt_server getRemoteMqttData(const string& path){
     data_mqtt_server data_mqtt;
     INIReader reader (path);
@@ -163,7 +196,8 @@ data_mqtt_server getRemoteMqttData(const string& path){
     string address = "tcp://" + host + ":" + to_string(port);
     spdlog::debug("Remote MQTT server address: {}", address);
     remote_data_mqtt.address = address;
-    remote_data_mqtt.client_id = "cpm-processing-remote-227";
+    string rnd = getRandomNumberString();
+    remote_data_mqtt.client_id = "cpm-processing-remote-" + to_string(domain_id) + "-" + rnd;
     string username = reader.Get("mqtt-processing", "remote_username", "username").c_str();
     spdlog::debug("Remote MQTT username: {}", username);
     string password = reader.Get("mqtt-processing", "remote_password", "password").c_str();
@@ -178,10 +212,11 @@ data_mqtt_server getRemoteMqttData(const string& path){
 
     //
     int stationType = reader.GetInteger("general", "stationType", 1);
-    if(stationType == 5){
-        remote_pub_topic = "obu" + to_string(domain_id) + "/objects";
+    int id = getDeviceID("/services/info.ini");
+    if(stationType == 15){
+        remote_pub_topic = "p" + to_string(id) + "/objects";
     } else {
-        remote_pub_topic = "rsu" + to_string(domain_id) + "/objects";
+        remote_pub_topic = "obu" + to_string(id) + "/objects";
     }
     remote_data_mqtt.publish_topic = remote_pub_topic;
 
@@ -193,12 +228,14 @@ data_mqtt_server getRemoteMqttData(const string& path){
     return remote_data_mqtt;
 }
 
+
 string json_to_string(Document& json){
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
     json.Accept(writer);
     return buffer.GetString();
 }
+
 
 void dds_handler(string topic, const string& response){
 
@@ -270,6 +307,7 @@ void setup_dds(){
     }
 }
 
+
 int main() {
     spdlog::info("Starting server...");
     readConfigFile("/config.ini");
@@ -293,7 +331,6 @@ int main() {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
     }
-
 
     if(enable_remote_mqtt){
         spdlog::info("Setting up remote MQTT...");
