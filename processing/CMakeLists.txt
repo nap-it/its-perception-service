@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(cpmGeneration)
+project(cpmProcessing)
 
 set(CMAKE_CXX_STANDARD 17)  
 

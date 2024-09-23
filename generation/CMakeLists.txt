@@ -10,16 +10,15 @@ include_directories(${CMAKE_SOURCE_DIR})
 
 find_package(Threads REQUIRED)
 find_package(Fastcdr REQUIRED)
-find_package(Fastrtps REQUIRED)
+find_package(Fastrtps REQUIRED )
 
 file(GLOB FASTDDS_SRC
-        ${CMAKE_SOURCE_DIR}/fastdds-cpp-wrapper/*.cpp
-        ${CMAKE_SOURCE_DIR}/fastdds-cpp-wrapper/*.c
-        ${CMAKE_SOURCE_DIR}/fastdds-cpp-wrapper/*.h
-        ${CMAKE_SOURCE_DIR}/fastdds-cpp-wrapper/*.hpp
-        ${CMAKE_SOURCE_DIR}/fastdds-cpp-wrapper/*.cxx
+    ${CMAKE_SOURCE_DIR}/fastdds-cpp-wrapper/*.cpp
+    ${CMAKE_SOURCE_DIR}/fastdds-cpp-wrapper/*.c
+    ${CMAKE_SOURCE_DIR}/fastdds-cpp-wrapper/*.h
+    ${CMAKE_SOURCE_DIR}/fastdds-cpp-wrapper/*.hpp
+    ${CMAKE_SOURCE_DIR}/fastdds-cpp-wrapper/*.cxx
 )
-
 add_executable(server 
     server.cpp 
     config_reader.hpp 

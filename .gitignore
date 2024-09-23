@@ -1,0 +1,5 @@
+#Global
+**/build
+**/fastdds-cpp-wrapper
+**/rapidjson
+**/spdlog

@@ -12,8 +12,7 @@
 #include <sys/msg.h>
 #include <mutex>
 #include <condition_variable>
-#include <random>
-#include <functional>
+#include <fstream>
 
 //json
 #include "rapidjson/document.h"
@@ -22,8 +21,8 @@
 #include <rapidjson/prettywriter.h>
 
 //DDS
+// #include "fastdds/dds.hpp"
 #include "fastdds-cpp-wrapper/dds.hpp"
-#include "fastdds-cpp-wrapper/JSONMessagePubSubTypes.h"
 
 //MQTT
 #include "mqttwrapper.h"
@@ -40,7 +39,7 @@ using namespace rapidjson;
 
 //DDS variables
 Dds* server;
-int domain_id = 0;
+int domain_id = 227;
 
 //MQTT variables
 data_mqtt_server data_mqtt;
@@ -73,6 +72,16 @@ int stationType = 0;
 vector<Document> sensorInfo = vector<Document>();
 int debug = 0;
 
+//TIME LOGS
+bool logs_written = false;
+int sequenceNumber = 0;
+long on_message_time = 0;
+long publish_time = 0;
+int request_iteration = 0;
+map<int,long> on_message_map;
+map<int,long> publish_map;
+map<int,long> request_map;
+
 
 
 vector<Document> received_objects = vector<Document>();
@@ -83,52 +92,45 @@ std::condition_variable cv;
 
 void readConfigFile(const string& path){
     INIReader reader (path);
+
+    if (reader.ParseError() < 0) {
+        spdlog::error("Can't load config file");
+        return;
+    }
+
     sub_adapter_topic = reader.Get("dds", "topic_adapter_subscribe", "from/adapters");
+    cout << "[Config] Sub Adapter Topic: " << sub_adapter_topic << endl;
     pub_adapter_topic = reader.Get("dds", "topic_adapter_publish", "to/adapters");
+    cout << "[Config] Pub Adapter Topic: " << pub_adapter_topic << endl;
     pub_cpm_topic = reader.Get("general", "topic_cpm_publish", "cps-v2/in/cpm");
+    cout << "[Config] Pub CPM Topic: " << pub_cpm_topic << endl;
     domain_id = reader.GetInteger("dds", "domain_id", 0);
+    cout << "[Config] Domain ID: " << domain_id << endl;
 
     request_deadline = std::chrono::milliseconds(reader.GetInteger("dds", "request_deadline", 50));
-    request_interval = std::chrono::milliseconds(reader.GetInteger("dds", "request_interval", 1000));
+    cout << "[Config] Request Deadline: " << request_deadline.count() << endl;
+    request_interval = std::chrono::milliseconds(reader.GetInteger("dds", "request_interval", 100));
+    cout << "[Config] Request Interval: " << request_interval.count() << endl;
     add_sensor_interval = std::chrono::milliseconds(reader.GetInteger("dds", "add_sensor_interval", 1000));
+    cout << "[Config] Add Sensor Interval: " << add_sensor_interval.count() << endl;
     max_interval = std::chrono::milliseconds(reader.GetInteger("dds", "max_interval", 1000));
+    cout << "[Config] Max Interval: " << max_interval.count() << endl;
     maxObjectAge = reader.GetInteger("general", "clean_object_interval", 15000);
+    cout << "[Config] Max Object Age: " << maxObjectAge << endl;
 
     mqtt_enable_publish = reader.GetBoolean("mqtt", "enable_publish", false);
 
     exptected_responses = reader.GetInteger("general", "expected_responses", 1);
+    cout << "[Config] Expected Responses: " << exptected_responses << endl;
 
-    stationType = reader.GetInteger("general", "stationType", 15);
+    stationType = reader.GetInteger("general", "stationType", 5);
+    cout << "[Config] Station Type: " << stationType << endl;
     debug = reader.GetInteger("general", "debug", 1);
+    cout << "[Config] Debug: " << debug << endl;
 
     cam_latitude = reader.GetReal("general", "latitude", 40.63028);
     cam_longitude = reader.GetReal("general", "longitude", -8.65423);
 }
-
-
-string getRandomNumberString() {
-    // Use the address of a local variable as a unique identifier
-    int uniqueVar;
-    std::size_t uniqueId = reinterpret_cast<std::size_t>(&uniqueVar);
-
-    // Get the current time
-    std::time_t currentTime_randomGenerator = std::time(0);
-    // Combine the current time and the unique identifier using a hash function
-    std::size_t seed = std::hash<std::size_t>{}(currentTime_randomGenerator) ^ uniqueId;
-
-    // Create a random number engine and seed it with the combined seed
-    std::default_random_engine generator(static_cast<unsigned int>(seed));
-    std::uniform_int_distribution<int> distribution(0, 10000); // Define range
-
-    // Create random interval at the beginning
-    int random_number = distribution(generator);       // Random value 
-
-    // Convert the random number to a string
-    string random_number_string = std::to_string(random_number);
-
-    return random_number_string;
-}
-
 
 data_mqtt_server readMqttData(const string& path){
     data_mqtt_server data;
@@ -137,18 +139,20 @@ data_mqtt_server readMqttData(const string& path){
 
     string host = reader.Get("mqtt", "host", "localhost");
     int port = reader.GetInteger("mqtt", "port", 1883);
+
     data.address = "tcp://" + host + ":" + to_string(port);
-    string rnd = getRandomNumberString();
-    data.client_id = "cpm-generation-" + to_string(domain_id) + rnd;
+    data.client_id = "cpm-generation";
     data.publish_topic = reader.Get("general", "topic_cpm_publish", "vanetza/in/cpm");
-    string sub_topic = "vanetza/own/cam";
+
+    string sub_topic1 = "vanetza/own/cam";
+    string sub_topic2 = "vanetza/time/cam_full";
     vector<string> topics;
-    topics.push_back(sub_topic);
+    topics.push_back(sub_topic1);
+    topics.push_back(sub_topic2);
     data.subscription_topic = topics;
 
     return data;
 }
-
 
 string documentToString(const Document& value) {
     StringBuffer buffer;
@@ -175,7 +179,7 @@ void adapter_handler(const string& response){
 
     unsigned long int total = reply_instance - request_instance;
 
-    cout << response << endl;
+    // spdlog::debug("Adapter response: {}", response);
 
     Document doc;
     doc.Parse(response.c_str());
@@ -201,6 +205,13 @@ void adapter_handler(const string& response){
         return;
     }
 
+    // Check sequenceNumber
+    if (doc.HasMember("sequenceNumber") && doc["sequenceNumber"].IsInt()) {
+        sequenceNumber = doc["sequenceNumber"].GetInt();
+        spdlog::debug("Sequence Number: {}", sequenceNumber);
+        // on_message_map[sequenceNumber] = on_message_time;
+    } 
+
     // Extract objects data
     if (doc.HasMember("objects") && doc["objects"].IsArray()) {
         const Value& objs = doc["objects"];
@@ -210,11 +221,14 @@ void adapter_handler(const string& response){
             copyDoc.CopyFrom(obj, copyDoc.GetAllocator());
             std::lock_guard<std::mutex> lock(mtx);
             received_objects.push_back(move(copyDoc));
+            // cout << "Received object" << endl;
         }
     } else {
         // cout << "No objects on response" << endl;
         spdlog::error("No objects on response");
     }
+
+    spdlog::debug("GENERATION REPLY: Received {} objects", received_objects.size());
 
     
 
@@ -228,32 +242,38 @@ void adapter_handler(const string& response){
 
 }
 
-void ownCam_handler(const string& response){
-
+void inCam_handler(const string& response){
     Document doc;
     doc.Parse(response.c_str());
     
-    if (!doc.HasMember("longitude") || !doc["longitude"].IsFloat() || !doc.HasMember("latitude") || !doc["latitude"].IsFloat()) {
-        cout << "Invalid CAM" << endl;
-        return;
-    }
-    cam_longitude = doc["longitude"].GetFloat();
-    cam_latitude = doc["latitude"].GetFloat();
-
-    if (doc.HasMember("altitude") && doc["altitude"].IsFloat()) {
-        cam_altitude = doc["altitude"].GetFloat();
+    if (doc.HasMember("latitude") && doc["latitude"].IsFloat()) {
+        cam_latitude = doc["latitude"].GetFloat();
     }
 
-    if (doc.HasMember("altitudeConf") && doc["altitudeConf"].IsInt()) {
-        cam_alitude_conf = doc["altitudeConf"].GetInt();
+    if (doc.HasMember("longitude") && doc["longitude"].IsFloat()) {
+        cam_longitude = doc["longitude"].GetFloat();
     }
+}
 
-    if (doc.HasMember("heading") && doc["heading"].IsFloat()) {
-        cam_heading = doc["heading"].GetFloat();
+void inCamFull_handler(const string& response){
+    Document doc;
+    doc.Parse(response.c_str());
+    
+    if (doc.HasMember("camParameters")) {
+        Value& camParameters = doc["camParameters"];
+        if (camParameters.HasMember("basicContainer")) {
+            Value& basicContainer = camParameters["basicContainer"];
+            if (basicContainer.HasMember("referencePosition")) {
+                Value& referencePosition = basicContainer["referencePosition"];
+                if (referencePosition.HasMember("latitude") && referencePosition["latitude"].IsFloat()) {
+                    cam_latitude = referencePosition["latitude"].GetFloat();
+                }
+                if (referencePosition.HasMember("longitude") && referencePosition["longitude"].IsFloat()) {
+                    cam_longitude = referencePosition["longitude"].GetFloat();
+                }
+            }
+        }
     }
-
-    spdlog::debug("CAM: latitude: {}, longitude: {}, altitude: {}, altitudeConf: {}, heading: {}", cam_latitude, cam_longitude, cam_altitude, cam_alitude_conf, cam_heading);
-
 }
 
 
@@ -261,7 +281,14 @@ void handle_response(string topic, const string& response){
 
     //topic handler
     if(topic == "from/adapters") {
+        on_message_time = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
         adapter_handler(response);
+    } else if (topic == "vanetza/in/cam") {
+        spdlog::debug("Received CAM from vanetza/in/cam");
+        inCam_handler(response);
+    } else if (topic == "vanetza/in/cam_full") {
+        spdlog::debug("Received CAM_FULL from vanetza/in/cam_full: {}", response);
+        inCamFull_handler(response);
     } else {
         cout << "Invalid topic" << endl;
         return;
@@ -269,10 +296,14 @@ void handle_response(string topic, const string& response){
 }
 
 void on_message_mqtt(std::string topic, std::string message) {
-    spdlog::debug("Received CAM");
+    // spdlog::debug("Received CAM");
     if(topic == "vanetza/own/cam"){
-        ownCam_handler(message);
-    }   
+        cout << "Received own/cam_full" << endl;
+        // ownCam_handler(message);
+    } else if (topic == "vanetza/time/cam_full") {
+        cout << "Received time/cam_full" << endl;
+        // timeCamFull_handler(message);
+    }
     
 }
 
@@ -282,9 +313,18 @@ void setup_dds(){
     server->provision_publisher(pub_adapter_topic);
     server->provision_publisher(pub_cpm_topic);
     server->subscribe(sub_adapter_topic);
-
+    server->subscribe("vanetza/in/cam");
+    server->subscribe("vanetza/in/cam_full");
 }
 
+void writeMapToFile(map<int, long> &time_map, string filename) {
+    ofstream file;
+    file.open(filename);
+    for (auto const &pair : time_map) {
+        file << pair.first << ": " << pair.second << endl;
+    }
+    file.close();
+}
 
 int main() {
     
@@ -297,9 +337,13 @@ int main() {
     }
     cout << "Setting up MQTT..." << endl;
     data_mqtt = readMqttData("/config.ini");
-    MqttWrapper* mqtt_server = new MqttWrapper(data_mqtt, on_message_mqtt);
-    while (!mqtt_server->is_connected()){
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    MqttWrapper* mqtt_server;
+    if(mqtt_enable_publish){
+        mqtt_server = new MqttWrapper(data_mqtt, on_message_mqtt);
+        while (!mqtt_server->is_connected()){
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+        cout << "MQTT setup completed" << endl;
     }
     cout << "Setting up DDS..." << endl;
     setup_dds();
@@ -317,7 +361,7 @@ int main() {
 
             //Check if it is time to request data
             if (current_request - last_request >= request_interval) {
-                spdlog::debug("-------------------- New request --------------------");
+                spdlog::debug("-------------------- New request {} --------------------", request_iteration);
 
                 last_request = current_request;
 
@@ -327,31 +371,24 @@ int main() {
 
                 auto starting_time_before_request = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
                 received_responses = 0;
-                //Request data from adapters
-                server->publish("to/adapters", "{\"requestID\":" + to_string(timestamp_milliseconds) + ",\"numberObjects\":1}");
 
+                //Request data from adapters
+                server->publish("to/adapters", "{\"requestID\":" + to_string(timestamp_milliseconds) + ",\"numberObjects\":" + to_string(request_iteration) + "}");
                 auto ending_time_after_publish = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+                // request_map[request_iteration] = ending_time_after_publish;
+                
+
                 
                 request_instance = starting_time_before_request;
 
-                // spdlog::warn("Published request in instant: {}", ending_time_after_publish);
+                spdlog::debug("Time to publish request: {} us with ID {} and numberObjects {}", (ending_time_after_publish - starting_time_before_request), timestamp_milliseconds, request_iteration);
 
-                spdlog::debug("Time to publish request: {}us with ID {}", (ending_time_after_publish - starting_time_before_request), timestamp_milliseconds);
-
+                // request_iteration++;
+                
                 std::unique_lock<std::mutex> lk(mtx);
                 if (!cv.wait_for(lk, request_deadline, []{return received_responses >= exptected_responses;})) {
                     spdlog::warn("Request deadline reached or received responses: {}", received_responses);
                 }  
-
-                // //Wait for responses or deadline
-                // while(received_responses < exptected_responses) {
-                //     if(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()) - current_request > request_deadline) {
-                //         cout << "Request deadline reached" << endl;
-                //         break;
-                //     }
-                //     std::this_thread::sleep_for(std::chrono::microseconds(20));
-                // }
-
                 //Check if it is time to add sensor information
                 if(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()) - last_sensor > add_sensor_interval) {
                     last_sensor = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
@@ -363,25 +400,28 @@ int main() {
                 auto starting_time_before_processing = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
                 //Received objects processing
-                vector<string> cpmList = generateCPM(received_objects, cam_latitude, cam_longitude, cam_altitude, cam_alitude_conf, cam_heading, add_sensor_data, sensorInfo, stationType, mtx);
-                
+                vector<string> cpmList = generateCPM(received_objects, cam_latitude, cam_longitude, cam_altitude, cam_alitude_conf, cam_heading, add_sensor_data, sensorInfo, stationType, mtx, sequenceNumber);
                 
                 auto ending_time_after_processing = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
-                spdlog::debug("FULL time to generate CPM: {}", (ending_time_after_processing - starting_time_before_processing));
+                // spdlog::debug("FULL time to generate CPM: {}", (ending_time_after_processing - starting_time_before_processing));
 
 
                 for (const auto& cpm_str : cpmList) {
 
                     auto starting_time_before_publish_dds = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
                     //Publish CPM to DDS
                     server->publish(pub_cpm_topic, cpm_str);
 
                     auto ending_time_after_publish_dds = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
-                    spdlog::debug("Time to publish to DDS on topic {}: {}", pub_cpm_topic, (ending_time_after_publish_dds - starting_time_before_publish_dds));
+                    publish_time = ending_time_after_publish_dds;
+                    // publish_map[sequenceNumber] = publish_time;
 
-                    spdlog::debug("CPM: {}", cpm_str);
+                    // spdlog::debug("Time to publish to DDS on topic {}: {}", pub_cpm_topic, (ending_time_after_publish_dds - starting_time_before_publish_dds));
+
+                    spdlog::debug("[{}] CPM Published: {}", sequenceNumber, cpm_str);
 
                     //Publish CPM to MQTT
 
@@ -394,18 +434,20 @@ int main() {
                 }
 
                 //Clean and reset everything
-
-
                 received_objects.clear();
                 cpmList.clear();
                 cleanOldObjectsIDs(maxObjectAge);
-                
-
-                
 
                 auto ending_time = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
                 spdlog::info("Total time to publish CPM: {} with ID {}", (ending_time - starting_time_before_request), timestamp_milliseconds);
+
+                // if((sequenceNumber >= 950) && !logs_written) {
+                //     writeMapToFile(on_message_map, "/times/times_6.txt");
+                //     writeMapToFile(publish_map, "/times/times_7.txt");
+                //     writeMapToFile(request_map, "/times/times_3.txt");
+                //     logs_written = true;
+                // }
 
                 //Sleep for the rest of the interval until next request to avoid busy waiting
                 auto now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());

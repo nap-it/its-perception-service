@@ -18,5 +18,5 @@ CpmObjectId createCpmId(int sensorId, int objectId);
 CpmObjectId getCpmId(int sensorId, int objectId);
 void cleanOldObjectsIDs(int maxTime);
 
-vector<string> generateCPM(vector<Document>& receivedObjs, float cam_latitude, float cam_longitude, float cam_altitude, int cam_altitude_conf, float cam_heading, bool add_sensor_data, vector<Document>& sensorArray, int stationType, std::mutex& cpmMutex);
+vector<string> generateCPM(vector<Document>& receivedObjs, float cam_latitude, float cam_longitude, float cam_altitude, int cam_altitude_conf, float cam_heading, bool add_sensor_data, vector<Document>& sensorArray, int stationType, std::mutex& cpmMutex, int sequenceNumber);
 #endif // CPM_BUILDER_HPP

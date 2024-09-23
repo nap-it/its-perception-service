@@ -40,9 +40,10 @@ struct object {
 
 long int getTimestampIts(long int timestamp);
 
-
 std::pair<double, double> rotate_axes(int yaw, double x, double y);
 
-string process_cpm(Document& cpm);
+string simplify_cpm(int senderID, int receiverID, int receiverType, int repeatIntervalSec, Document& cpm);
+
+string process_cpm(int senderID, int receiverID, int receiverType, int repeatIntervalSec, Document& cpm);
 
 #endif //CPM_PROCESSING_C_CPM_PROCESSING_H

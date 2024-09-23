@@ -46,8 +46,10 @@ COPY *.h /cpm-generation/
 COPY *.hpp /cpm-generation/
 COPY CMakeLists.txt /cpm-generation/
 
+# MQTT
+WORKDIR /
 RUN git clone https://github.com/eclipse/paho.mqtt.c.git
-WORKDIR paho.mqtt.c
+WORKDIR /paho.mqtt.c
 RUN git checkout v1.3.13
 RUN cmake -Bbuild -H. -DPAHO_ENABLE_TESTING=OFF -DPAHO_BUILD_STATIC=ON \
         -DPAHO_WITH_SSL=ON -DPAHO_HIGH_PERFORMANCE=ON
@@ -64,12 +66,17 @@ RUN cmake --build build/ --target install
 RUN ldconfig
 
 WORKDIR /cpm-generation
-RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/rapidjson.git
-RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/spdlog.git
-RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/mobility-networks/fastdds-cpp-wrapper.git
+RUN git clone https://code.nap.av.it.pt/mobility-networks/fastdds-cpp-wrapper.git
+# COPY fastdds-cpp-wrapper /cpm-generation/fastdds-cpp-wrapper
+COPY rapidjson /cpm-generation/rapidjson
+COPY spdlog /cpm-generation/spdlog
+
+WORKDIR /cpm-generation
+# RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/rapidjson.git
+# RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/spdlog.git
+# RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/mobility-networks/fastdds-cpp-wrapper.git
 
 RUN cmake .
 RUN cmake --build .
 RUN chmod +x server
 ENTRYPOINT ["/cpm-generation/server"]
-

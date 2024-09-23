@@ -2,13 +2,17 @@ version: '2.4'
 services:
     cpm-processing:
         hostname: cpm-processing
-        image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/cpm-processing:latest
+        image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/cpm-processing:pix
         cap_add:
             - "NET_ADMIN"
-        networks:
-            vanetzalan0:
-                ipv4_address: 192.168.98.43
+        volumes:
+            # - ./timing-data:/times
+            - ./config.ini:/config.ini
+        network_mode: host
+        ipc: host
+#         networks:
+#             deploymentslan:
 
-networks:
-  vanetzalan0:
-    external: true
+# networks:
+#     deploymentslan:
+#         external: true

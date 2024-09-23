@@ -18,9 +18,12 @@ using namespace std;
 using namespace rapidjson;
 
 
+
+
 //globals
 unordered_map<int, CpmObjectId> idMap = unordered_map<int, CpmObjectId>();
 int current_id = 1;
+unsigned long int lowest_obj_timestamp = 0;
 
 //constants
 const float sensor_size = 7.941537;
@@ -30,6 +33,8 @@ const int header_manag_stat_size = 38;
 const int R = 6371000;
 const long int time2004ms = 1072915200000;
 const double multConst = (M_PI / 180);
+
+
 
 
 CpmObjectId createCpmId(int combinedId){
@@ -71,7 +76,7 @@ void cleanOldObjectsIDs(int maxTime){
     spdlog::debug("Number of objects in map: {}", idMap.size());
 }
 
-Document getManagementContainer(long unsigned int timestamp, float latitude, float longitude, float altitude, int altitudeConfidence){
+Document getManagementContainer(unsigned long int timestamp, float latitude, float longitude, float altitude, int altitudeConfidence, int sequenceNumber){
     Document managementContainer;
     managementContainer.SetObject();
     Document::AllocatorType& allocator = managementContainer.GetAllocator();
@@ -84,7 +89,7 @@ Document getManagementContainer(long unsigned int timestamp, float latitude, flo
     Value positionConfidenceEllipse(kObjectType);
     positionConfidenceEllipse.AddMember("semiMajorConfidence", 4095, allocator);
     positionConfidenceEllipse.AddMember("semiMinorConfidence", 4095, allocator);
-    positionConfidenceEllipse.AddMember("semiMajorOrientation", 0.0, allocator);
+    positionConfidenceEllipse.AddMember("semiMajorOrientation", 0, allocator);
 
     Value referencePosition(kObjectType);
     referencePosition.AddMember("latitude", latitude, allocator);
@@ -121,6 +126,14 @@ int getMessageEncodedSize(int numObjects, int numSensors){
     float c = 7.941537;
 
     return static_cast<int>(a + b * numObjects + c * numSensors);
+}
+
+void printValue(const Value& value){
+    cout << "------- Printing Value -------" << endl;
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    value.Accept(writer);
+    cout << buffer.GetString() << endl;
 }
 
 tuple<float,float> gpsToLocal(float obj_lat, float obj_lon, float cam_lat, float cam_lon, float multConst, float multConst2){
@@ -170,27 +183,27 @@ string docToString(const Document& value) {
     return buffer.GetString();
 }
 
-Document getPerceivedObject(int objectId, vector<int> sensorIDList, int deltaTimeMilliSecondSigned, int perceptionQuality, float x, float y, float x_speed, float y_speed, float x_acc, float y_acc, Document& objClassification){
+Document getPerceivedObject(int objectId, vector<int> sensorIDList, int deltaTimeMilliSecondSigned, int perceptionQuality, float x, float y, float x_speed, float y_speed, float x_acc, float y_acc, Document& objClassification, float heading){
 
     Document perceivedObject;
     perceivedObject.SetObject();
     Document::AllocatorType& allocator = perceivedObject.GetAllocator();
 
     //objectID
-    perceivedObject.AddMember("objectID", objectId, allocator);
+    perceivedObject.AddMember("objectId", objectId, allocator);
 
     //sensorIDList
     Value sensorList(kArrayType);
     for (int i = 0; i < sensorIDList.size(); i++){
         sensorList.PushBack(sensorIDList[i], allocator);
     }
-    perceivedObject.AddMember("sensorIDList", sensorList, allocator);
+    perceivedObject.AddMember("sensorIdList", sensorList, allocator);
 
     //deltaTimeMilliSecondSigned
     perceivedObject.AddMember("measurementDeltaTime", deltaTimeMilliSecondSigned, allocator);
 
     //objectPerceptionQuality
-    perceivedObject.AddMember("objectPerceptionQuality", perceptionQuality, allocator);
+    perceivedObject.AddMember("objectPerceptionQuality", 0, allocator);
 
     //position
     Value position(kObjectType);
@@ -207,33 +220,53 @@ Document getPerceivedObject(int objectId, vector<int> sensorIDList, int deltaTim
 
     perceivedObject.AddMember("position", position, allocator);
 
-    //xSpeed
-    Value xSpeed(kObjectType);
-    xSpeed.AddMember("value", x_speed, allocator);
-    xSpeed.AddMember("confidence", 1, allocator);
+    //velocity
+    Value velocity(kObjectType);
+    Value xVelocity(kObjectType);
+    Value yVelocity(kObjectType);
+    Value cartesianVelocity(kObjectType);
 
-    perceivedObject.AddMember("xSpeed", xSpeed, allocator);
+    xVelocity.AddMember("value", x_speed, allocator);
+    xVelocity.AddMember("confidence", 1, allocator);
+    yVelocity.AddMember("value", y_speed, allocator);
+    yVelocity.AddMember("confidence", 1, allocator);
 
-    //ySpeed
-    Value ySpeed(kObjectType);
-    ySpeed.AddMember("value", y_speed, allocator);
-    ySpeed.AddMember("confidence", 1, allocator);
+    cartesianVelocity.AddMember("xVelocity", xVelocity, allocator);
+    cartesianVelocity.AddMember("yVelocity", yVelocity, allocator);
 
-    perceivedObject.AddMember("ySpeed", ySpeed, allocator);
+    velocity.AddMember("cartesianVelocity", cartesianVelocity, allocator);
 
-    //xAcceleration
+    perceivedObject.AddMember("velocity", velocity, allocator);
+
+    //acceleration
+    Value acceleration(kObjectType);
     Value xAcceleration(kObjectType);
-    xAcceleration.AddMember("longitudinalAccelerationValue", x_acc, allocator);
-    xAcceleration.AddMember("longitudinalAccelerationConfidence", 102, allocator);
-
-    perceivedObject.AddMember("xAcceleration", xAcceleration, allocator);
-
-    //yAcceleration
     Value yAcceleration(kObjectType);
-    yAcceleration.AddMember("lateralAccelerationValue", y_acc, allocator);
-    yAcceleration.AddMember("lateralAccelerationConfidence", 102, allocator);
+    Value cartesianAcceleration(kObjectType);
 
-    perceivedObject.AddMember("yAcceleration", yAcceleration, allocator);
+    xAcceleration.AddMember("value", x_acc, allocator);
+    xAcceleration.AddMember("confidence", 1, allocator);
+
+    yAcceleration.AddMember("value", y_acc, allocator);
+    yAcceleration.AddMember("confidence", 1, allocator);
+
+    cartesianAcceleration.AddMember("xAcceleration", xAcceleration, allocator);
+    cartesianAcceleration.AddMember("yAcceleration", yAcceleration, allocator);
+
+    acceleration.AddMember("cartesianAcceleration", cartesianAcceleration, allocator);
+
+    perceivedObject.AddMember("acceleration", acceleration, allocator);
+
+    //heading
+    Value angles(kObjectType);
+    Value zAngle(kObjectType);
+
+    zAngle.AddMember("value", heading, allocator);
+    zAngle.AddMember("confidence", 1, allocator);
+
+    angles.AddMember("zAngle", zAngle, allocator);
+
+    perceivedObject.AddMember("angles", angles, allocator);
 
     //classification
     Value classification(kObjectType);
@@ -249,6 +282,9 @@ vector<Document> getPerceivedObjectsList(unsigned long int timestampIts, vector<
     vector<Document> perceivedObjectsList;
 
     double multConst2 = R * cos(cam_latitude * M_PI / 180);
+
+    //find lowest obj timestamp, start the temp_lowest_obj_timestamp with the highest possible value
+    unsigned long int temp_lowest_obj_timestamp = 18446744073709551615;
 
     for (int i = 0; i < receivedObjs.size(); i++){
 
@@ -276,12 +312,15 @@ vector<Document> getPerceivedObjectsList(unsigned long int timestampIts, vector<
         objectId = receivedObj["objID"].GetInt();
         obj_timestamp = receivedObj["timestamp"].GetInt64();
 
+        if (obj_timestamp < temp_lowest_obj_timestamp){
+            temp_lowest_obj_timestamp = obj_timestamp;
+        }
+
         if(receivedObj.HasMember("latitude") && receivedObj.HasMember("longitude")){
             obj_lat = receivedObj["latitude"].GetFloat();
             obj_lon = receivedObj["longitude"].GetFloat();
 
             tie(y, x) = gpsToLocal(obj_lat, obj_lon, cam_latitude, cam_longitude, multConst, multConst2);
-
 
             if(x > 1310.72){
                 x = 1310.72;
@@ -306,8 +345,11 @@ vector<Document> getPerceivedObjectsList(unsigned long int timestampIts, vector<
 
         if(receivedObj.HasMember("heading") && receivedObj.HasMember("speed") && receivedObj.HasMember("acceleration")){
             obj_heading = receivedObj["heading"].GetFloat();
+            // cout << "Object heading: " << obj_heading << endl;
             obj_abs_speed = receivedObj["speed"].GetFloat();
+            // cout << "Object speed: " << obj_abs_speed << endl;
             obj_abs_acc = receivedObj["acceleration"].GetFloat();
+            // cout << "Object acceleration: " << obj_abs_acc << endl;
 
             tie(xSpeed, ySpeed, xAcc, yAcc) = getRelativeValues(obj_heading, obj_abs_speed, obj_abs_acc, multConst);
 
@@ -342,7 +384,7 @@ vector<Document> getPerceivedObjectsList(unsigned long int timestampIts, vector<
 
         vector<int> sensorIDList = {sensorId};
 
-        Document perceivedObject = getPerceivedObject(cpmObjectId, sensorIDList, deltaTimeMilliSecondSigned, confidence, x, y, xSpeed, ySpeed, xAcc, yAcc, classification);
+        Document perceivedObject = getPerceivedObject(cpmObjectId, sensorIDList, deltaTimeMilliSecondSigned, confidence, x, y, xSpeed, ySpeed, xAcc, yAcc, classification, obj_heading);
 
         perceivedObjectsList.push_back(move(perceivedObject));
 
@@ -350,6 +392,10 @@ vector<Document> getPerceivedObjectsList(unsigned long int timestampIts, vector<
 
         // cout << "Time to process object: " << finalTime - initialTime << " microseconds" << endl;
 
+    }
+
+    if(temp_lowest_obj_timestamp != 18446744073709551615){
+        lowest_obj_timestamp = temp_lowest_obj_timestamp;
     }
 
     return perceivedObjectsList;
@@ -360,7 +406,7 @@ Document segment(unsigned long int timestampIts, const Document& managementConta
     cpm.SetObject();
     Document::AllocatorType& allocator = cpm.GetAllocator();
 
-    cpm.AddMember("generationDeltaTime", timestampIts, allocator);
+    // cpm.AddMember("generationDeltaTime", timestampIts, allocator);
 
     Document cpmParameters;
     cpmParameters.SetObject();
@@ -375,19 +421,20 @@ Document segment(unsigned long int timestampIts, const Document& managementConta
         managementContainerVal.AddMember("perceivedObjectContainerSegmentInfo", objectContainerSegmentInfo, allocator);
     }
 
-    cpmParameters.AddMember("managementContainer", managementContainerVal, allocator);
+    cpm.AddMember("managementContainer", managementContainerVal, allocator);
 
-    //wrappedCpmContainer (array)
-    Value wrappedCpmContainer(kArrayType);
+    //cpmContainers (array)
+    Value cpmContainers(kArrayType);
     //containerId 1 (stationDataContainer)
     Value containerId1(kObjectType);
     containerId1.CopyFrom(move(stationContainer), allocator);
 
-    wrappedCpmContainer.PushBack(containerId1, allocator);
+    cpmContainers.PushBack(containerId1, allocator);
 
     //containerId 5 (perceivedObjectContainer)
-    Value containerId3(kObjectType);
-    containerId3.AddMember("containerId", 5, allocator);
+    
+    Value containerId5(kObjectType);
+    containerId5.AddMember("containerId", 5, allocator);
     //containerData is an array of perceivedObjects
     Value containerData3(kObjectType);
     containerData3.AddMember("numberOfPerceivedObjects", perceivedObjectsList.size(), allocator);
@@ -398,36 +445,38 @@ Document segment(unsigned long int timestampIts, const Document& managementConta
         perceivedObjects.PushBack(perceivedObjectVal, allocator);
     }
     containerData3.AddMember("perceivedObjects", perceivedObjects, allocator);
-    containerId3.AddMember("containerData", containerData3, allocator);
+    containerId5.AddMember("containerData", containerData3, allocator);
 
-    wrappedCpmContainer.PushBack(containerId3, allocator);
+    cpmContainers.PushBack(containerId5, allocator);
 
     //containerId 3 (sensorDataContainer)
-    if (add_sensor_data){
-        Value containerId2(kObjectType);
-        containerId2.AddMember("containerId", 3, allocator);
+    if (true){
+        Value containerId3(kObjectType);
+        containerId3.AddMember("containerId", 3, allocator);
+
         //containerData is an array of sensors
-        Value containerData2(kArrayType);
+        Value containerData3(kArrayType);
         for (int i = 0; i < sensorArray.size(); i++){
             Value sensorVal(kObjectType);
             sensorVal.CopyFrom(sensorArray[i], allocator);
-            containerData2.PushBack(sensorVal, allocator);
+            containerData3.PushBack(sensorVal, allocator);
         }
-        containerId2.AddMember("containerData", containerData2, allocator);
+        containerId3.AddMember("containerData", containerData3, allocator);
         
-        wrappedCpmContainer.PushBack(containerId2, allocator);
+        cpmContainers.PushBack(containerId3, allocator);
     }
 
-    cpmParameters.AddMember("cpmContainers", wrappedCpmContainer, allocator);
+    cpm.AddMember("cpmContainers", cpmContainers, allocator);
 
-    cpm.AddMember("cpmParameters", cpmParameters, allocator);
+    // cpm.AddMember("cpmParameters", cpmParameters, allocator);
 
     return cpm;
 }
 
-vector<string> generateCPM(vector<Document>& receivedObjs, float cam_latitude, float cam_longitude, float cam_altitude, int cam_altitude_conf, float cam_heading, bool add_sensor_data, vector<Document>& sensorArray, int stationType, std::mutex& cpmMutex){
+vector<string> generateCPM(vector<Document>& receivedObjs, float cam_latitude, float cam_longitude, float cam_altitude, int cam_altitude_conf, float cam_heading, bool add_sensor_data, vector<Document>& sensorArray, int stationType, std::mutex& cpmMutex, int sequenceNumber){
 
     // std::lock_guard<std::mutex> lock(cpmMutex);
+
     vector<string> cpmList;
 
     Document cpm;
@@ -445,14 +494,33 @@ vector<string> generateCPM(vector<Document>& receivedObjs, float cam_latitude, f
     
     vector<Document> perceivedObjectsList = getPerceivedObjectsList(deltaTime, receivedObjs, cam_latitude, cam_longitude);
 
-    receivedObjs.clear();
+    // if(lowest_obj_timestamp == 18446744073709551615){
+    //     lowest_obj_timestamp = 0;
+    // }
+
+    // spdlog::debug("Lowest obj timestamp: {}", lowest_obj_timestamp);
+
+    // //Timing measurements
+    // lowest_obj_timestamp = deltaTime;
+
+    // for (int i = 0; i < perceivedObjectsList.size(); i++){
+    //     printValue(perceivedObjectsList[i]);
+    // }
 
     auto time_after_objs = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
     spdlog::debug("Time to process objects: {} microseconds", time_after_objs - time_before_objs);
 
+    Document managementContainer = getManagementContainer(deltaTime, cam_latitude, cam_longitude, cam_altitude, cam_altitude_conf, sequenceNumber);
 
-    Document managementContainer = getManagementContainer(deltaTime, cam_latitude, cam_longitude, cam_altitude, cam_altitude_conf);
+    //TIMING DEBUG
+    // perceivedObjectsList.clear();
+
+    // lowest_obj_timestamp = 0;
+
+    receivedObjs.clear();
+
+   
 
     //StationContainer
     Document stationContainer;
@@ -460,10 +528,16 @@ vector<string> generateCPM(vector<Document>& receivedObjs, float cam_latitude, f
     Document::AllocatorType& allocator = stationContainer.GetAllocator();
 
     if(stationType == 5){
+        spdlog::debug("stationType == 5");
         stationContainer.AddMember("containerId", 1, allocator);
         Value stationContainerData(kObjectType);
-        stationContainerData.AddMember("orientationAngle", cam_heading, allocator);
+        Value orientationAngle(kObjectType);
+        orientationAngle.AddMember("value", cam_heading, allocator);
+        orientationAngle.AddMember("confidence", 1, allocator);
+        stationContainerData.AddMember("orientationAngle", orientationAngle, allocator);
         stationContainer.AddMember("containerData", stationContainerData, allocator);
+
+        // printValue(stationContainer);
     } else {
         stationContainer.AddMember("containerId", 2, allocator);
         Value stationContainerData(kObjectType);

@@ -2,15 +2,17 @@ version: '2.4'
 services:
   cpm-generation:
     hostname: cpm-generation
-    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/cpm-generation:latest
+    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/cpm-generation:new-aw
     cap_add:
       - "NET_ADMIN"
     volumes:
-      - ./config.ini:/cpm-generation/config.ini
-    networks:
-      vanetzalan0:
-        ipv4_address: 192.168.98.42
+      - ./config.ini:/config.ini
+    network_mode: host
+    ipc: host
+#     networks:
+#       vanetzalan0:
+#         ipv4_address: 192.168.98.42
 
-networks:
-  vanetzalan0:
-    external: true
+# networks:
+#   vanetzalan0:
+#     external: true
