@@ -1,0 +1,20 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/opt/ros/humble/include/**",
+                "/home/pi/autoware/install/**",
+                "/home/pi/amaral/vortex/worldmodel_test/vortex-interfaces-dev/vortex_std_msgs/install/vortex_std_msgs/include/**",
+                "/home/pi/amaral/vortex/worldmodel_test/vortex-interfaces-dev/vortex_perception_msgs/install/vortex_perception_msgs/include/**"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c17",
+            "cppStandard": "gnu++17",
+            "intelliSenseMode": "linux-gcc-x64"
+        }
+    ],
+    "version": 4
+}

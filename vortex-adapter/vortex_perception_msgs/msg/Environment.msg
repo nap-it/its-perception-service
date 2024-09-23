@@ -1,0 +1,4 @@
+float32 temperature
+float32 wind_speed
+float32 wind_direction
+float32 humidity

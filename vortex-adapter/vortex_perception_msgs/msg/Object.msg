@@ -1,0 +1,9 @@
+uint32 id
+std_msgs/Header header
+geometry_msgs/PoseWithCovariance pose
+geometry_msgs/PoseWithCovariance pose_relative
+vortex_std_msgs/Vector3dWithCovariance size
+vortex_perception_msgs/Classification[] classification
+vortex_perception_msgs/Dynamics dynamics
+uint32[] observers
+bool is_observer

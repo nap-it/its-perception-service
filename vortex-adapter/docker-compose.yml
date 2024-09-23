@@ -1,0 +1,16 @@
+version: '2.4'
+
+services:
+  vortex_adapter:
+    image: vortex_adapter:latest
+    container_name: vortex_adapter
+    volumes:
+      - ./config.ini:/vortex_adapter/config.ini
+    network_mode: host
+    ipc: host
+#     networks:
+#       deploymentslan:
+
+# networks:
+#   deploymentslan:
+#     external: true

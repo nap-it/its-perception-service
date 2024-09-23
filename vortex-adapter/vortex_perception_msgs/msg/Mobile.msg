@@ -1,0 +1,5 @@
+float32 steering_angle
+uint32 current_lane
+float32 weight
+float32 max_steering_angle
+float32 max_acceleration
