@@ -257,6 +257,7 @@ string simplify_cpm(int senderID, int receiverID, int receiverType, int repeatIn
 
         double xVelocity = 16383;
         double yVelocity = 16383;
+        
 
         if(perceivedObjectContainer["containerData"]["perceivedObjects"][i].HasMember("velocity") && (perceivedObjectContainer["containerData"]["perceivedObjects"][i]["velocity"].HasMember("cartesianVelocity"))){
             xVelocity = perceivedObjectContainer["containerData"]["perceivedObjects"][i]["velocity"]["cartesianVelocity"]["xVelocity"]["value"].GetDouble();
@@ -458,6 +459,15 @@ string process_cpm(int senderID, int receiverID, int receiverType, int repeatInt
 
         double xDistance = perceivedObjectContainer["containerData"]["perceivedObjects"][i]["position"]["xCoordinate"]["value"].GetDouble();
         double yDistance = perceivedObjectContainer["containerData"]["perceivedObjects"][i]["position"]["yCoordinate"]["value"].GetDouble();
+        double xCov = perceivedObjectContainer["containerData"]["perceivedObjects"][i]["position"]["xCoordinate"]["confidence"].GetDouble();
+        double yCov = perceivedObjectContainer["containerData"]["perceivedObjects"][i]["position"]["yCoordinate"]["confidence"].GetDouble();
+
+        double zDistance = 0.0;
+        double zCov = 0.0;
+        if (perceivedObjectContainer["containerData"]["perceivedObjects"][i]["position"].HasMember("zCoordinate")) {
+            zDistance = perceivedObjectContainer["containerData"]["perceivedObjects"][i]["position"]["zCoordinate"]["value"].GetDouble();
+            zCov = perceivedObjectContainer["containerData"]["perceivedObjects"][i]["position"]["zCoordinate"]["confidence"].GetDouble();
+        }
 
         double latitude;
         double longitude;
@@ -469,10 +479,14 @@ string process_cpm(int senderID, int receiverID, int receiverType, int repeatInt
 
         double xVelocity = 16383;
         double yVelocity = 16383;
+        double xCovVelocity = 0.0;
+        double yCovVelocity = 0.0;
 
         if(perceivedObjectContainer["containerData"]["perceivedObjects"][i].HasMember("velocity") && (perceivedObjectContainer["containerData"]["perceivedObjects"][i]["velocity"].HasMember("cartesianVelocity"))){
             xVelocity = perceivedObjectContainer["containerData"]["perceivedObjects"][i]["velocity"]["cartesianVelocity"]["xVelocity"]["value"].GetDouble();
+            xCovVelocity = perceivedObjectContainer["containerData"]["perceivedObjects"][i]["velocity"]["cartesianVelocity"]["xVelocity"]["confidence"].GetDouble();
             yVelocity = perceivedObjectContainer["containerData"]["perceivedObjects"][i]["velocity"]["cartesianVelocity"]["yVelocity"]["value"].GetDouble();
+            yCovVelocity = perceivedObjectContainer["containerData"]["perceivedObjects"][i]["velocity"]["cartesianVelocity"]["yVelocity"]["confidence"].GetDouble();
         }
 
         double speed = 0.0;
@@ -492,8 +506,12 @@ string process_cpm(int senderID, int receiverID, int receiverType, int repeatInt
         else acceleration = 0.0;
 
         float heading;
-        if(perceivedObjectContainer["containerData"]["perceivedObjects"][i].HasMember("angles"))heading = perceivedObjectContainer["containerData"]["perceivedObjects"][i]["angles"]["zAngle"]["value"].GetFloat();
+        float heading_cov = 0.0;
+        if(perceivedObjectContainer["containerData"]["perceivedObjects"][i].HasMember("angles")) heading = perceivedObjectContainer["containerData"]["perceivedObjects"][i]["angles"]["zAngle"]["value"].GetFloat();
         else heading = 0.0;
+
+        if(perceivedObjectContainer["containerData"]["perceivedObjects"][i].HasMember("angles")) heading_cov = perceivedObjectContainer["containerData"]["perceivedObjects"][i]["angles"]["zAngle"]["confidence"].GetFloat();
+        else heading_cov = 0.0;
 
         string classification;
         int classificationID = 0;
@@ -520,6 +538,22 @@ string process_cpm(int senderID, int receiverID, int receiverType, int repeatInt
             catch(...){classification = "unclassified";}
         }
 
+        float zAngularVelocity = 0.0;
+        float zAngularVelocity_cov = 0.0;
+
+        if (perceivedObjectContainer["containerData"]["perceivedObjects"][i].HasMember("zAngularVelocity")) {
+            zAngularVelocity = perceivedObjectContainer["containerData"]["perceivedObjects"][i]["zAngularVelocity"]["value"].GetFloat();
+            zAngularVelocity_cov = perceivedObjectContainer["containerData"]["perceivedObjects"][i]["zAngularVelocity"]["confidence"].GetFloat();
+        }
+
+        float size_x = 0.0;
+        float size_y = 0.0;
+        float size_z = 0.0;
+
+        if(perceivedObjectContainer["containerData"]["perceivedObjects"][i].HasMember("objectDimensionX")) size_x = perceivedObjectContainer["containerData"]["perceivedObjects"][i]["objectDimensionX"]["value"].GetFloat();
+        if(perceivedObjectContainer["containerData"]["perceivedObjects"][i].HasMember("objectDimensionY")) size_y = perceivedObjectContainer["containerData"]["perceivedObjects"][i]["objectDimensionY"]["value"].GetFloat();
+        if(perceivedObjectContainer["containerData"]["perceivedObjects"][i].HasMember("objectDimensionZ")) size_z = perceivedObjectContainer["containerData"]["perceivedObjects"][i]["objectDimensionZ"]["value"].GetFloat();
+
         //Misc
         json_obj.AddMember("id", objectId, objAlloc);
         json_obj.AddMember("uniqueID", static_cast<int64_t>(uniqueID), objAlloc);
@@ -534,13 +568,21 @@ string process_cpm(int senderID, int receiverID, int receiverType, int repeatInt
         json_obj.AddMember("referenceLongitude", lon, objAlloc);
         json_obj.AddMember("xDistance", xDistance, objAlloc);
         json_obj.AddMember("yDistance", yDistance, objAlloc);
+        json_obj.AddMember("xDistanceCov", xCov, objAlloc);
+        json_obj.AddMember("yDistanceCov", yCov, objAlloc);
         json_obj.AddMember("latitude", latitude, objAlloc);
         json_obj.AddMember("longitude", longitude, objAlloc);
 
         //Velocity
         json_obj.AddMember("xVelocity", xVelocity, objAlloc);
+        json_obj.AddMember("xVelocityCov", xCovVelocity, objAlloc);
         json_obj.AddMember("yVelocity", yVelocity, objAlloc);
+        json_obj.AddMember("yVelocityCov", yCovVelocity, objAlloc);
         json_obj.AddMember("speed", speed, objAlloc);
+
+        //zAngularVelocity
+        json_obj.AddMember("zAngularVelocity", zAngularVelocity, objAlloc);
+        json_obj.AddMember("zAngularVelocityCov", zAngularVelocity_cov, objAlloc);
 
         //Acceleration
         json_obj.AddMember("xAcceleration", xAcceleration, objAlloc);
@@ -549,6 +591,12 @@ string process_cpm(int senderID, int receiverID, int receiverType, int repeatInt
 
         //Heading
         json_obj.AddMember("heading", heading, objAlloc);
+        json_obj.AddMember("headingCov", heading_cov, objAlloc);
+
+        //Size
+        json_obj.AddMember("size_x", size_x, objAlloc);
+        json_obj.AddMember("size_y", size_y, objAlloc);
+        json_obj.AddMember("size_z", size_z, objAlloc);
 
         //Classification
         json_obj.AddMember("classification", rapidjson::Value(classification.c_str(), objAlloc).Move(), objAlloc);

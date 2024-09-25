@@ -189,7 +189,7 @@ void dds_handler(string topic, const string& response){
         return;
     }
 
-    spdlog::info("Processed message: {}", cpmJson);
+    spdlog::info("Processed message: {}", fullCpmJson);
 
     if(dds_enable_publish){
         server->publish(dds_pub_topic, cpmJson);
