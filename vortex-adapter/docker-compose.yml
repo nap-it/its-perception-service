@@ -2,7 +2,7 @@ version: '2.4'
 
 services:
   vortex_adapter:
-    image: vortex_adapter:latest
+    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/vortex-adapter:latest
     container_name: vortex_adapter
     volumes:
       - ./config.ini:/vortex_adapter/config.ini

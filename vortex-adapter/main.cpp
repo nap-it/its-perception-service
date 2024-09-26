@@ -58,6 +58,10 @@ float obs_qy = 0;
 float obs_qz = 0;
 float obs_qw = 0;
 float obs_speed = 0;
+float obs_heading = 0;
+float obs_heading_rate = 0;
+float obs_size_x = 0;
+float obs_size_y = 0;
 uint32_t obs_id = 0;
 uint32_t obs_type = 0;
 
@@ -95,31 +99,58 @@ private:
 
         auto msg = vortex_perception_msgs::msg::Observer();
         msg.id = obs_id;
-        msg.type = obs_type;
+        msg.type = 1;
         msg.header.stamp = this->now();
         msg.header.frame_id = "map";
 
-        msg.gnss.vector.x = obs_latitude;
-        msg.gnss.vector.y = obs_longitude;
+        msg.gnss.vector.y = obs_latitude;
+        msg.gnss.vector.x = obs_longitude;
+
+        spdlog::debug("Observer gnss position: {}, {}", msg.gnss.vector.x, msg.gnss.vector.y);
 
         msg.pose.pose.position.x = obs_x;
         msg.pose.pose.position.y = obs_y;
         msg.pose.pose.position.z = 0;
+
+        spdlog::debug("Observer position: {}, {}", msg.pose.pose.position.x, msg.pose.pose.position.y);
+
+        msg.pose.covariance[0] = 0.0001;
+        msg.pose.covariance[7] = 0.0001;
+
+        msg.heading = obs_heading;
 
         msg.pose.pose.orientation.x = obs_qx;
         msg.pose.pose.orientation.y = obs_qy;
         msg.pose.pose.orientation.z = obs_qz;
         msg.pose.pose.orientation.w = obs_qw;
 
-        msg.size.vector.x = 0.5;
-        msg.size.vector.y = 0.5;
-        msg.size.vector.z = 0.5;
+        spdlog::debug("Observer orientation: {}, {}, {}, {}", msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w);
+
+        msg.size.vector.x = obs_size_x;
+        msg.size.vector.y = obs_size_y;
+        msg.size.vector.z = 1.5;
+
+        spdlog::debug("Observer size: {}, {}, {}", msg.size.vector.x, msg.size.vector.y, msg.size.vector.z);
+
+        
 
         msg.dynamics.speed = obs_speed;
+        msg.dynamics.velocity.twist.linear.x = obs_speed * cos(obs_heading);
+        msg.dynamics.velocity.twist.linear.y = obs_speed * sin(obs_heading);
+        msg.dynamics.velocity.covariance[0] = 0.0001;
+        msg.dynamics.velocity.covariance[7] = 0.0001;
+        msg.dynamics.velocity.covariance[35] = 0.001;
+
+        spdlog::debug("Observer speed: {}", msg.dynamics.speed);
+        spdlog::debug("Observer velocity: {}, {}", msg.dynamics.velocity.twist.linear.x, msg.dynamics.velocity.twist.linear.y);
 
         msg.objects.clear();
-        for(const auto& obj : objects){
-            msg.objects.push_back(obj);
+
+        {
+            std::lock_guard<std::mutex> lock(objects_mutex);
+            for(const auto& obj : objects){
+                msg.objects.push_back(obj);
+            }
         }
 
         observer_pub->publish(msg);
@@ -236,34 +267,44 @@ void on_message_dds(string topic, string message) {
                 object.header.stamp.sec = static_cast<int>(obj["objectTimestamp"].GetDouble());
                 object.header.frame_id = "map";
 
-                spdlog::debug("Object timestamp: {}", obj["objectTimestamp"].GetDouble());
-
                 double obj_x = obj["xDistance"].GetDouble();
-                spdlog::debug("Object x: {}", obj_x);
                 double obj_y = obj["yDistance"].GetDouble();
-                spdlog::debug("Object y: {}", obj_y);
+                double obj_z = obj["zDistance"].GetDouble();
+                double obj_x_cov = obj["xDistanceCov"].GetDouble();
+                double obj_y_cov = obj["yDistanceCov"].GetDouble();
+                double obj_z_cov = obj["zDistanceCov"].GetDouble();
+                obj_x_cov = obj_x_cov * obj_x_cov;
+                obj_y_cov = obj_y_cov * obj_y_cov;
+                obj_z_cov = obj_z_cov * obj_z_cov;
                 double obj_ref_lat = obj["referenceLatitude"].GetDouble();
-                spdlog::debug("Object ref lat: {}", obj_ref_lat);
                 double obj_ref_lon = obj["referenceLongitude"].GetDouble();
-                spdlog::debug("Object ref lon: {}", obj_ref_lon);
 
                 double x;
                 double y;
 
-                spdlog::debug("Computing new x and y");
-                spdlog::debug("Object x: {}, Object y: {}", obj_x, obj_y);
-                spdlog::debug("Object ref lat: {}, Object ref lon: {}", obj_ref_lat, obj_ref_lon);
-                spdlog::debug("Reference lat: {}, Reference lon: {}", reference_latitude, reference_longitude);
+                // spdlog::debug("Computing new x and y");
+                // spdlog::debug("Object x: {}, Object y: {}", obj_x, obj_y);
+                // spdlog::debug("Object ref lat: {}, Object ref lon: {}", obj_ref_lat, obj_ref_lon);
+                // spdlog::debug("Reference lat: {}, Reference lon: {}", reference_latitude, reference_longitude);
 
                 computeNewXY(obj_x, obj_y, obj_ref_lat, obj_ref_lon, reference_latitude, reference_longitude, x, y);
 
-                spdlog::debug("New x: {}, New y: {}", x, y);
+                // spdlog::debug("New x: {}, New y: {}", x, y);
 
                 object.pose.pose.position.x = x;
                 object.pose.pose.position.y = y;
+                object.pose.pose.position.z = obj_z;
+                spdlog::debug("Object x: {}, y: {}, z: {}", object.pose.pose.position.x, object.pose.pose.position.y, object.pose.pose.position.z);
+
+                object.pose.covariance[0] = obj_x_cov;
+                object.pose.covariance[7] = obj_y_cov;
+                object.pose.covariance[14] = obj_z_cov;
+                spdlog::debug("Object x cov: {}, y cov: {}, z cov: {}", object.pose.covariance[0], object.pose.covariance[7], object.pose.covariance[14]);
 
                 float heading = obj["heading"].GetFloat();
-                spdlog::debug("Object heading: {}", heading);
+                float heading_cov = obj["headingCov"].GetFloat();
+                heading_cov = heading_cov * heading_cov;
+                // spdlog::debug("Object heading: {} and cov {}", heading, heading_cov);
                 float qx, qy, qz, qw;
                 heading_to_quaternion(heading, qx, qy, qz, qw);
                 
@@ -271,27 +312,58 @@ void on_message_dds(string topic, string message) {
                 object.pose.pose.orientation.y = qy;
                 object.pose.pose.orientation.z = qz;
                 object.pose.pose.orientation.w = qw;
+                spdlog::debug("Object qx: {}, qy: {}, qz: {}, qw: {}", object.pose.pose.orientation.x, object.pose.pose.orientation.y, object.pose.pose.orientation.z, object.pose.pose.orientation.w);
+
+                object.pose.covariance[35] = heading_cov;
+                spdlog::debug("Object heading cov: {}", object.pose.covariance[35]);
 
                 vortex_perception_msgs::msg::Classification classification;
                 classification.sensor_type = 2;
+                int classification_id = obj["classificationID"].GetInt();
+
+                if(classification_id == 1) classification.class_name = "person";
+                else if(classification_id == 5) classification.class_name = "car";
+
+                classification.score = 1.0;
+
+                spdlog::debug("Object classification: {}", classification.class_name);
 
                 object.classification.push_back(classification);
 
-                object.size.vector.x = 0.5;
-                object.size.vector.y = 0.5;
-                object.size.vector.z = 0.5;
+                float size_x = obj["size_x"].GetFloat();
+                float size_y = obj["size_y"].GetFloat();
+                float size_z = obj["size_z"].GetFloat();
+
+                object.size.vector.x = size_x;
+                object.size.vector.y = size_y;
+                object.size.vector.z = size_z;
+
+                spdlog::debug("Object size: x: {}, y: {}, z: {}", object.size.vector.x, object.size.vector.y, object.size.vector.z);
 
                 object.dynamics.speed = obj["speed"].GetFloat();
-                spdlog::debug("Object speed: {}", object.dynamics.speed);
+                
                 object.dynamics.velocity.twist.linear.x = obj["xVelocity"].GetFloat();
-                spdlog::debug("Object x velocity: {}", object.dynamics.velocity.twist.linear.x);
+                float obj_x_vel_cov = obj["xVelocityCov"].GetFloat();
+                object.dynamics.velocity.covariance[0] = obj_x_vel_cov * obj_x_vel_cov;
+                
                 object.dynamics.velocity.twist.linear.y = obj["yVelocity"].GetFloat();
-                spdlog::debug("Object y velocity: {}", object.dynamics.velocity.twist.linear.y);
+                float obj_y_vel_cov = obj["yVelocityCov"].GetFloat();
+                object.dynamics.velocity.covariance[7] = obj_y_vel_cov * obj_y_vel_cov;
+
+                spdlog::debug("Object x velocity: {}, y velocity: {}", object.dynamics.velocity.twist.linear.x, object.dynamics.velocity.twist.linear.y);
+                spdlog::debug("Object x velocity cov: {}, y velocity cov: {}", object.dynamics.velocity.covariance[0], object.dynamics.velocity.covariance[7]);
+                spdlog::debug("Object speed: {}", object.dynamics.speed);
+
+                float obj_z_ang_vel = obj["zAngularVelocity"].GetFloat();
+                obj_z_ang_vel = obj_z_ang_vel * (M_PI / 180.0);
+                object.dynamics.velocity.twist.angular.z = obj_z_ang_vel;
+                float obj_z_ang_vel_cov = obj["zAngularVelocityCov"].GetFloat();
+                object.dynamics.velocity.covariance[35] = obj_z_ang_vel_cov * obj_z_ang_vel_cov;
+
+                spdlog::debug("Object z angular velocity: {}, cov: {}", object.dynamics.velocity.twist.angular.z, object.dynamics.velocity.covariance[35]);
+
 
                 int object_stationSenderID = obj["stationSenderID"].GetInt();
-                    
-                object.observers.push_back(obs_id);
-                object.is_observer = false;
 
                 if(object_stationSenderID == obs_id) objects.push_back(object);
             }
@@ -305,19 +377,22 @@ void on_message_dds(string topic, string message) {
 
             obs_id = out_cam["fields"]["header"]["stationID"].GetInt();
 
-            if(out_cam.HasMember("fileds") && out_cam["fields"].HasMember("cam")){
+            if(out_cam.HasMember("fields") && out_cam["fields"].HasMember("cam")){
                 obs_type = out_cam["fields"]["cam"]["camParameters"]["basicContainer"]["stationType"].GetInt();
-                Document cam;
-                cam.Parse(out_cam["fields"]["cam"].GetString());
-                obs_latitude = cam["camParameters"]["basicContainer"]["referencePosition"]["latitude"].GetDouble();
-                obs_longitude = cam["camParameters"]["basicContainer"]["referencePosition"]["longitude"].GetDouble();
+                obs_latitude = out_cam["fields"]["cam"]["camParameters"]["basicContainer"]["referencePosition"]["latitude"].GetDouble();
+                obs_longitude = out_cam["fields"]["cam"]["camParameters"]["basicContainer"]["referencePosition"]["longitude"].GetDouble();
+
+                obs_speed = out_cam["fields"]["cam"]["camParameters"]["highFrequencyContainer"]["basicVehicleContainerHighFrequency"]["speed"]["speedValue"].GetFloat();
+                obs_heading = out_cam["fields"]["cam"]["camParameters"]["highFrequencyContainer"]["basicVehicleContainerHighFrequency"]["heading"]["headingValue"].GetFloat();
+                obs_heading_rate = out_cam["fields"]["cam"]["camParameters"]["highFrequencyContainer"]["basicVehicleContainerHighFrequency"]["yawRate"]["yawRateValue"].GetFloat();
 
                 //calculate distance between observer and reference point in meters
                 calculate_distance(reference_latitude, reference_longitude, obs_latitude, obs_longitude);
-                obs_speed = cam["camParameters"]["highFrequencyContainer"]["basicVehicleContainerHighFrequency"]["speed"]["speedValue"].GetFloat();
-
                 //convert heading to quaternion
-                heading_to_quaternion(cam["camParameters"]["highFrequencyContainer"]["basicVehicleContainerHighFrequency"]["heading"]["headingValue"].GetFloat(), obs_qx, obs_qy, obs_qz, obs_qw);
+                heading_to_quaternion(obs_heading, obs_qx, obs_qy, obs_qz, obs_qw);
+
+                obs_size_x = out_cam["fields"]["cam"]["camParameters"]["highFrequencyContainer"]["basicVehicleContainerHighFrequency"]["vehicleLength"]["vehicleLengthValue"].GetFloat();
+                obs_size_y = out_cam["fields"]["cam"]["camParameters"]["highFrequencyContainer"]["basicVehicleContainerHighFrequency"]["vehicleWidth"].GetFloat();
 
             }
         } else if (topic == "vanetza/in/cam_full"){
@@ -333,10 +408,15 @@ void on_message_dds(string topic, string message) {
 
             //calculate distance between observer and reference point in meters
             calculate_distance(reference_latitude, reference_longitude, obs_latitude, obs_longitude);
+            obs_heading = cam["camParameters"]["highFrequencyContainer"]["basicVehicleContainerHighFrequency"]["heading"]["headingValue"].GetFloat();
+            obs_heading_rate = cam["camParameters"]["highFrequencyContainer"]["basicVehicleContainerHighFrequency"]["yawRate"]["yawRateValue"].GetFloat();
             obs_speed = cam["camParameters"]["highFrequencyContainer"]["basicVehicleContainerHighFrequency"]["speed"]["speedValue"].GetFloat();
 
             //convert heading to quaternion
-            heading_to_quaternion(cam["camParameters"]["highFrequencyContainer"]["basicVehicleContainerHighFrequency"]["heading"]["headingValue"].GetFloat(), obs_qx, obs_qy, obs_qz, obs_qw);
+            heading_to_quaternion(obs_heading, obs_qx, obs_qy, obs_qz, obs_qw);
+
+            obs_size_x = cam["camParameters"]["highFrequencyContainer"]["basicVehicleContainerHighFrequency"]["vehicleLength"]["vehicleLengthValue"].GetFloat();
+            obs_size_y = cam["camParameters"]["highFrequencyContainer"]["basicVehicleContainerHighFrequency"]["vehicleWidth"].GetFloat();
         }
     }
 }
