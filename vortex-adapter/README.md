@@ -20,3 +20,6 @@ To change the *ROS_DOMAIN_ID* for the adapter to publish, edit *start.sh*  and c
 ## Deployment
 
 The *docker-compose.yml* file already deploys the service with the correct networking options and the script to start the service with the correct  *ROS_DOMAIN_ID*.
+
+## Understanding the adapter
+The adapter subscribes to the two *DDS* topics to gather information from the *Observer* and its *objects*. The CPM Processing service creates the formatted objects_full topic that contains the necessary information to the adapter. An example of the **out_cam_full.json**, **out_cpm.json** and **objects_full** message are provided in the repository.
