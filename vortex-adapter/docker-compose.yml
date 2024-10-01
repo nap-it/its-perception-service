@@ -6,8 +6,12 @@ services:
     container_name: vortex_adapter
     volumes:
       - ./config.ini:/vortex_adapter/config.ini
+      - ./start.sh:/start.sh
     network_mode: host
     ipc: host
+    command: ["/bin/bash", "-c" , "/start.sh"]
+    tty: true
+
 #     networks:
 #       deploymentslan:
 

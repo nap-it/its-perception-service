@@ -62,7 +62,7 @@ float obs_heading = 0;
 float obs_heading_rate = 0;
 float obs_size_x = 0;
 float obs_size_y = 0;
-uint32_t obs_id = 0;
+uint32_t obs_id = -1;
 uint32_t obs_type = 0;
 
 //objects variables
@@ -71,6 +71,12 @@ std::vector<vortex_perception_msgs::msg::Object> objects;
 const double earth_radius = 6371000;
 
 std::mutex objects_mutex;
+std::mutex observer_mutex;
+
+//time to keep last cam message
+std::chrono::time_point<std::chrono::system_clock> last_cam_message = std::chrono::system_clock::now();
+bool cam_message_timeout = false;
+std::mutex cam_message_timeout_mutex;
 
 Dds* dds_;
 
@@ -99,6 +105,16 @@ private:
 
         auto msg = vortex_perception_msgs::msg::Observer();
         msg.id = obs_id;
+
+        if(obs_id != 157 && obs_id != 229) {
+            return;
+        }
+
+        if(cam_message_timeout) {
+            spdlog::warn("Not publishing observer message due to timeout");
+            return;
+        }
+
         msg.type = 1;
         msg.header.stamp = this->now();
         msg.header.frame_id = "map";
@@ -132,17 +148,18 @@ private:
 
         spdlog::debug("Observer size: {}, {}, {}", msg.size.vector.x, msg.size.vector.y, msg.size.vector.z);
 
-        
+        float obs_heading_rate_rad = obs_heading_rate * (M_PI / 180.0);
 
         msg.dynamics.speed = obs_speed;
         msg.dynamics.velocity.twist.linear.x = obs_speed * cos(obs_heading);
         msg.dynamics.velocity.twist.linear.y = obs_speed * sin(obs_heading);
+        msg.dynamics.velocity.twist.angular.z = obs_heading_rate_rad;
         msg.dynamics.velocity.covariance[0] = 0.0001;
         msg.dynamics.velocity.covariance[7] = 0.0001;
         msg.dynamics.velocity.covariance[35] = 0.001;
 
         spdlog::debug("Observer speed: {}", msg.dynamics.speed);
-        spdlog::debug("Observer velocity: {}, {}", msg.dynamics.velocity.twist.linear.x, msg.dynamics.velocity.twist.linear.y);
+        spdlog::debug("Observer velocity: {}, {}, angular {}", msg.dynamics.velocity.twist.linear.x, msg.dynamics.velocity.twist.linear.y, msg.dynamics.velocity.twist.angular.z);
 
         msg.objects.clear();
 
@@ -151,10 +168,13 @@ private:
             for(const auto& obj : objects){
                 msg.objects.push_back(obj);
             }
+            objects.clear();
         }
 
-        observer_pub->publish(msg);
-        spdlog::info("Published observer message");
+        if(obs_id == 157 || obs_id == 229) {
+            observer_pub->publish(msg);
+            spdlog::info("Published observer message");
+        }
 
     }
 
@@ -194,6 +214,15 @@ void heading_to_quaternion(float heading_angle, float& qx, float& qy, float& qz,
 }
 
 void calculate_distance(double reference_lat, double reference_lon, double obs_lat, double obs_lon){
+
+    if(reference_lat == 0 || reference_lon == 0){
+        spdlog::warn("Reference latitude or longitude not set");
+        return;
+    } else if (obs_lat == 0 || obs_lon == 0){
+        spdlog::warn("Observer latitude or longitude not set");
+        return;
+    }
+
     double lat1 = degrees_to_radians(reference_lat);
     double lon1 = degrees_to_radians(reference_lon);
     double lat2 = degrees_to_radians(obs_lat);
@@ -207,7 +236,7 @@ void calculate_distance(double reference_lat, double reference_lon, double obs_l
     
     obs_x = X;
     obs_y = Y;
-    spdlog::info("X: {}, Y: {}", obs_x, obs_y);
+    // spdlog::info("X: {}, Y: {}", obs_x, obs_y);
 }
 
 void computeNewXY(double x, double y,
@@ -235,7 +264,7 @@ void computeNewXY(double x, double y,
     double delta_N = delta_lat_rad * R; // North displacement
     double delta_E = delta_lon_rad * R * cos(mean_lat_rad); // East displacement
 
-    spdlog::info("Delta N: {}, Delta E: {}", delta_N, delta_E);
+    // spdlog::debug("Delta N: {}, Delta E: {}", delta_N, delta_E);
 
     // Adjust the original coordinates
     x_prime = x - delta_E;
@@ -251,9 +280,26 @@ void on_message_dds(string topic, string message) {
 
     if(topic == objects_topic) {
         spdlog::info("Received objects message");
+
+        if(cam_message_timeout){
+            spdlog::warn("Skipping objects message due to timeout");
+            return;
+        }
+
+        if(d.HasParseError()) {
+            spdlog::error("Error parsing objects message");
+            return;
+        }
+
+        if(d.IsArray() == false) {
+            spdlog::error("Objects message is not an array");
+            return;
+        }
+        
         //number of objects
         int n_objects = d.Size();
         spdlog::debug("Number of objects: {}", n_objects);
+        if (n_objects == 0) return;
 
         {
             std::lock_guard<std::mutex> lock(objects_mutex);
@@ -261,39 +307,53 @@ void on_message_dds(string topic, string message) {
             objects.clear();
             for (auto& obj : d.GetArray()){
                 vortex_perception_msgs::msg::Object object;
-                object.id = obj["id"].GetUint();
-                spdlog::debug("Object ID: {}", object.id);
 
-                object.header.stamp.sec = static_cast<int>(obj["objectTimestamp"].GetDouble());
-                object.header.frame_id = "map";
+                if(obj.HasMember("id")) {
+                    object.id = obj["id"].GetUint();
+                    spdlog::debug("Object ID: {}", object.id);
+                } else {
+                    spdlog::warn("Object ID not found, skipping object");
+                    continue;
+                }
 
-                double obj_x = obj["xDistance"].GetDouble();
-                double obj_y = obj["yDistance"].GetDouble();
-                double obj_z = obj["zDistance"].GetDouble();
-                double obj_x_cov = obj["xDistanceCov"].GetDouble();
-                double obj_y_cov = obj["yDistanceCov"].GetDouble();
-                double obj_z_cov = obj["zDistanceCov"].GetDouble();
+                if(obj.HasMember("objectTimestamp")) {
+                    object.header.stamp.sec = static_cast<int>(obj["objectTimestamp"].GetDouble());
+                    object.header.frame_id = "map";
+                } else {
+                    spdlog::warn("Object timestamp not found, skipping object");
+                    continue;
+                }
+                
+                double obj_x = 0;
+                if(obj.HasMember("xDistance")) obj_x = obj["xDistance"].GetDouble();
+                double obj_y = 0;
+                if(obj.HasMember("yDistance")) obj_y = obj["yDistance"].GetDouble();
+                double obj_z = 0;
+                if(obj.HasMember("zDistance")) obj_z = obj["zDistance"].GetDouble();
+                double obj_x_cov = 0;
+                if(obj.HasMember("xDistanceCov")) obj_x_cov = obj["xDistanceCov"].GetDouble();
+                double obj_y_cov = 0;
+                if(obj.HasMember("yDistanceCov")) obj_y_cov = obj["yDistanceCov"].GetDouble();
+                double obj_z_cov = 0;
+                if(obj.HasMember("zDistanceCov")) obj_z_cov = obj["zDistanceCov"].GetDouble();
                 obj_x_cov = obj_x_cov * obj_x_cov;
                 obj_y_cov = obj_y_cov * obj_y_cov;
                 obj_z_cov = obj_z_cov * obj_z_cov;
-                double obj_ref_lat = obj["referenceLatitude"].GetDouble();
-                double obj_ref_lon = obj["referenceLongitude"].GetDouble();
+
+                double obj_ref_lat = 0;
+                if(obj.HasMember("referenceLatitude")) obj_ref_lat = obj["referenceLatitude"].GetDouble();
+                double obj_ref_lon = 0;
+                if(obj.HasMember("referenceLongitude")) obj_ref_lon = obj["referenceLongitude"].GetDouble();
 
                 double x;
                 double y;
-
-                // spdlog::debug("Computing new x and y");
-                // spdlog::debug("Object x: {}, Object y: {}", obj_x, obj_y);
-                // spdlog::debug("Object ref lat: {}, Object ref lon: {}", obj_ref_lat, obj_ref_lon);
-                // spdlog::debug("Reference lat: {}, Reference lon: {}", reference_latitude, reference_longitude);
-
                 computeNewXY(obj_x, obj_y, obj_ref_lat, obj_ref_lon, reference_latitude, reference_longitude, x, y);
 
                 // spdlog::debug("New x: {}, New y: {}", x, y);
 
                 object.pose.pose.position.x = x;
                 object.pose.pose.position.y = y;
-                object.pose.pose.position.z = obj_z;
+                // object.pose.pose.position.z = obj_z;
                 spdlog::debug("Object x: {}, y: {}, z: {}", object.pose.pose.position.x, object.pose.pose.position.y, object.pose.pose.position.z);
 
                 object.pose.covariance[0] = obj_x_cov;
@@ -301,10 +361,12 @@ void on_message_dds(string topic, string message) {
                 object.pose.covariance[14] = obj_z_cov;
                 spdlog::debug("Object x cov: {}, y cov: {}, z cov: {}", object.pose.covariance[0], object.pose.covariance[7], object.pose.covariance[14]);
 
-                float heading = obj["heading"].GetFloat();
-                float heading_cov = obj["headingCov"].GetFloat();
+                float heading = 0;
+                if(obj.HasMember("heading")) heading = obj["heading"].GetFloat();
+                float heading_cov = 0;
+                if(obj.HasMember("headingCov")) heading_cov = obj["headingCov"].GetFloat();
                 heading_cov = heading_cov * heading_cov;
-                // spdlog::debug("Object heading: {} and cov {}", heading, heading_cov);
+
                 float qx, qy, qz, qw;
                 heading_to_quaternion(heading, qx, qy, qz, qw);
                 
@@ -319,104 +381,145 @@ void on_message_dds(string topic, string message) {
 
                 vortex_perception_msgs::msg::Classification classification;
                 classification.sensor_type = 2;
-                int classification_id = obj["classificationID"].GetInt();
+                int classification_id = 1;
+                if(obj.HasMember("classificationID")) classification_id = obj["classificationID"].GetInt();
 
                 if(classification_id == 1) classification.class_name = "person";
                 else if(classification_id == 5) classification.class_name = "car";
+                else if(classification_id == 7) classification.class_name = "truck";
+                else if(classification_id == 8) classification.class_name = "truck";
 
                 classification.score = 1.0;
 
                 spdlog::debug("Object classification: {}", classification.class_name);
 
-                object.classification.push_back(classification);
+                if(classification_id != 0) object.classification.push_back(classification);
 
-                float size_x = obj["size_x"].GetFloat();
-                float size_y = obj["size_y"].GetFloat();
-                float size_z = obj["size_z"].GetFloat();
+                float size_x = 0;
+                if(obj.HasMember("size_x")) size_x = obj["size_x"].GetFloat();
+                float size_y = 0;
+                if(obj.HasMember("size_y")) size_y = obj["size_y"].GetFloat();
+                float size_z = 0;
+                if(obj.HasMember("size_z")) size_z = obj["size_z"].GetFloat();
 
                 object.size.vector.x = size_x;
                 object.size.vector.y = size_y;
                 object.size.vector.z = size_z;
 
+                //object z is the height of the object / 2
+                object.pose.pose.position.z = size_z / 2;
+
                 spdlog::debug("Object size: x: {}, y: {}, z: {}", object.size.vector.x, object.size.vector.y, object.size.vector.z);
 
-                object.dynamics.speed = obj["speed"].GetFloat();
+                float speed = 0;
+                if(obj.HasMember("speed")) speed = obj["speed"].GetFloat();
+                object.dynamics.speed = speed;
                 
-                object.dynamics.velocity.twist.linear.x = obj["xVelocity"].GetFloat();
-                float obj_x_vel_cov = obj["xVelocityCov"].GetFloat();
+                float obj_x_vel = 0;
+                if(obj.HasMember("xVelocity")) obj_x_vel = obj["xVelocity"].GetFloat();
+                object.dynamics.velocity.twist.linear.x = obj_x_vel;
+
+                float obj_x_vel_cov = 0;
+                if(obj.HasMember("xVelocityCov")) obj_x_vel_cov = obj["xVelocityCov"].GetFloat();
                 object.dynamics.velocity.covariance[0] = obj_x_vel_cov * obj_x_vel_cov;
                 
-                object.dynamics.velocity.twist.linear.y = obj["yVelocity"].GetFloat();
-                float obj_y_vel_cov = obj["yVelocityCov"].GetFloat();
+                float obj_y_vel = 0;
+                if(obj.HasMember("yVelocity")) obj_y_vel = obj["yVelocity"].GetFloat();
+                object.dynamics.velocity.twist.linear.y = obj_y_vel;
+
+                float obj_y_vel_cov = 0;
+                if(obj.HasMember("yVelocityCov")) obj_y_vel_cov = obj["yVelocityCov"].GetFloat();
                 object.dynamics.velocity.covariance[7] = obj_y_vel_cov * obj_y_vel_cov;
 
                 spdlog::debug("Object x velocity: {}, y velocity: {}", object.dynamics.velocity.twist.linear.x, object.dynamics.velocity.twist.linear.y);
                 spdlog::debug("Object x velocity cov: {}, y velocity cov: {}", object.dynamics.velocity.covariance[0], object.dynamics.velocity.covariance[7]);
                 spdlog::debug("Object speed: {}", object.dynamics.speed);
 
-                float obj_z_ang_vel = obj["zAngularVelocity"].GetFloat();
+                float obj_z_ang_vel = 0;
+                if (obj.HasMember("zAngularVelocity")) obj_z_ang_vel = obj["zAngularVelocity"].GetFloat();
                 obj_z_ang_vel = obj_z_ang_vel * (M_PI / 180.0);
                 object.dynamics.velocity.twist.angular.z = obj_z_ang_vel;
-                float obj_z_ang_vel_cov = obj["zAngularVelocityCov"].GetFloat();
+
+                float obj_z_ang_vel_cov = 0;
+                if(obj.HasMember("zAngularVelocityCov")) obj_z_ang_vel_cov = obj["zAngularVelocityCov"].GetFloat();
                 object.dynamics.velocity.covariance[35] = obj_z_ang_vel_cov * obj_z_ang_vel_cov;
 
                 spdlog::debug("Object z angular velocity: {}, cov: {}", object.dynamics.velocity.twist.angular.z, object.dynamics.velocity.covariance[35]);
 
-
-                int object_stationSenderID = obj["stationSenderID"].GetInt();
+                
+                int object_stationSenderID = -1;
+                if (obj.HasMember("stationSenderID")) object_stationSenderID = obj["stationSenderID"].GetInt();
 
                 if(object_stationSenderID == obs_id) objects.push_back(object);
             }
         }
 
     } else if(topic == cam_topic) {
-        spdlog::info("Received cam message");
         if (topic == "vanetza/out/cam_full"){
+
             Document out_cam;
-            out_cam.Parse(message.c_str());
-
-            obs_id = out_cam["fields"]["header"]["stationID"].GetInt();
-
-            if(out_cam.HasMember("fields") && out_cam["fields"].HasMember("cam")){
-                obs_type = out_cam["fields"]["cam"]["camParameters"]["basicContainer"]["stationType"].GetInt();
-                obs_latitude = out_cam["fields"]["cam"]["camParameters"]["basicContainer"]["referencePosition"]["latitude"].GetDouble();
-                obs_longitude = out_cam["fields"]["cam"]["camParameters"]["basicContainer"]["referencePosition"]["longitude"].GetDouble();
-
-                obs_speed = out_cam["fields"]["cam"]["camParameters"]["highFrequencyContainer"]["basicVehicleContainerHighFrequency"]["speed"]["speedValue"].GetFloat();
-                obs_heading = out_cam["fields"]["cam"]["camParameters"]["highFrequencyContainer"]["basicVehicleContainerHighFrequency"]["heading"]["headingValue"].GetFloat();
-                obs_heading_rate = out_cam["fields"]["cam"]["camParameters"]["highFrequencyContainer"]["basicVehicleContainerHighFrequency"]["yawRate"]["yawRateValue"].GetFloat();
-
-                //calculate distance between observer and reference point in meters
-                calculate_distance(reference_latitude, reference_longitude, obs_latitude, obs_longitude);
-                //convert heading to quaternion
-                heading_to_quaternion(obs_heading, obs_qx, obs_qy, obs_qz, obs_qw);
-
-                obs_size_x = out_cam["fields"]["cam"]["camParameters"]["highFrequencyContainer"]["basicVehicleContainerHighFrequency"]["vehicleLength"]["vehicleLengthValue"].GetFloat();
-                obs_size_y = out_cam["fields"]["cam"]["camParameters"]["highFrequencyContainer"]["basicVehicleContainerHighFrequency"]["vehicleWidth"].GetFloat();
-
+            try{
+                out_cam.Parse(message.c_str());
+            } catch(...){
+                spdlog::error("Error parsing CAM message");
+                return;
             }
-        } else if (topic == "vanetza/in/cam_full"){
 
-            //static data for testing
-            obs_id = 229;
-            obs_type = 5;
+            if (out_cam.HasMember("fields") && out_cam["fields"].HasMember("cam") && out_cam["fields"]["cam"].HasMember("camParameters") && out_cam["fields"]["cam"]["camParameters"].HasMember("basicContainer") && out_cam["fields"]["cam"]["camParameters"]["basicContainer"].HasMember("stationType"))
+                obs_type = out_cam["fields"]["cam"]["camParameters"]["basicContainer"]["stationType"].GetInt();
+            else
+                return;
 
-            Document cam;
-            cam.Parse(message.c_str());
-            obs_latitude = cam["camParameters"]["basicContainer"]["referencePosition"]["latitude"].GetDouble();
-            obs_longitude = cam["camParameters"]["basicContainer"]["referencePosition"]["longitude"].GetDouble();
+            if(obs_type == 15 || obs_type == 0){
+                return;
+            }
 
-            //calculate distance between observer and reference point in meters
-            calculate_distance(reference_latitude, reference_longitude, obs_latitude, obs_longitude);
-            obs_heading = cam["camParameters"]["highFrequencyContainer"]["basicVehicleContainerHighFrequency"]["heading"]["headingValue"].GetFloat();
-            obs_heading_rate = cam["camParameters"]["highFrequencyContainer"]["basicVehicleContainerHighFrequency"]["yawRate"]["yawRateValue"].GetFloat();
-            obs_speed = cam["camParameters"]["highFrequencyContainer"]["basicVehicleContainerHighFrequency"]["speed"]["speedValue"].GetFloat();
+            if(out_cam.HasMember("fields") && out_cam["fields"].HasMember("header") && out_cam["fields"]["header"].HasMember("stationID"))
+                obs_id = out_cam["fields"]["header"]["stationID"].GetInt();
 
-            //convert heading to quaternion
-            heading_to_quaternion(obs_heading, obs_qx, obs_qy, obs_qz, obs_qw);
+            //for tech days demo
+            if(obs_id != 157 && obs_id != 229){
+                spdlog::info("Observer ID is not 157 or 229, skipping message");
+                return;
+            }
 
-            obs_size_x = cam["camParameters"]["highFrequencyContainer"]["basicVehicleContainerHighFrequency"]["vehicleLength"]["vehicleLengthValue"].GetFloat();
-            obs_size_y = cam["camParameters"]["highFrequencyContainer"]["basicVehicleContainerHighFrequency"]["vehicleWidth"].GetFloat();
+            {
+                std::lock_guard<std::mutex> lock(cam_message_timeout_mutex);
+                cam_message_timeout = false;
+                last_cam_message = std::chrono::system_clock::now();
+            }
+
+            {
+                std::lock_guard<std::mutex> lock(observer_mutex);
+            
+                if(out_cam.HasMember("fields") && out_cam["fields"].HasMember("cam")){
+                    if (out_cam["fields"]["cam"].HasMember("camParameters") && out_cam["fields"]["cam"]["camParameters"].HasMember("basicContainer") && out_cam["fields"]["cam"]["camParameters"]["basicContainer"].HasMember("referencePosition")){
+                        obs_latitude = out_cam["fields"]["cam"]["camParameters"]["basicContainer"]["referencePosition"]["latitude"].GetDouble();
+                        obs_longitude = out_cam["fields"]["cam"]["camParameters"]["basicContainer"]["referencePosition"]["longitude"].GetDouble();
+                    } else {
+                        spdlog::error("Error parsing Latitude and Longitude, skipping message");
+                        return;
+                    }
+
+                    if(out_cam["fields"]["cam"].HasMember("camParameters") && out_cam["fields"]["cam"]["camParameters"].HasMember("highFrequencyContainer") && out_cam["fields"]["cam"]["camParameters"]["highFrequencyContainer"].HasMember("basicVehicleContainerHighFrequency") && out_cam["fields"]["cam"]["camParameters"]["highFrequencyContainer"]["basicVehicleContainerHighFrequency"].HasMember("speed") && out_cam["fields"]["cam"]["camParameters"]["highFrequencyContainer"]["basicVehicleContainerHighFrequency"]["speed"].HasMember("speedValue"))
+                        obs_speed = out_cam["fields"]["cam"]["camParameters"]["highFrequencyContainer"]["basicVehicleContainerHighFrequency"]["speed"]["speedValue"].GetFloat();
+                    if(out_cam["fields"]["cam"].HasMember("camParameters") && out_cam["fields"]["cam"]["camParameters"].HasMember("highFrequencyContainer") && out_cam["fields"]["cam"]["camParameters"]["highFrequencyContainer"].HasMember("basicVehicleContainerHighFrequency") && out_cam["fields"]["cam"]["camParameters"]["highFrequencyContainer"]["basicVehicleContainerHighFrequency"].HasMember("heading") && out_cam["fields"]["cam"]["camParameters"]["highFrequencyContainer"]["basicVehicleContainerHighFrequency"]["heading"].HasMember("headingValue"))
+                        obs_heading = out_cam["fields"]["cam"]["camParameters"]["highFrequencyContainer"]["basicVehicleContainerHighFrequency"]["heading"]["headingValue"].GetFloat();
+                    if(out_cam["fields"]["cam"].HasMember("camParameters") && out_cam["fields"]["cam"]["camParameters"].HasMember("highFrequencyContainer") && out_cam["fields"]["cam"]["camParameters"]["highFrequencyContainer"].HasMember("basicVehicleContainerHighFrequency") && out_cam["fields"]["cam"]["camParameters"]["highFrequencyContainer"]["basicVehicleContainerHighFrequency"].HasMember("yawRate") && out_cam["fields"]["cam"]["camParameters"]["highFrequencyContainer"]["basicVehicleContainerHighFrequency"]["yawRate"].HasMember("yawRateValue"))
+                        obs_heading_rate = out_cam["fields"]["cam"]["camParameters"]["highFrequencyContainer"]["basicVehicleContainerHighFrequency"]["yawRate"]["yawRateValue"].GetFloat();
+
+                    //calculate distance between observer and reference point in meters
+                    calculate_distance(reference_latitude, reference_longitude, obs_latitude, obs_longitude);
+                    //convert heading to quaternion
+                    heading_to_quaternion(obs_heading, obs_qx, obs_qy, obs_qz, obs_qw);
+
+                    if(out_cam["fields"]["cam"].HasMember("camParameters") && out_cam["fields"]["cam"]["camParameters"].HasMember("highFrequencyContainer") && out_cam["fields"]["cam"]["camParameters"]["highFrequencyContainer"].HasMember("basicVehicleContainerHighFrequency") && out_cam["fields"]["cam"]["camParameters"]["highFrequencyContainer"]["basicVehicleContainerHighFrequency"].HasMember("vehicleLength") && out_cam["fields"]["cam"]["camParameters"]["highFrequencyContainer"]["basicVehicleContainerHighFrequency"]["vehicleLength"].HasMember("vehicleLengthValue"))
+                        obs_size_x = out_cam["fields"]["cam"]["camParameters"]["highFrequencyContainer"]["basicVehicleContainerHighFrequency"]["vehicleLength"]["vehicleLengthValue"].GetFloat();
+                    if(out_cam["fields"]["cam"].HasMember("camParameters") && out_cam["fields"]["cam"]["camParameters"].HasMember("highFrequencyContainer") && out_cam["fields"]["cam"]["camParameters"]["highFrequencyContainer"].HasMember("basicVehicleContainerHighFrequency") && out_cam["fields"]["cam"]["camParameters"]["highFrequencyContainer"]["basicVehicleContainerHighFrequency"].HasMember("vehicleWidth"))
+                        obs_size_y = out_cam["fields"]["cam"]["camParameters"]["highFrequencyContainer"]["basicVehicleContainerHighFrequency"]["vehicleWidth"].GetFloat();
+                }
+            }
+
         }
     }
 }
@@ -472,7 +575,19 @@ int main(int argc, char * argv[]) {
 
     while (rclcpp::ok()) {
 
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+        auto elapsed_time = std::chrono::system_clock::now() - last_cam_message;
+
+        {
+            std::lock_guard<std::mutex> lock(cam_message_timeout_mutex);
+            if(elapsed_time > std::chrono::milliseconds(2000)){
+                spdlog::warn("Status: CAM message timeout");
+                cam_message_timeout = true;
+            } else {
+                cam_message_timeout = false;
+            }
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
     // If rclcpp::ok() returns false, it means ros2 has been shutdown, 

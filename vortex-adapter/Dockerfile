@@ -1,5 +1,5 @@
 # Use OSRF ROS Humble as the base image
-FROM osrf/ros:humble-desktop
+FROM ros:humble-ros-base-jammy
 
 # Update the package list
 RUN apt-get update 
@@ -52,7 +52,7 @@ RUN /bin/bash -c "source /opt/ros/humble/setup.bash && source /vortex_adapter/vo
 
 RUN chmod +x /vortex_adapter/build/main
 
-COPY start.sh /vortex_adapter/start.sh
-RUN chmod +x /vortex_adapter/start.sh
+# COPY start.sh /vortex_adapter/start.sh
+# RUN chmod +x /vortex_adapter/start.sh
 
-ENTRYPOINT [ "/vortex_adapter/start.sh" ]
+# ENTRYPOINT [ "/vortex_adapter/start.sh" ]
