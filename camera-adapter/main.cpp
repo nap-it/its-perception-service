@@ -149,8 +149,8 @@ void on_message_dds(std::string topic, std::string message) {
         n_objects_to_send = 0;
 
         //clean last_sent old data
-        // unsigned long int now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - time2004ms;
-        // clean_last_sent(&last_sent, now);
+        unsigned long int now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - time2004ms;
+        clean_last_sent(&last_sent, now);
     }
 }
 
