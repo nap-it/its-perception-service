@@ -1,9 +1,0 @@
-uint32 id
-uint32 right_line
-uint32 left_line
-uint32[] horizontal_signs
-float32 speed_limit
-float32 width
-uint32 ground_type
-float32 ground_condition
-float32 distance_to_end

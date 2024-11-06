@@ -1,3 +1,0 @@
-float32 speed
-geometry_msgs/TwistWithCovariance velocity
-geometry_msgs/AccelWithCovariance acceleration

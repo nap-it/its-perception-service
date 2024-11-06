@@ -81,7 +81,7 @@ data_mqtt_server readConfigFile(const std::string& path)
 
 
 void clean_last_sent(std::map<int, radarMqttObject> * last_sent_dict, unsigned long int current_time) {
-    // cout << "Cleaning last_sent_dict..." << endl;
+    cout << "Cleaning last_sent_dict..." << endl;
     for(auto it = last_sent_dict->begin(); it != last_sent_dict->end(); ) {
         // cout << "id: " << it->first << " timestamp: " << it->second.timestamp << endl;
         if (current_time - it->second.timestamp > 15000) {
@@ -149,8 +149,8 @@ void on_message_dds(std::string topic, std::string message) {
         n_objects_to_send = 0;
 
         // clean "last_sent"
-        // unsigned long int now = static_cast<unsigned long int>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - time2004ms);
-        // clean_last_sent(&last_sent, now);
+        unsigned long int now = static_cast<unsigned long int>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - time2004ms);
+        clean_last_sent(&last_sent, now);
     }
 }
 
