@@ -1,0 +1,17 @@
+version: '2.4'
+
+services:
+  aw-cpm-adapter:
+    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/aw-cpm-adapter:pix
+    container_name: aw-cpm-adapter
+    volumes:
+      - ./config.ini:/cpm_adapter/config.ini
+      - ./timing-data:/times
+    network_mode: host
+    ipc: host
+#     networks:
+#       deploymentslan:
+
+# networks:
+#   deploymentslan:
+#     external: true

@@ -39,7 +39,7 @@ WORKDIR /tmp/Fast-DDS/build
 RUN cmake ..
 RUN cmake --build . --target install --parallel $(nproc)
 
-# MQTT
+# mqtt
 WORKDIR /
 RUN git clone https://github.com/eclipse/paho.mqtt.c.git
 WORKDIR /paho.mqtt.c
@@ -59,24 +59,22 @@ RUN cmake --build build/ --target install
 RUN ldconfig
 
 WORKDIR /
-RUN mkdir /cpm-generation
-COPY *.cpp /cpm-generation/
-COPY *.h /cpm-generation/
-COPY *.hpp /cpm-generation/
-COPY CMakeLists.txt /cpm-generation/
+RUN mkdir /camera-adapter
+COPY *.cpp /camera-adapter/
+COPY *.h /camera-adapter/
+COPY *.hpp /camera-adapter/
+COPY CMakeLists.txt /camera-adapter/
 
-WORKDIR /cpm-generation
-RUN git clone https://code.nap.av.it.pt/mobility-networks/fastdds-cpp-wrapper.git
-# COPY fastdds-cpp-wrapper /cpm-generation/fastdds-cpp-wrapper
-# COPY rapidjson /cpm-generation/rapidjson
-# COPY spdlog /cpm-generation/spdlog
-
-WORKDIR /cpm-generation
+WORKDIR /camera-adapter
 RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/rapidjson.git
 RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/spdlog.git
-# RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/mobility-networks/fastdds-cpp-wrapper.git
+RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/mobility-networks/fastdds-cpp-wrapper.git
 
+WORKDIR /camera-adapter
 RUN cmake .
 RUN cmake --build .
-RUN chmod +x server
-ENTRYPOINT ["/cpm-generation/server"]
+RUN chmod +x main
+ENTRYPOINT ["/camera-adapter/main"]
+
+#ENTRYPOINT ["sleep"]
+#CMD 50000

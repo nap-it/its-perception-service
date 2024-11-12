@@ -2,7 +2,7 @@ version: '2.4'
 services:
     cpm-processing:
         hostname: cpm-processing
-        image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/cpm-processing:pix
+        image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/cpm-processing:dev
         cap_add:
             - "NET_ADMIN"
         volumes:

@@ -22,7 +22,7 @@ WORKDIR /tmp
 RUN git clone https://github.com/eProsima/foonathan_memory_vendor.git
 RUN mkdir /tmp/foonathan_memory_vendor/build
 WORKDIR /tmp/foonathan_memory_vendor/build
-RUN cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local/ -DBUILD_SHARED_LIBS=ON
+RUN cmake .. -DBUILD_SHARED_LIBS=ON
 RUN cmake --build . --target install --parallel $(nproc)
 WORKDIR /tmp
 RUN git clone https://github.com/eProsima/Fast-CDR.git
@@ -39,7 +39,7 @@ WORKDIR /tmp/Fast-DDS/build
 RUN cmake ..
 RUN cmake --build . --target install --parallel $(nproc)
 
-# MQTT
+#MQTT
 WORKDIR /
 RUN git clone https://github.com/eclipse/paho.mqtt.c.git
 WORKDIR /paho.mqtt.c
@@ -59,24 +59,18 @@ RUN cmake --build build/ --target install
 RUN ldconfig
 
 WORKDIR /
-RUN mkdir /cpm-generation
-COPY *.cpp /cpm-generation/
-COPY *.h /cpm-generation/
-COPY *.hpp /cpm-generation/
-COPY CMakeLists.txt /cpm-generation/
+RUN mkdir /radar-adapter
+COPY *.cpp /radar-adapter/
+COPY *.h /radar-adapter/
+COPY *.hpp /radar-adapter/
+COPY CMakeLists.txt /radar-adapter/
 
-WORKDIR /cpm-generation
-RUN git clone https://code.nap.av.it.pt/mobility-networks/fastdds-cpp-wrapper.git
-# COPY fastdds-cpp-wrapper /cpm-generation/fastdds-cpp-wrapper
-# COPY rapidjson /cpm-generation/rapidjson
-# COPY spdlog /cpm-generation/spdlog
-
-WORKDIR /cpm-generation
+WORKDIR /radar-adapter
 RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/rapidjson.git
 RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/spdlog.git
-# RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/mobility-networks/fastdds-cpp-wrapper.git
+RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/mobility-networks/fastdds-cpp-wrapper.git
 
 RUN cmake .
 RUN cmake --build .
-RUN chmod +x server
-ENTRYPOINT ["/cpm-generation/server"]
+RUN chmod +x main
+ENTRYPOINT ["/radar-adapter/main"]

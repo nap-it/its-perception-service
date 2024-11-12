@@ -2,7 +2,7 @@ version: '2.4'
 services:
   cpm-generation:
     hostname: cpm-generation
-    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/cpm-generation:new-aw
+    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/cpm-generation:dev
     cap_add:
       - "NET_ADMIN"
     volumes:

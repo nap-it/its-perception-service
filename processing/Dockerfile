@@ -39,13 +39,6 @@ WORKDIR /tmp/Fast-DDS/build
 RUN cmake ..
 RUN cmake --build . --target install --parallel $(nproc)
 
-WORKDIR /
-RUN mkdir /cpm-processing
-COPY *.cpp /cpm-processing/
-COPY *.h /cpm-processing/
-COPY *.hpp /cpm-processing/
-COPY CMakeLists.txt /cpm-processing/
-
 # MQTT
 WORKDIR /
 RUN git clone https://github.com/eclipse/paho.mqtt.c.git
@@ -65,16 +58,17 @@ RUN cmake -Bbuild -H. -DPAHO_BUILD_STATIC=ON \
 RUN cmake --build build/ --target install
 RUN ldconfig
 
-WORKDIR /cpm-processing
-# RUN git clone https://code.nap.av.it.pt/mobility-networks/fastdds-cpp-wrapper.git
-COPY fastdds-cpp-wrapper /cpm-processing/fastdds-cpp-wrapper
-COPY rapidjson /cpm-processing/rapidjson
-COPY spdlog /cpm-processing/spdlog
+WORKDIR /
+RUN mkdir /cpm-processing
+COPY *.cpp /cpm-processing/
+COPY *.h /cpm-processing/
+COPY *.hpp /cpm-processing/
+COPY CMakeLists.txt /cpm-processing/
 
 WORKDIR /cpm-processing
-# RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/rapidjson.git
-# RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/spdlog.git
-# RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/mobility-networks/fastdds-cpp-wrapper.git
+RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/rapidjson.git
+RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/spdlog.git
+RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/mobility-networks/fastdds-cpp-wrapper.git
 
 RUN cmake .
 RUN cmake --build .

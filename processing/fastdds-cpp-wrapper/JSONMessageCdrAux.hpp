@@ -24,7 +24,7 @@
 
 #include "JSONMessage.h"
 
-constexpr uint32_t JSONMessage_max_cdr_typesize {532UL};
+constexpr uint32_t JSONMessage_max_cdr_typesize {20000ULL};
 constexpr uint32_t JSONMessage_max_key_cdr_typesize {0UL};
 
 

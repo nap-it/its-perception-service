@@ -28,6 +28,12 @@ MqttWrapper::MqttWrapper(data_mqtt_server data, std::function<void(std::string, 
     this->connOpts_.set_clean_session(false);
     this->connOpts_.set_automatic_reconnect(true);
 
+    //Set username and password if available
+    if(!data_server.username.empty()) {
+        this->connOpts_.set_user_name(data_server.username);
+        this->connOpts_.set_password(data_server.password);
+    }
+
     this->client_.set_callback(*this);
 
     this->on_message_function = on_message_received;
@@ -51,6 +57,15 @@ MqttWrapper::MqttWrapper(data_mqtt_server data)
 
     this->connOpts_.set_clean_session(false);
     this->connOpts_.set_automatic_reconnect(true);
+
+    // Set username and password if provided
+    if (!data_server.username.empty()) {
+        spdlog::info("Setting username and password for MQTT connection");
+        spdlog::info("Username: {}", data_server.username);
+        spdlog::info("Password: {}", data_server.password);
+        this->connOpts_.set_user_name(data_server.username);
+        this->connOpts_.set_password(data_server.password);
+    }
 
     this->client_.set_callback(*this);
 

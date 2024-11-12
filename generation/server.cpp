@@ -98,38 +98,50 @@ void readConfigFile(const string& path){
         return;
     }
 
-    sub_adapter_topic = reader.Get("dds", "topic_adapter_subscribe", "from/adapters");
-    cout << "[Config] Sub Adapter Topic: " << sub_adapter_topic << endl;
-    pub_adapter_topic = reader.Get("dds", "topic_adapter_publish", "to/adapters");
-    cout << "[Config] Pub Adapter Topic: " << pub_adapter_topic << endl;
-    pub_cpm_topic = reader.Get("general", "topic_cpm_publish", "cps-v2/in/cpm");
-    cout << "[Config] Pub CPM Topic: " << pub_cpm_topic << endl;
-    domain_id = reader.GetInteger("dds", "domain_id", 0);
-    cout << "[Config] Domain ID: " << domain_id << endl;
+    sub_adapter_topic = reader.Get("cpm-generation", "subscribe_adapter_topic", "from/adapters");
+    spdlog::info("[GENERATION - CONFIG] Sub Adapter Topic: {}", sub_adapter_topic);
+    
+    pub_adapter_topic = reader.Get("cpm-generation", "publish_adapter_topic", "to/adapters");
+    spdlog::info("[GENERATION - CONFIG] Pub Adapter Topic: {}", pub_adapter_topic);
 
-    request_deadline = std::chrono::milliseconds(reader.GetInteger("dds", "request_deadline", 50));
-    cout << "[Config] Request Deadline: " << request_deadline.count() << endl;
-    request_interval = std::chrono::milliseconds(reader.GetInteger("dds", "request_interval", 100));
-    cout << "[Config] Request Interval: " << request_interval.count() << endl;
-    add_sensor_interval = std::chrono::milliseconds(reader.GetInteger("dds", "add_sensor_interval", 1000));
-    cout << "[Config] Add Sensor Interval: " << add_sensor_interval.count() << endl;
-    max_interval = std::chrono::milliseconds(reader.GetInteger("dds", "max_interval", 1000));
-    cout << "[Config] Max Interval: " << max_interval.count() << endl;
-    maxObjectAge = reader.GetInteger("general", "clean_object_interval", 15000);
-    cout << "[Config] Max Object Age: " << maxObjectAge << endl;
+    pub_cpm_topic = reader.Get("cpm-generation", "publish_cpm_topic", "vanetza/in/cpm");
+    spdlog::info("[GENERATION - CONFIG] Pub CPM Topic: {}", pub_cpm_topic);
 
-    mqtt_enable_publish = reader.GetBoolean("mqtt", "enable_publish", false);
+    domain_id = reader.GetInteger("cpm-generation", "domain_id", 0);
+    spdlog::info("[GENERATION - CONFIG] Domain ID: {}", domain_id);
 
-    exptected_responses = reader.GetInteger("general", "expected_responses", 1);
-    cout << "[Config] Expected Responses: " << exptected_responses << endl;
+    request_deadline = std::chrono::milliseconds(reader.GetInteger("cpm-generation", "request_deadline", 50));
+    spdlog::info("[GENERATION - CONFIG] Request Deadline: {}", request_deadline.count());
 
-    stationType = reader.GetInteger("general", "stationType", 5);
-    cout << "[Config] Station Type: " << stationType << endl;
-    debug = reader.GetInteger("general", "debug", 1);
-    cout << "[Config] Debug: " << debug << endl;
+    request_interval = std::chrono::milliseconds(reader.GetInteger("cpm-generation", "request_interval", 100));
+    spdlog::info("[GENERATION - CONFIG] Request Interval: {}", request_interval.count());
 
-    cam_latitude = reader.GetReal("general", "latitude", 40.63028);
-    cam_longitude = reader.GetReal("general", "longitude", -8.65423);
+    add_sensor_interval = std::chrono::milliseconds(reader.GetInteger("cpm-generation", "add_sensor_interval", 1000));
+    spdlog::info("[GENERATION - CONFIG] Add Sensor Interval: {}", add_sensor_interval.count());
+
+    max_interval = std::chrono::milliseconds(reader.GetInteger("cpm-generation", "max_interval", 1000));
+    spdlog::info("[GENERATION - CONFIG] Max Interval: {}", max_interval.count());
+
+    maxObjectAge = reader.GetInteger("cpm-generation", "clean_object_interval", 15000);
+    spdlog::info("[GENERATION - CONFIG] Clean Object Interval: {}", maxObjectAge);
+
+    mqtt_enable_publish = reader.GetBoolean("cpm-generation", "mqtt_enable_publish", false);
+    spdlog::info("[GENERATION - CONFIG] MQTT Enable Publish: {}", mqtt_enable_publish);
+
+    exptected_responses = reader.GetInteger("cpm-generation", "expected_responses", 1);
+    spdlog::info("[GENERATION - CONFIG] Expected Responses: {}", exptected_responses);
+
+    stationType = reader.GetInteger("cpm-generation", "station_type", 5);
+    spdlog::info("[GENERATION - CONFIG] Station Type: {}", stationType);
+    
+    debug = reader.GetInteger("cpm-generation", "debug", 1);
+    spdlog::info("[GENERATION - CONFIG] Debug: {}", debug);
+
+    cam_latitude = reader.GetReal("cpm-generation", "latitude", 40.63028);
+    spdlog::info("[GENERATION - CONFIG] Cam Latitude: {}", cam_latitude);
+
+    cam_longitude = reader.GetReal("cpm-generation", "longitude", -8.65423);
+    spdlog::info("[GENERATION - CONFIG] Cam Longitude: {}", cam_longitude);
 }
 
 data_mqtt_server readMqttData(const string& path){
@@ -137,12 +149,12 @@ data_mqtt_server readMqttData(const string& path){
 
     INIReader reader (path);
 
-    string host = reader.Get("mqtt", "host", "localhost");
-    int port = reader.GetInteger("mqtt", "port", 1883);
+    string host = reader.Get("cpm-generation", "mqtt_host", "localhost");
+    int port = reader.GetInteger("cpm-generation", "mqtt_port", 1883);
 
     data.address = "tcp://" + host + ":" + to_string(port);
     data.client_id = "cpm-generation";
-    data.publish_topic = reader.Get("general", "topic_cpm_publish", "vanetza/in/cpm");
+    data.publish_topic = reader.Get("cpm-generation", "mqtt_publish_cpm_topic", "vanetza/in/cpm");
 
     string sub_topic1 = "vanetza/own/cam";
     string sub_topic2 = "vanetza/time/cam_full";
@@ -227,10 +239,6 @@ void adapter_handler(const string& response){
         // cout << "No objects on response" << endl;
         spdlog::error("No objects on response");
     }
-
-    spdlog::debug("GENERATION REPLY: Received {} objects", received_objects.size());
-
-    
 
     // Increase received responses
     std::lock_guard<std::mutex> lock(mtx);
@@ -374,14 +382,15 @@ int main() {
 
                 //Request data from adapters
                 server->publish("to/adapters", "{\"requestID\":" + to_string(timestamp_milliseconds) + ",\"numberObjects\":" + to_string(request_iteration) + "}");
-                auto ending_time_after_publish = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+                spdlog::debug("Sent request to {} with ID {} and numberObjects {}", "to/adapters", timestamp_milliseconds, request_iteration);
+                // auto ending_time_after_publish = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
                 // request_map[request_iteration] = ending_time_after_publish;
                 
 
                 
-                request_instance = starting_time_before_request;
+                // request_instance = starting_time_before_request;
 
-                spdlog::debug("Time to publish request: {} us with ID {} and numberObjects {}", (ending_time_after_publish - starting_time_before_request), timestamp_milliseconds, request_iteration);
+                // spdlog::debug("Time to publish request: {} us with ID {} and numberObjects {}", (ending_time_after_publish - starting_time_before_request), timestamp_milliseconds, request_iteration);
 
                 // request_iteration++;
                 
