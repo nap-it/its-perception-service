@@ -59,12 +59,12 @@
 | subscribe_cpm_topic           | Number of active connected adapters | Update depending on the deployed environment (in RSUs should be the same as Generation) |
 | dds_publish_objects_topic     | DDS Objects topic                         | Default is *objects* |
 | dds_publish_objects_full_topic     | DDS Objects Full information topic   | Default is *objects_full* |
-| **local_mqtt_enable_publisher**       | Enable publishing CPMs via MQTT   | **Enabled** by default|
+| **local_mqtt_enable_publisher**       | Enable publishing CPMs via MQTT   | **Enabled** by default for RSUs|
 | local_mqtt_host                       | MQTT Broker IP                    | Default is *mosquitto* |
 | local_mqtt_port                       | MQTT Broker IP                    | Default is *1883* |
 | local_mqtt_publish_objects_topic      | MQTT Publish CPM topic            | Default is *objects*|
 | local_mqtt_publish_objects_full_topic | MQTT Publish CPM topic            | Default is *objects_full*|
-| **remote_mqtt_enable_publisher**           | Enable publishing CPMs via MQTT   | **Disabled** by default|
+| **remote_mqtt_enable_publisher**           | Enable publishing CPMs via MQTT   | **Disabled** by default for RSUs|
 | remote_mqtt_host                       | MQTT Broker IP                    | Can be used for ATCLL|
 | remote_mqtt_port                       | MQTT Broker IP                    | Can be used for ATCLL|
 | remote_mqtt_publish_objects_topic      | MQTT Publish CPM topic            | **Update** depending on the deployed station, default is *p0/objects*|
