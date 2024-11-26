@@ -5,27 +5,49 @@
 
 ```
 {
-    timestamp: double,
-    listOfObjects: [
+    "numberOf": int,
+    "listOfObjects": [
         {
-            objectID: int,
-            classification: int;
-            confidence: int,
-            latitude: float,
-            longitude: float,
-            heading: float,
-            speed: float
+        "objectID": int,
+        "globalID": int,
+        "classification": int,
+        "confidence": int,
+        "bbox": {
+            "top_left_x": int,
+            "top_left_y": int,
+            "width": int,
+            "height": int
         },
-        {
-            objectID: int,
-            classification: int;
-            confidence: int,
-            latitude: float,
-            longitude: float,
-            heading: float,
-            speed: float
+        "latitude": float,
+        "longitude": float,
+        "heading": null,
+        "speed": null,
+        "event": ""
+    },
+    {
+        "objectID": int,
+        "globalID": int,
+        "classification": int,
+        "confidence": int,
+        "bbox": {
+            "top_left_x": int,
+            "top_left_y": int,
+            "width": int,
+            "height": int
         },
-        (...)
-    ]
+        "latitude": float,
+        "longitude": float,
+        "heading": null,
+        "speed": null,
+        "event": ""
+    }
+    ],
+    "timestamp": float,
+    "receiverID": int,
+    "test": {
+            "timestamp_start_yolo": float,
+            "timestamp_end_yolo": float
+    }
 }
 ```
+
