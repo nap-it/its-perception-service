@@ -5,16 +5,17 @@
 
 ```
 {
-    objectID: int,
-    receiverID: int,
-    acceleration: float,
-    speed: float,
-    classification: int,
-    confidence: int,
-    heading: float,
-    latitude: float,
-    longitude: float,
-    length: float,
-    timestamp: double
+    "acceleration": float,
+    "classification": int,
+    "confidence": int,
+    "heading": float,
+    "latitude": float,
+    "longitude": float,
+    "length": float,
+    "cloudPersist": boolean,
+    "objectID": int,
+    "receiverID": int,
+    "speed": float,
+    "timestamp": float,
 }
 ```
