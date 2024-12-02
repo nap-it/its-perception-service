@@ -25,6 +25,7 @@
         classificationID: int,
         stationSenderID: int,
         stationSenderType: int,
+        detectionStationType, int,
         stationReceiverID: int,
         stationReceiverType: int,
         referenceTimestamp: int64
