@@ -21,8 +21,8 @@
         speed: float,
         acceleration: float,
         heading: float,
-		classification: string,			// string representation of classification
-		classificationID: int,
+        classification: string,			// string representation of classification
+        classificationID: int,
         stationSenderID: int,
         stationSenderType: int,
         stationReceiverID: int,
@@ -54,11 +54,11 @@
         zDistance: float,				// altitude in meters
         xDistanceCov: float, 			// xDistance covariance
         yDistanceCov: float, 			// yDistance covariance
-		zDistanceCov: float, 			// zDistance covariance
-		xVelocity: float,				// velocity vector x based on heading
-		yVelocity: float,				// velocity vector y based on heading
-		xVelocityCov: foat,
-		yVelocityCov: float,
+        zDistanceCov: float, 			// zDistance covariance
+        xVelocity: float,				// velocity vector x based on heading
+        yVelocity: float,				// velocity vector y based on heading
+        xVelocityCov: foat,
+        yVelocityCov: float,
         speed: float,
         acceleration: float,
         xAcceleration: float,
@@ -70,8 +70,8 @@
         size_x: float,					// object length
         size_y: float, 					// object width
         size_z: float, 					// object height
-		classification: string,
-		classificationID: int,
+        classification: string,
+        classificationID: int,
         stationSenderID: int,
         stationSenderType: int,
         stationReceiverID: int,
