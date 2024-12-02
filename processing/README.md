@@ -14,14 +14,14 @@
         age: int,
         objectTimestamp: float,
         objectPerceptionQuality: float,
-        sensor: string,					// string representation of sensor
+        sensor: string,                 // string representation of sensor
         sensorID: int,
         latitude: float,
         longitude: float,
         speed: float,
         acceleration: float,
         heading: float,
-        classification: string,			// string representation of classification
+        classification: string,         // string representation of classification
         classificationID: int,
         stationSenderID: int,
         stationSenderType: int,
@@ -49,27 +49,27 @@
         longitude: float,
         referenceLatitude: float,
         referenceLongitude: float,
-        xDistance: float,				// distance in meters to the reference position (East)
-        yDistance: float,				// distance in meters to the reference position (North)
-        zDistance: float,				// altitude in meters
-        xDistanceCov: float, 			// xDistance covariance
-        yDistanceCov: float, 			// yDistance covariance
-        zDistanceCov: float, 			// zDistance covariance
-        xVelocity: float,				// velocity vector x based on heading
-        yVelocity: float,				// velocity vector y based on heading
+        xDistance: float,               // distance in meters to the reference position (East)
+        yDistance: float,               // distance in meters to the reference position (North)
+        zDistance: float,               // altitude in meters
+        xDistanceCov: float,            // xDistance covariance
+        yDistanceCov: float,            // yDistance covariance
+        zDistanceCov: float,            // zDistance covariance
+        xVelocity: float,               // velocity vector x based on heading
+        yVelocity: float,               // velocity vector y based on heading
         xVelocityCov: foat,
         yVelocityCov: float,
         speed: float,
         acceleration: float,
         xAcceleration: float,
         yAcceleration: float,
-        zAngularVelocity: float,		// angular velocity
+        zAngularVelocity: float,        // angular velocity
         zAngularVelocityCov: float,
         heading: float,
         headingCov: float,
-        size_x: float,					// object length
-        size_y: float, 					// object width
-        size_z: float, 					// object height
+        size_x: float,                  // object length
+        size_y: float,                  // object width
+        size_z: float,                  // object height
         classification: string,
         classificationID: int,
         stationSenderID: int,
