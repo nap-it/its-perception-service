@@ -11,6 +11,7 @@
 ###### The CPM Generation expects a specific DDS response format containing information about all detected objects from the adapter with the correct requestID
 
 ```
+{
     "requestID: int,                //must be same as request
     "numberObjects: int,            //optional (legacy)
     "objects":[
@@ -76,4 +77,5 @@
         },
         (...)
     ]
+}
 ```
