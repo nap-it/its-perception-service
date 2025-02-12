@@ -76,11 +76,11 @@ void cleanOldObjectsIDs(int maxTime){
     spdlog::debug("Number of objects in map: {}", idMap.size());
 }
 
-Document getManagementContainer(unsigned long int timestamp, float latitude, float longitude, float altitude, int altitudeConfidence, int sequenceNumber){
+Document getManagementContainer(unsigned long int timestamp, float latitude, float longitude, float altitude, int altitudeConfidence){
     Document managementContainer;
     managementContainer.SetObject();
     Document::AllocatorType& allocator = managementContainer.GetAllocator();
-    managementContainer.AddMember("referenceTime", timestamp, allocator);
+    managementContainer.AddMember("referenceTime", static_cast<uint64_t>(timestamp), allocator);
 
     Value altitudeValue(kObjectType);
     altitudeValue.AddMember("altitudeValue", altitude, allocator);
@@ -522,7 +522,7 @@ Document segment(unsigned long int timestampIts, const Document& managementConta
     containerId5.AddMember("containerId", 5, allocator);
     //containerData is an array of perceivedObjects
     Value containerData5(kObjectType);
-    containerData5.AddMember("numberOfPerceivedObjects", perceivedObjectsList.size(), allocator);
+    containerData5.AddMember("numberOfPerceivedObjects", static_cast<uint64_t>(perceivedObjectsList.size()), allocator);
     Value perceivedObjects(kArrayType);
     for (int i = 0; i < perceivedObjectsList.size(); i++){
         Value perceivedObjectVal(kObjectType);
@@ -556,7 +556,7 @@ Document segment(unsigned long int timestampIts, const Document& managementConta
     return cpm;
 }
 
-vector<string> generateCPM(vector<Document>& receivedObjs, float cam_latitude, float cam_longitude, float cam_altitude, int cam_altitude_conf, float cam_heading, bool add_sensor_data, vector<Document>& sensorArray, int stationType, std::mutex& cpmMutex, int sequenceNumber){
+vector<string> generateCPM(vector<Document>& receivedObjs, float cam_latitude, float cam_longitude, float cam_altitude, int cam_altitude_conf, float cam_heading, bool add_sensor_data, vector<Document>& sensorArray, int stationType, std::mutex& cpmMutex){
 
     // std::lock_guard<std::mutex> lock(cpmMutex);
 
@@ -594,7 +594,7 @@ vector<string> generateCPM(vector<Document>& receivedObjs, float cam_latitude, f
 
     spdlog::debug("Time to process objects: {} microseconds", time_after_objs - time_before_objs);
 
-    Document managementContainer = getManagementContainer(deltaTime, cam_latitude, cam_longitude, cam_altitude, cam_altitude_conf, sequenceNumber);
+    Document managementContainer = getManagementContainer(deltaTime, cam_latitude, cam_longitude, cam_altitude, cam_altitude_conf);
 
     //TIMING DEBUG
     // perceivedObjectsList.clear();

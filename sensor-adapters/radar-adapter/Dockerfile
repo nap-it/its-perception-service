@@ -15,9 +15,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libcurl4-openssl-dev \
     libssl-dev \
     git \
-    ca-certificates
+    ca-certificates \
+    python3 \
+    python3-pip
 
-# fastdds
+# Install Fast-DDS
 WORKDIR /tmp
 RUN git clone https://github.com/eProsima/foonathan_memory_vendor.git
 RUN mkdir /tmp/foonathan_memory_vendor/build
@@ -39,7 +41,7 @@ WORKDIR /tmp/Fast-DDS/build
 RUN cmake ..
 RUN cmake --build . --target install --parallel $(nproc)
 
-#MQTT
+# Install MQTT
 WORKDIR /
 RUN git clone https://github.com/eclipse/paho.mqtt.c.git
 WORKDIR /paho.mqtt.c
@@ -58,19 +60,11 @@ RUN cmake -Bbuild -H. -DPAHO_BUILD_STATIC=ON \
 RUN cmake --build build/ --target install
 RUN ldconfig
 
-WORKDIR /
-RUN mkdir /radar-adapter
-COPY *.cpp /radar-adapter/
-COPY *.h /radar-adapter/
-COPY *.hpp /radar-adapter/
-COPY CMakeLists.txt /radar-adapter/
-
+# Create workspace for the Radar Adapter, but do not copy files (will mount)
 WORKDIR /radar-adapter
-RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/rapidjson.git
+
+# Clone dependencies
 RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/spdlog.git
 RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/mobility-networks/fastdds-cpp-wrapper.git
 
-RUN cmake .
-RUN cmake --build .
-RUN chmod +x main
-ENTRYPOINT ["/radar-adapter/main"]
+CMD ["/bin/bash"]

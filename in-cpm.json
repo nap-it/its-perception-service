@@ -1,0 +1,282 @@
+{
+  "managementContainer": {
+    "referenceTime": 665944629561,
+    "referencePosition": {
+      "latitude": 40.63457489013672,
+      "longitude": -8.660029411315918,
+      "altitude": {
+        "altitudeValue": 0.0,
+        "altitudeConfidence": 0
+      },
+      "positionConfidenceEllipse": {
+        "semiMajorConfidence": 4095,
+        "semiMinorConfidence": 4095,
+        "semiMajorOrientation": 0
+      }
+    }
+  },
+  "cpmContainers": [
+    {
+      "containerId": 1,
+      "containerData": {
+        "orientationAngle": {
+          "value": 134.0,
+          "confidence": 1
+        }
+      }
+    },
+    {
+      "containerId": 5,
+      "containerData": {
+        "numberOfPerceivedObjects": 3,
+        "perceivedObjects": [
+          {
+            "objectId": 139,
+            "sensorIdList": [
+              12
+            ],
+            "measurementDeltaTime": 26,
+            "objectPerceptionQuality": 1.0,
+            "position": {
+              "xCoordinate": {
+                "value": 7.725533962249756,
+                "confidence": 0.2063051015138626
+              },
+              "yCoordinate": {
+                "value": -0.4241749942302704,
+                "confidence": 0.20830991864204407
+              },
+              "zCoordinate": {
+                "value": -0.7479671835899353,
+                "confidence": 0.10000000149011612
+              }
+            },
+            "velocity": {
+              "cartesianVelocity": {
+                "xVelocity": {
+                  "value": -0.6582440733909607,
+                  "confidence": 0.4076579809188843
+                },
+                "yVelocity": {
+                  "value": -0.7467459440231323,
+                  "confidence": 0.4076579809188843
+                }
+              }
+            },
+            "zAngularVelocity": {
+              "value": 0,
+              "confidence": 1
+            },
+            "acceleration": {
+              "cartesianAcceleration": {
+                "xAcceleration": {
+                  "value": 161.0,
+                  "confidence": 1
+                },
+                "yAcceleration": {
+                  "value": 161.0,
+                  "confidence": 1
+                }
+              }
+            },
+            "angles": {
+              "zAngle": {
+                "value": 221.39564514160156,
+                "confidence": 0.27005329728126526
+              }
+            },
+            "classification": [
+              {
+                "objectClass": {
+                  "vehicleSubClass": 1
+                },
+                "confidence": 100
+              }
+            ],
+            "objectDimensionX": {
+              "value": 0.9654809832572937,
+              "confidence": 1
+            },
+            "objectDimensionY": {
+              "value": 0.9654809832572937,
+              "confidence": 1
+            },
+            "objectDimensionZ": {
+              "value": 2.0318031311035156,
+              "confidence": 1
+            }
+          },
+          {
+            "objectId": 138,
+            "sensorIdList": [
+              12
+            ],
+            "measurementDeltaTime": 26,
+            "objectPerceptionQuality": 1.0,
+            "position": {
+              "xCoordinate": {
+                "value": -3.058023691177368,
+                "confidence": 0.21031226217746735
+              },
+              "yCoordinate": {
+                "value": -3.393399953842163,
+                "confidence": 0.20386800169944763
+              },
+              "zCoordinate": {
+                "value": -0.3544982373714447,
+                "confidence": 0.10000000149011612
+              }
+            },
+            "velocity": {
+              "cartesianVelocity": {
+                "xVelocity": {
+                  "value": 0.7976389527320862,
+                  "confidence": 0.4076569378376007
+                },
+                "yVelocity": {
+                  "value": -0.5945478677749634,
+                  "confidence": 0.4076569378376007
+                }
+              }
+            },
+            "zAngularVelocity": {
+              "value": 1,
+              "confidence": 1
+            },
+            "acceleration": {
+              "cartesianAcceleration": {
+                "xAcceleration": {
+                  "value": 161.0,
+                  "confidence": 1
+                },
+                "yAcceleration": {
+                  "value": 161.0,
+                  "confidence": 1
+                }
+              }
+            },
+            "angles": {
+              "zAngle": {
+                "value": 126.70028686523438,
+                "confidence": 0.269853413105011
+              }
+            },
+            "classification": [
+              {
+                "objectClass": {
+                  "vehicleSubClass": 1
+                },
+                "confidence": 100
+              }
+            ],
+            "objectDimensionX": {
+              "value": 0.7632834911346436,
+              "confidence": 1
+            },
+            "objectDimensionY": {
+              "value": 0.7632834911346436,
+              "confidence": 1
+            },
+            "objectDimensionZ": {
+              "value": 1.3180752992630005,
+              "confidence": 1
+            }
+          },
+          {
+            "objectId": 137,
+            "sensorIdList": [
+              12
+            ],
+            "measurementDeltaTime": 26,
+            "objectPerceptionQuality": 1.0,
+            "position": {
+              "xCoordinate": {
+                "value": 16.738656997680664,
+                "confidence": 0.40723419189453125
+              },
+              "yCoordinate": {
+                "value": -14.846123695373535,
+                "confidence": 0.3781379461288452
+              },
+              "zCoordinate": {
+                "value": -0.5634968876838684,
+                "confidence": 0.10000000149011612
+              }
+            },
+            "velocity": {
+              "cartesianVelocity": {
+                "xVelocity": {
+                  "value": 1.5040899515151978,
+                  "confidence": 0.8654468059539795
+                },
+                "yVelocity": {
+                  "value": -1.3232295513153076,
+                  "confidence": 0.8654468059539795
+                }
+              }
+            },
+            "zAngularVelocity": {
+              "value": 0,
+              "confidence": 1
+            },
+            "acceleration": {
+              "cartesianAcceleration": {
+                "xAcceleration": {
+                  "value": 161.0,
+                  "confidence": 1
+                },
+                "yAcceleration": {
+                  "value": 161.0,
+                  "confidence": 1
+                }
+              }
+            },
+            "angles": {
+              "zAngle": {
+                "value": 131.33984375,
+                "confidence": 0.13243751227855682
+              }
+            },
+            "classification": [
+              {
+                "objectClass": {
+                  "vehicleSubClass": 5
+                },
+                "confidence": 100
+              }
+            ],
+            "objectDimensionX": {
+              "value": 4.400000095367432,
+              "confidence": 1
+            },
+            "objectDimensionY": {
+              "value": 1.8718371391296387,
+              "confidence": 1
+            },
+            "objectDimensionZ": {
+              "value": 1.843931794166565,
+              "confidence": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "containerId": 3,
+      "containerData": [
+        {
+          "sensorId": 12,
+          "sensorType": 12,
+          "shadowingApplies": false,
+          "perceptionRegionShape": {
+            "radial": {
+              "range": 100,
+              "horizontalOpeningAngleStart": 3601,
+              "horizontalOpeningAngleEnd": 3601
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -178,7 +178,7 @@ std::string struct_to_string(radarMqttObject radar_object)
     document.AddMember("objID", radar_object.objectID, allocator);
     document.AddMember("sensorID", 1, allocator);
     document.AddMember("speed", radar_object.speed, allocator);
-    document.AddMember("timestamp", radar_object.timestamp, allocator);
+    document.AddMember("timestamp", static_cast<uint64_t>(radar_object.timestamp), allocator);
     document.AddMember("confidence", radar_object.confidence, allocator);
 
     // Classification
