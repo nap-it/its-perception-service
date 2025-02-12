@@ -60,10 +60,24 @@ RUN cmake -Bbuild -H. -DPAHO_BUILD_STATIC=ON \
 RUN cmake --build build/ --target install
 RUN ldconfig
 
-# Create workspace for the Radar Adapter, but do not copy files (will mount)
 WORKDIR /radar-adapter
+# ---- OLD ----
+# COPY *.cpp /radar-adapter/
+# COPY *.h /radar-adapter/
+# COPY *.hpp /radar-adapter/
+# COPY CMakeLists.txt /radar-adapter/
 
-# Clone dependencies
+# WORKDIR /radar-adapter
+# RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/rapidjson.git
+# RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/spdlog.git
+# RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/mobility-networks/fastdds-cpp-wrapper.git
+
+# RUN cmake .
+# RUN cmake --build .
+# RUN chmod +x main
+# ENTRYPOINT ["/radar-adapter/main"]
+
+# ---- NEW ----
 RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/spdlog.git
 RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/mobility-networks/fastdds-cpp-wrapper.git
 
