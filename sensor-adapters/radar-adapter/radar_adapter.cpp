@@ -51,10 +51,11 @@ void RadarAdapter::on_message_mqtt(const std::string& topic, const std::string& 
 
 std::string RadarAdapter::parseMessage(const std::string& input) {
 
-
+    auto t1 = std::chrono::high_resolution_clock::now();
     Object obj;
     try {
         json j = json::parse(input);
+        auto t2 = std::chrono::high_resolution_clock::now();
 
         obj.objectID = j.value("objectID", -1);
         obj.sensorID = 1;  // Hardcoded sensor ID for Radar
@@ -72,6 +73,12 @@ std::string RadarAdapter::parseMessage(const std::string& input) {
         if (acc_value.is_number()) obj.acceleration = acc_value.get<float>();
         else obj.acceleration = 0.0f;
 
+        auto t3 = std::chrono::high_resolution_clock::now();
+
+        spdlog::debug("Parsing time: {} | Extracting time: {}", 
+            std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count(),
+            std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2).count());
+
     } catch (const nlohmann::json::type_error& e) {
         spdlog::error("Type error: {} | Input: {}", e.what(), input);
     } catch (const nlohmann::json::parse_error& e) {
@@ -80,6 +87,7 @@ std::string RadarAdapter::parseMessage(const std::string& input) {
         spdlog::error("Unexpected error: {} | Input: {}", e.what(), input);
     }
 
+    auto t4 = std::chrono::high_resolution_clock::now();
     // Convert Object struct to JSON
     json output = {
         {"objectID", obj.objectID},
@@ -95,6 +103,11 @@ std::string RadarAdapter::parseMessage(const std::string& input) {
         {"size_x", obj.size_x}
     };
 
+    auto t5 = std::chrono::high_resolution_clock::now();
+
+    spdlog::debug("JSON Building time: {}", 
+        std::chrono::duration_cast<std::chrono::microseconds>(t5 - t4).count());
+        
     return output.dump();
 }
 
