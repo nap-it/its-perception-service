@@ -18,7 +18,25 @@ RadarAdapter::RadarAdapter(const Config& config) : config(config) {
     dds_->provision_publisher("cps/objects");
     dds_->provision_publisher("cps/sensors");
     
-    //dds_->publish("cps/sensors", "hello there");
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+
+    //Publish sensor information once
+    json sensorInfo = {
+        {"sensorID", 1},
+        {"sensorType", 11},
+        {"shadowingApplies", false},
+        {"perceptionRegionShape", {
+            {"semiMajorRangeLength", 75},
+            {"semiMinorRangeLength", 20},
+            {"semiMajorRangeOrientation", 3061},
+            {"range", 0},
+            {"stationaryHorizontalOpeningAngleStart", 0},
+            {"stationaryHorizontalOpeningAngleEnd", 0}
+        }}
+    };
+    string sensorInfoStr = sensorInfo.dump();
+    dds_->publish("cps/sensors", sensorInfoStr);
+    spdlog::info("Sensor information published {}", sensorInfoStr);
 
     // MQTT
     data_mqtt_server mqttInfo;
@@ -107,7 +125,7 @@ std::string RadarAdapter::parseMessage(const std::string& input) {
 
     spdlog::debug("JSON Building time: {}", 
         std::chrono::duration_cast<std::chrono::microseconds>(t5 - t4).count());
-        
+
     return output.dump();
 }
 
