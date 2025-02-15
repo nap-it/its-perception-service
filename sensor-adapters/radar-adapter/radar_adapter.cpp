@@ -55,8 +55,26 @@ RadarAdapter::RadarAdapter(const Config& config) : config(config) {
 
 void RadarAdapter::run() {
     spdlog::info("Radar Adapter started running...");
+
+    json sensorInfo = {
+            {"sensorID", 1},
+            {"sensorType", 11},
+            {"shadowingApplies", false},
+            {"perceptionRegionShape", {
+                {"semiMajorRangeLength", 75},
+                {"semiMinorRangeLength", 20},
+                {"semiMajorRangeOrientation", 3061},
+                {"range", 0},
+                {"stationaryHorizontalOpeningAngleStart", 0},
+                {"stationaryHorizontalOpeningAngleEnd", 0}
+            }}
+        };
+    string sensorInfoStr = sensorInfo.dump();
+    
     while (true) {
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+        std::this_thread::sleep_for(std::chrono::seconds(5));
+        dds_->publish("cps/sensors", sensorInfoStr);
+        spdlog::debug("Sensor information published {}", sensorInfoStr);
     }
 }
 
