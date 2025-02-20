@@ -125,7 +125,7 @@ std::string RadarAdapter::parseMessage(const std::string& input) {
 
     auto t4 = std::chrono::high_resolution_clock::now();
     // Convert Object struct to JSON
-    json output = {
+    json object = {
         {"objectID", obj.objectID},
         {"sensorID", obj.sensorID},
         {"timestamp", obj.timestamp},
@@ -137,6 +137,10 @@ std::string RadarAdapter::parseMessage(const std::string& input) {
         {"latitude", obj.latitude},
         {"longitude", obj.longitude},
         {"size_x", obj.size_x}
+    };
+
+    json output = {
+        {"objects", {object}}
     };
 
     auto t5 = std::chrono::high_resolution_clock::now();

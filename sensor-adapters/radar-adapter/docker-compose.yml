@@ -1,11 +1,9 @@
 version: '2.4'
 services:
-  radar:
-    hostname: radar
-    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/radar-adapter:dev
-    # image: radar-adapter:test
-    cap_add:
-      - "NET_ADMIN"
+  radar-adapter:
+    hostname: radar-adapter
+    container_name: radar-adapter
+    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/radar-adapter:dcc
     volumes:
       - ./config.ini:/config.ini
     network_mode: host
