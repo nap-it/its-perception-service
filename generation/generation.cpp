@@ -2,13 +2,27 @@
 #include <chrono>
 #include <spdlog/spdlog.h>
 
-Generation::Generation(Aggregator &aggregator, int requestRateMs)
-    : aggregator_(aggregator), requestRateMs_(requestRateMs), stopFlag_(false) {
+Generation::Generation(std::shared_ptr<Aggregator> aggregator, std::shared_ptr<Locator> locator, int requestRateMs, bool debug, int ddsDomain, std::string ddsTopic)
+    : aggregator_(aggregator), locator_(locator), requestRateMs_(requestRateMs), stopFlag_(false), ddsTopic_(ddsTopic) {
+
+    if (debug) {
+        spdlog::set_level(spdlog::level::debug);
+        spdlog::debug("[Generation] Debug logging enabled.");
+    } else {
+        spdlog::set_level(spdlog::level::info);
+        spdlog::info("[Generation] Info logging enabled.");
+    }
+    
     spdlog::info("[Generation] initialized with request rate {} ms", requestRateMs);
+
+    dds_ = new Dds("Generation", ddsDomain, nullptr);
+    dds_->provision_publisher(ddsTopic);
+    spdlog::info("[Generation] DDS client initialized on domain {} and topic {}", ddsDomain, ddsTopic);
 }
 
 Generation::~Generation() {
     stop();
+    delete dds_;
 }
 
 void Generation::run() {
@@ -32,27 +46,61 @@ void Generation::setRequestRate(int newRateMs) {
 
 void Generation::runLoop() {
     auto last_sensor_ts = std::chrono::system_clock::now();
+
+    std::unordered_map<int, SensorInfo> sensorInfo;
+    bool addSensor = false;
+    vector<Object> freshObjects;
+    double stationLatitude;
+    double stationLongitude;
+    int stationType;
+
     while (!stopFlag_) {
+        auto start = std::chrono::high_resolution_clock::now();
+
         // Retrieve fresh objects from the aggregator.
-        auto freshObjects = aggregator_.getFreshObjects(6);
+        freshObjects = aggregator_->getFreshObjects();
+        addSensor = false;
 
         auto now = std::chrono::system_clock::now();
-        if (std::chrono::duration_cast<std::chrono::seconds>(now - last_sensor_ts).count() > 1) {
-            auto sensorInfo = aggregator_.getSensorInfo();
+        if (std::chrono::duration_cast<std::chrono::milliseconds>(now - last_sensor_ts).count() > 1000) {
+            sensorInfo = aggregator_->getSensorInfo();
+            addSensor = true;
             for (const auto& [sensorID, sensor] : sensorInfo) {
                 spdlog::info("[Generation]: Sensor ID: {}, Type: {}", sensor.sensorID, sensor.sensorType);
             }
+
+            stationLatitude = locator_->getStationLatitude();
+            stationLongitude = locator_->getStationLongitude();
+            stationType = locator_->getStationType();
+
+            spdlog::info("[Generation]: Station Latitude: {}, Longitude: {}, Type: {}", stationLatitude, stationLongitude, stationType);
+
             last_sensor_ts = now;
         }
 
-        if (!freshObjects.empty()) {
-            spdlog::info("[Generation]: Retrieved {} fresh objects", freshObjects.size());
+        if (freshObjects.empty()) {
+            spdlog::info("[Generation]: No fresh objects retrieved this cycle.");
         } else {
-            spdlog::debug("[Generation]: No fresh objects retrieved this cycle.");
+            spdlog::info("[Generation]: Retrieved {} fresh objects.", freshObjects.size());
         }
 
-        // Sleep for the current request rate
-        spdlog::debug("[Generation]: Sleeping for {} ms", requestRateMs_.load());
-        std::this_thread::sleep_for(std::chrono::milliseconds(requestRateMs_.load()));
+        // Generate CPM
+        auto t1 = std::chrono::high_resolution_clock::now();
+        json cpm = builder_.generateCPM(freshObjects, sensorInfo, addSensor, stationLatitude, stationLongitude, stationType);
+        auto t2 = std::chrono::high_resolution_clock::now();
+        std::string cpm_str = cpm.dump();
+        auto t3 = std::chrono::high_resolution_clock::now();
+
+        spdlog::info("[Generation]: CPM generation took {} us, serialization took {} us", std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count(), std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2).count());
+        spdlog::info("[Generation]: Publising CPM: {}", cpm_str);
+
+        // Publish CPM
+        dds_->publish(ddsTopic_, cpm_str);
+
+        // Sleep for the current request rate - time taken to process this cycle.
+        auto end = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+        spdlog::info("[Generation]: Cycle took {} ms, sleeping for {} ms", duration, requestRateMs_.load() - duration);
+        if (requestRateMs_.load() - duration > 0) std::this_thread::sleep_for(std::chrono::milliseconds(requestRateMs_.load() - duration));
     }
 }

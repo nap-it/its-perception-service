@@ -5,7 +5,7 @@
 using json = nlohmann::json;
 
 RadarAdapter::RadarAdapter(const Config& config) : config(config) {
-    if (config.debug == 1) {
+    if (config.debug) {
         spdlog::set_level(spdlog::level::debug);
         spdlog::debug("Debug logging enabled.");
     } else {
@@ -38,8 +38,15 @@ RadarAdapter::RadarAdapter(const Config& config) : config(config) {
         this->on_message_mqtt(topic, message);
     });
 
+    int max_retries = 10;
+    int retries = 0;
     while (!mqtt_wrapper->is_connected()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        spdlog::info("Waiting for MQTT connection, retrying...");
+        if (retries++ > max_retries) {
+            spdlog::error("Failed to connect to MQTT server, exiting...");
+            exit(1);
+        }
     }
 }
 
@@ -56,6 +63,11 @@ void RadarAdapter::run() {
         std::this_thread::sleep_for(std::chrono::seconds(5));
         dds_->publish("cps/sensors", sensorInfoStr);
         spdlog::info("Sensor information published {}", sensorInfoStr);
+
+        //Check if MQTT is still connected
+        if (!mqtt_wrapper->is_connected()) {
+            spdlog::error("MQTT connection lost, reconnecting...");
+        }
     }
 }
 

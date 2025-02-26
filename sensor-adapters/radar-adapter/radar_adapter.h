@@ -11,7 +11,7 @@
 
 struct Config {
     int domain_id;
-    int debug;
+    bool debug;
     std::string mqtt_host;
     int mqtt_port;
     std::string mqtt_topic;

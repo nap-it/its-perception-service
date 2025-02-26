@@ -50,6 +50,24 @@ WORKDIR /usr/src/Fast-DDS/build
 RUN cmake .. && \
     cmake --build . --target install --parallel $(nproc)
 
+# ------------------------- Build MQTT C -------------------------
+WORKDIR /usr/src
+RUN git clone https://github.com/eclipse/paho.mqtt.c.git
+WORKDIR /usr/src/paho.mqtt.c
+RUN git checkout v1.3.13
+RUN cmake -Bbuild -H. -DPAHO_ENABLE_TESTING=OFF -DPAHO_BUILD_STATIC=ON -DPAHO_WITH_SSL=ON -DPAHO_HIGH_PERFORMANCE=ON
+RUN cmake --build build/ --target install
+RUN ldconfig
+
+# ------------------------- Build MQTT C++ -------------------------
+WORKDIR /usr/src
+RUN git clone https://github.com/eclipse/paho.mqtt.cpp
+WORKDIR /usr/src/paho.mqtt.cpp
+RUN git checkout v1.3.2
+RUN cmake -Bbuild -H. -DPAHO_BUILD_STATIC=ON -DPAHO_BUILD_DOCUMENTATION=OFF -DPAHO_BUILD_SAMPLES=ON
+RUN cmake --build build/ --target install
+RUN ldconfig
+
 # ------------------------- Build Generation -------------------------
 WORKDIR /usr/src/generation
 RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/spdlog.git
@@ -87,6 +105,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # ------------------------- Copy Built Libraries -------------------------
+COPY --from=builder /usr/local/lib/libpaho-mqtt3*.so* /usr/local/lib/
+COPY --from=builder /usr/local/lib/libpaho-mqttpp3.so* /usr/local/lib/
 COPY --from=builder /usr/local/lib/libfastcdr.so* /usr/local/lib/
 COPY --from=builder /usr/local/lib/libfastrtps.so* /usr/local/lib/
 COPY --from=builder /usr/local/lib/libfoonathan_memory* /usr/local/lib/

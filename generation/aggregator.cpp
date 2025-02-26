@@ -10,23 +10,23 @@ Aggregator* Aggregator::instance_ = nullptr;
 
 
 // Constructor: sets up DDS and subscribes to the "cps/objects" topic.
-Aggregator::Aggregator(int domainId, long maxObjectAge, long cleanInterval, bool debug)
+Aggregator::Aggregator(int ddsDomain, long maxObjectAge, long cleanInterval, bool debug)
     : maxObjectAge_(maxObjectAge), cleanInterval_(cleanInterval), stopFlag_(false)
 {
     // Set the static instance pointer to this object.
     instance_ = this;
 
     // Initialize the DDS client.
-    dds_ = new Dds("CPS-aggregator", domainId, ddsCallback);
+    dds_ = new Dds("CPS-aggregator", ddsDomain, ddsCallback);
     dds_->subscribe("cps/objects");
     dds_->subscribe("cps/sensors");
     dds_->provision_publisher("cps/pending");
-    spdlog::info("[Aggregator] Initialized on DDS domain {} and subscribed to 'cps/objects'", domainId);
+    spdlog::info("[Aggregator] Initialized on DDS domain {} and subscribed to 'cps/objects'", ddsDomain);
 
     // Set the verbosity level for the logger.
     if (debug) spdlog::set_level(spdlog::level::debug);
     else spdlog::set_level(spdlog::level::info);
-    spdlog::info("[Aggregator] Verbosity level set to {}", debug ? "debug" : "info");
+    spdlog::debug("[Aggregator] Verbosity level set to {}", debug ? "debug" : "info");
 }
 
 Aggregator::~Aggregator() {

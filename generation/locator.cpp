@@ -14,7 +14,8 @@ Locator::Locator(ProviderType provider,
                    std::string mqttBroker,
                    std::string mqttTopic,
                    int ddsDomain,
-                   std::string ddsTopic)
+                   std::string ddsTopic,
+                   bool debug)
     : provider_(provider),
       stationType_(configStationType),
       latestLatitude_(configLatitude),
@@ -25,6 +26,14 @@ Locator::Locator(ProviderType provider,
       ddsTopic_(ddsTopic)
 {
     spdlog::info("[Locator] Constructing with provider type: {}", (provider_ == ProviderType::STATIC ? "STATIC" : (provider_ == ProviderType::MQTT ? "MQTT" : "DDS")));
+
+    if (debug) {
+        spdlog::set_level(spdlog::level::debug);
+        spdlog::debug("[Locator] Debug logging enabled.");
+    } else {
+        spdlog::set_level(spdlog::level::info);
+        spdlog::info("[Locator] Info logging enabled.");
+    }
 
     if(provider_ == ProviderType::STATIC) {
         spdlog::info("[Locator] Using STATIC provider. Fixed location: lat {:.6f}, lon {:.6f}, type {}", latestLatitude_, latestLongitude_, stationType_);
@@ -69,6 +78,17 @@ Locator::~Locator() {
     }
 }
 
+void Locator::run() {
+    locatorThread_ = std::thread(&Locator::runLoop, this);
+    spdlog::info("[Locator] run loop started.");
+}
+
+void Locator::runLoop() {
+    while(true) {
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+}
+
 double Locator::getStationLatitude() {
     std::lock_guard<std::mutex> lock(mtx_);
     return latestLatitude_;
@@ -107,9 +127,25 @@ void Locator::parseAndUpdateLocation(const std::string& topic, const std::string
                 latestLatitude_ = lat;
                 latestLongitude_ = lon;
             }
-        } else if 
 
-        spdlog::debug("[Locator] Updated dynamic location: lat {:.6f}, lon {:.6f}, stationType {}", lat, lon, stationType_);
+            spdlog::debug("[Locator] Updated dynamic location: lat {:.6f}, lon {:.6f}", lat, lon);
+        
+        } else if (topic == "vanetza/in/cam_full") {
+            double lat = j.value("camParameters", json::object()).value("basicContainer", json::object()).value("referencePosition", json::object()).value("latitude", latestLatitude_);
+            double lon = j.value("camParameters", json::object()).value("basicContainer", json::object()).value("referencePosition", json::object()).value("longitude", latestLongitude_);
+        
+            {
+                std::lock_guard<std::mutex> lock(mtx_);
+                latestLatitude_ = lat;
+                latestLongitude_ = lon;
+            }
+
+            spdlog::debug("[Locator] Updated dynamic location: lat {:.6f}, lon {:.6f}", lat, lon);
+        
+            } else {
+            spdlog::warn("[Locator] Unknown topic: {}", topic);
+        }
+
     } catch (const std::exception& e) {
         spdlog::error("[Locator] Error parsing location message: {}", e.what());
     }

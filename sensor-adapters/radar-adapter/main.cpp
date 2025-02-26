@@ -17,7 +17,7 @@ void readConfigFile(const std::string& path, Config& config) {
     // Read configuration
     config.domain_id = reader.GetInteger("radar-adapter", "domain_id", 0);
     spdlog::info("[RADAR-CONFIG] Domain ID: {}", config.domain_id);
-    config.debug = reader.GetInteger("radar-adapter", "debug", 0);
+    config.debug = reader.GetBoolean("radar-adapter", "debug", false);
     spdlog::info("[RADAR-CONFIG] Debug: {}", config.debug);
     config.mqtt_host = reader.Get("radar-adapter", "mqtt_host", "");
     spdlog::info("[RADAR-CONFIG] MQTT Host: {}", config.mqtt_host);

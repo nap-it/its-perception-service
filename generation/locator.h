@@ -26,6 +26,7 @@ public:
      * @param mqttTopic MQTT topic to subscribe for CAMs if provider is MQTT.
      * @param ddsDomain DDS domain ID if provider is DDS.
      * @param ddsTopic DDS topic to subscribe for CAMs if provider is DDS.
+     * @param debug Debug level (0 = off, 1 = on).
      */
     Locator(ProviderType provider,
                    float configLatitude,
@@ -34,9 +35,12 @@ public:
                    std::string mqttBroker,
                    std::string mqttTopic, 
                    int ddsDomain,
-                   std::string ddsTopic);
+                   std::string ddsTopic,
+                   bool debug);
     
     ~Locator();
+
+    void run();
 
     // Getters for location and station type.
     double getStationLatitude();
@@ -44,6 +48,9 @@ public:
     int getStationType();
 
 private:
+
+    std::thread locatorThread_;
+
     // Provider type chosen at construction.
     ProviderType provider_;
 
@@ -77,6 +84,8 @@ private:
 
     // Helper to parse CAM messages and update location.
     void parseAndUpdateLocation(const std::string& topic, const std::string& message);
+
+    void runLoop();
 };
 
 #endif // LOCATOR_H
