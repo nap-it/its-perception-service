@@ -6,7 +6,7 @@
 
 int main() {
 
-    Aggregator aggregator(0, 300000, 5000, false);
+    Aggregator aggregator(0, 10, 5, true);
     aggregator.run();
 
     Generation generation(aggregator, 1000);

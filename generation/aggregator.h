@@ -12,6 +12,10 @@
 
 using json = nlohmann::json;
 
+constexpr float NOT_PRESENT_FLOAT = -999.0f;
+constexpr double NOT_PRESENT_DOUBLE = -999.0;
+constexpr int NOT_PRESENT_INT = -999;
+
 struct Object {
     int objectID;
     int sensorID;
@@ -23,17 +27,36 @@ struct Object {
     float acceleration;
     float latitude;
     float longitude;
-    float altitude = 0.0f;
-    float size_x = 0.0f;
-    float size_y = 0.0f;
-    float size_z = 0.0f;
-    float angular_velocity = 0.0f;
-    float cov_latitude = 0.0f;
-    float cov_longitude = 0.0f;
-    float cov_altitude = 0.0f;
-    float cov_heading = 0.0f;
-    float cov_speed = 0.0f;
-    float cov_angular_velocity = 0.0f;
+    float altitude = NOT_PRESENT_FLOAT;
+    float size_x = NOT_PRESENT_FLOAT;
+    float size_y = NOT_PRESENT_FLOAT;
+    float size_z = NOT_PRESENT_FLOAT;
+    float angular_velocity = NOT_PRESENT_FLOAT;
+    float cov_latitude = NOT_PRESENT_FLOAT;
+    float cov_longitude = NOT_PRESENT_FLOAT;
+    float cov_altitude = NOT_PRESENT_FLOAT;
+    float cov_heading = NOT_PRESENT_FLOAT;
+    float cov_speed = NOT_PRESENT_FLOAT;
+    float cov_angular_velocity = NOT_PRESENT_FLOAT;
+};
+
+struct ObjectEntity {
+    bool to_send = false;
+    Object last_sent;
+    Object current;
+    double priority = 0.0;
+};
+
+struct SensorInfo {
+    int sensorID = NOT_PRESENT_INT;
+    int sensorType = NOT_PRESENT_INT;
+    bool shadowingApplies = false;
+    int semiMajorRangeLength = NOT_PRESENT_INT;
+    int semiMinorRangeLength = NOT_PRESENT_INT;
+    int semiMajorRangeOrientation = NOT_PRESENT_INT;
+    int range = NOT_PRESENT_INT;
+    int stationaryHorizontalOpeningAngleStart = NOT_PRESENT_INT;
+    int stationaryHorizontalOpeningAngleEnd = NOT_PRESENT_INT;
 };
 
 class Aggregator {
@@ -41,11 +64,11 @@ public:
     /**
      * @brief Construct a new Aggregator object.
      * @param domainId DDS domain ID.
-     * @param maxObjectAgeMs Maximum age (in ms) for an object in the lastSent list (default: 5 minutes).
-     * @param cleanIntervalMs Interval (in ms) to run the cleanup routine (default: 5 seconds).
+     * @param maxObjectAge Maximum age (in seconds) for an object in the lastSent list (default: 5 minutes).
+     * @param cleanInterval Interval (in seconds) to run the cleanup routine (default: 5 seconds).
      * @param debugLevel Verbosity level for logging (default: 0).
      */
-    Aggregator(int domainId, long maxObjectAgeMs = 300000, long cleanIntervalMs = 5000, bool debug = false);
+    Aggregator(int domainId, long maxObjectAgeS = 300, long cleanInterval = 5, bool debug = false);
 
     /**
      * @brief Destroy the Aggregator object.
@@ -66,7 +89,13 @@ public:
      * @brief Retrieve the list of fresh objects (pending for a CPM) and update internal state.
      * @return std::vector<Object> Fresh objects.
      */
-    std::vector<Object> getFreshObjects();
+    std::vector<Object> getFreshObjects(int maxObjects = -1);
+
+    /**
+     * @brief Retrieve the list of sensor information.
+     * @return std::unordered_map<int, SensorInfo> Sensor information.
+     */
+    std::unordered_map<int, SensorInfo> getSensorInfo();
 
     /**
      * @brief Non-static DDS message handler.
@@ -84,9 +113,11 @@ public:
 
 private:
     Dds* dds_;
-    std::mutex mtx_;
-    std::unordered_map<int, Object> lastSent_;     // Objects that have been included in a CPM
-    std::unordered_map<int, Object> pendingObjects_; // New objects waiting to be sent
+    std::mutex objMtx_;
+    std::unordered_map<int, ObjectEntity> all_objects_; // All objects received
+
+    std::mutex sensorMtx_;
+    std::unordered_map<int, SensorInfo> sensor_info_; // Sensor information
 
     // Freshness thresholds
     double minTimeDiff_ = 1000;      // Minimum time difference in milliseconds
@@ -95,8 +126,8 @@ private:
     double minHeadingDiff_ = 4.0;    // Minimum heading difference (degrees)
 
     // Cleanup configuration
-    long maxObjectAgeMs_;
-    long cleanIntervalMs_;
+    long maxObjectAge_;     // Maximum object age in seconds
+    long cleanInterval_;    // Cleanup interval in seconds
 
     // Thread control for periodic cleanup
     std::atomic<bool> stopFlag_;

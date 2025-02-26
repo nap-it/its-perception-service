@@ -20,21 +20,11 @@ RadarAdapter::RadarAdapter(const Config& config) : config(config) {
     
     std::this_thread::sleep_for(std::chrono::seconds(2));
 
-    //Publish sensor information once
-    json sensorInfo = {
-        {"sensorID", 1},
-        {"sensorType", 11},
-        {"shadowingApplies", false},
-        {"perceptionRegionShape", {
-            {"semiMajorRangeLength", 75},
-            {"semiMinorRangeLength", 20},
-            {"semiMajorRangeOrientation", 3061},
-            {"range", 0},
-            {"stationaryHorizontalOpeningAngleStart", 0},
-            {"stationaryHorizontalOpeningAngleEnd", 0}
-        }}
+    // Publish sensor information
+    SensorInfo sensorInfo = {
+        1, 11, false, 75, 20, 3061, 0, 0, 0
     };
-    string sensorInfoStr = sensorInfo.dump();
+    string sensorInfoStr = to_json(sensorInfo).dump();
     dds_->publish("cps/sensors", sensorInfoStr);
     spdlog::info("Sensor information published {}", sensorInfoStr);
 
@@ -56,25 +46,16 @@ RadarAdapter::RadarAdapter(const Config& config) : config(config) {
 void RadarAdapter::run() {
     spdlog::info("Radar Adapter started running...");
 
-    json sensorInfo = {
-            {"sensorID", 1},
-            {"sensorType", 11},
-            {"shadowingApplies", false},
-            {"perceptionRegionShape", {
-                {"semiMajorRangeLength", 75},
-                {"semiMinorRangeLength", 20},
-                {"semiMajorRangeOrientation", 3061},
-                {"range", 0},
-                {"stationaryHorizontalOpeningAngleStart", 0},
-                {"stationaryHorizontalOpeningAngleEnd", 0}
-            }}
-        };
-    string sensorInfoStr = sensorInfo.dump();
+    // Publish sensor information
+    SensorInfo sensorInfo = {
+        1, 11, false, 75, 20, 3061, 0, 0, 0
+    };
+    string sensorInfoStr = to_json(sensorInfo).dump();
     
     while (true) {
         std::this_thread::sleep_for(std::chrono::seconds(5));
         dds_->publish("cps/sensors", sensorInfoStr);
-        spdlog::debug("Sensor information published {}", sensorInfoStr);
+        spdlog::info("Sensor information published {}", sensorInfoStr);
     }
 }
 
