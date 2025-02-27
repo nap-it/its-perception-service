@@ -22,7 +22,7 @@ RadarAdapter::RadarAdapter(const Config& config) : config(config) {
 
     // Publish sensor information
     SensorInfo sensorInfo = {
-        1, 1, false, 75, 20, 3061, 0, 0, 0
+        1, 1, false, 75, 20, 3061, 100, 3601, 3601
     };
     string sensorInfoStr = to_json(sensorInfo).dump();
     dds_->publish("cps/sensors", sensorInfoStr);
@@ -55,7 +55,7 @@ void RadarAdapter::run() {
 
     // Publish sensor information
     SensorInfo sensorInfo = {
-        1, 1, false, 75, 20, 3061, 0, 0, 0
+        1, 1, false, 75, 20, 3061, 100, 3601, 3601
     };
     string sensorInfoStr = to_json(sensorInfo).dump();
     

@@ -73,15 +73,15 @@ json Builder::generateCPM(const std::vector<Object>& freshObjects,
         json sensorContainerData = json::array();
         for (const auto& [sensorID, sensor] : sensorInfo) {
             sensorContainerData.push_back({
-                {"sensorID", sensor.sensorID},
+                {"sensorId", sensor.sensorID},
                 {"sensorType", sensor.sensorType},
                 {"shadowingApplies", sensor.shadowingApplies},
                 {"perceptionRegionShape", {
-                    "radial", {
+                    {"radial", {
                         {"range", sensor.range},
                         {"horizontalOpeningAngleStart", sensor.stationaryHorizontalOpeningAngleStart},
                         {"horizontalOpeningAngleEnd", sensor.stationaryHorizontalOpeningAngleEnd}
-                    }
+                    }}
                 }}
             });
         }
@@ -110,7 +110,7 @@ json Builder::generateCPM(const std::vector<Object>& freshObjects,
             spdlog::warn("Object out of bounds: x={}, y={}", x, y);
             continue;
         }
-        
+
         objJson["position"] = {
             {"xCoordinate", {
                 {"value", x},
