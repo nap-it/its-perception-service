@@ -24,8 +24,8 @@ json Builder::generateCPM(const std::vector<Object>& freshObjects,
                              int stationType)
 {
     json cpm;
-
-    unsigned long referenceTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - time2004ms;
+    auto now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    unsigned long referenceTime = now - time2004ms;
 
     // Management container
     cpm["managementContainer"] = {
@@ -99,12 +99,18 @@ json Builder::generateCPM(const std::vector<Object>& freshObjects,
         json objJson;
         objJson["objectID"] = obj.cpmObjectID;
         objJson["sensorIDList"] = {obj.sensorID};
-        objJson["measurementDeltaTime"] = getMeasurementDeltaTime(referenceTime, obj.timestamp);
+        objJson["measurementDeltaTime"] = getMeasurementDeltaTime(now, obj.timestamp*1000);
         objJson["objectPerceptionQuality"] = obj.confidence/100.0;
 
         // position
         double x, y;
         calculateRelativePositions(stationLatitude, stationLongitude, obj.latitude, obj.longitude, C, x, y);
+
+        if (x > 1310.72 || x < -1310.72 || y > 1310.72 || y < -1310.72) {
+            spdlog::warn("Object out of bounds: x={}, y={}", x, y);
+            continue;
+        }
+        
         objJson["position"] = {
             {"xCoordinate", {
                 {"value", x},
@@ -178,11 +184,8 @@ json Builder::generateCPM(const std::vector<Object>& freshObjects,
         //classification
         objJson["classification"] = json::array();
         json classification = {
-            {"objectClass", {
-                {"vehicleSubClass", obj.classification}
-            },
+            {"objectClass", { {"vehicleSubClass", obj.classification} }},
             {"confidence", obj.confidence}
-            }
         };
         objJson["classification"].push_back(classification);
 
@@ -211,8 +214,8 @@ json Builder::generateCPM(const std::vector<Object>& freshObjects,
     cpmContainers.push_back({
         {"containerId", 5},
         {"containerData", {
-            "numberOfPerceivedObjects", perceivedObjects.size(),
-            "perceivedObjects", perceivedObjects
+            {"numberOfPerceivedObjects", perceivedObjects.size()},
+            {"perceivedObjects", perceivedObjects}
         }}
     });
 

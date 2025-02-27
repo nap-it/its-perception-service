@@ -69,14 +69,6 @@ void Generation::runLoop() {
             for (const auto& [sensorID, sensor] : sensorInfo) {
                 spdlog::info("[Generation]: Sensor ID: {}, Type: {}", sensor.sensorID, sensor.sensorType);
             }
-
-            stationLatitude = locator_->getStationLatitude();
-            stationLongitude = locator_->getStationLongitude();
-            stationHeading = locator_->getStationHeading();
-            stationType = locator_->getStationType();
-
-            spdlog::info("[Generation]: Station Latitude: {}, Longitude: {}, Type: {}", stationLatitude, stationLongitude, stationType);
-
             last_sensor_ts = now;
         }
 
@@ -84,21 +76,26 @@ void Generation::runLoop() {
             spdlog::info("[Generation]: No fresh objects retrieved this cycle.");
         } else {
             spdlog::info("[Generation]: Retrieved {} fresh objects.", freshObjects.size());
+            
+            stationLatitude = locator_->getStationLatitude();
+            stationLongitude = locator_->getStationLongitude();
+            stationHeading = locator_->getStationHeading();
+            stationType = locator_->getStationType();
+            spdlog::info("[Generation]: Station Latitude: {}, Longitude: {}, Type: {}", stationLatitude, stationLongitude, stationType);
+
+            // Generate CPM
+            auto t1 = std::chrono::high_resolution_clock::now();
+            json cpm = builder_.generateCPM(freshObjects, sensorInfo, addSensor, stationLatitude, stationLongitude, stationHeading, stationType);
+            auto t2 = std::chrono::high_resolution_clock::now();
+            std::string cpm_str = cpm.dump();
+            auto t3 = std::chrono::high_resolution_clock::now();
+
+            spdlog::info("[Generation]: CPM generation took {} us, serialization took {} us", std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count(), std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2).count());
+            spdlog::info("[Generation]: Publising CPM: {}", cpm_str);
+
+            // Publish CPM
+            dds_->publish(ddsTopic_, cpm_str);
         }
-
-        // Generate CPM
-        auto t1 = std::chrono::high_resolution_clock::now();
-        json cpm = builder_.generateCPM(freshObjects, sensorInfo, addSensor, stationLatitude, stationLongitude, stationHeading, stationType);
-        auto t2 = std::chrono::high_resolution_clock::now();
-        std::string cpm_str = cpm.dump();
-        auto t3 = std::chrono::high_resolution_clock::now();
-
-        spdlog::info("[Generation]: CPM generation took {} us, serialization took {} us", std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count(), std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2).count());
-        spdlog::info("[Generation]: Publising CPM: {}", cpm_str);
-
-        // Publish CPM
-        dds_->publish(ddsTopic_, cpm_str);
-
         // Sleep for the current request rate - time taken to process this cycle.
         auto end = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();

@@ -22,7 +22,7 @@ RadarAdapter::RadarAdapter(const Config& config) : config(config) {
 
     // Publish sensor information
     SensorInfo sensorInfo = {
-        1, 11, false, 75, 20, 3061, 0, 0, 0
+        1, 1, false, 75, 20, 3061, 0, 0, 0
     };
     string sensorInfoStr = to_json(sensorInfo).dump();
     dds_->publish("cps/sensors", sensorInfoStr);
@@ -55,7 +55,7 @@ void RadarAdapter::run() {
 
     // Publish sensor information
     SensorInfo sensorInfo = {
-        1, 11, false, 75, 20, 3061, 0, 0, 0
+        1, 1, false, 75, 20, 3061, 0, 0, 0
     };
     string sensorInfoStr = to_json(sensorInfo).dump();
     
@@ -63,11 +63,6 @@ void RadarAdapter::run() {
         std::this_thread::sleep_for(std::chrono::seconds(5));
         dds_->publish("cps/sensors", sensorInfoStr);
         spdlog::info("Sensor information published {}", sensorInfoStr);
-
-        //Check if MQTT is still connected
-        if (!mqtt_wrapper->is_connected()) {
-            spdlog::error("MQTT connection lost, reconnecting...");
-        }
     }
 }
 
@@ -125,7 +120,7 @@ std::string RadarAdapter::parseMessage(const std::string& input) {
         {"classification", obj.classification},
         {"confidence", obj.confidence},
         {"speed", obj.speed},
-        {"heading", obj.heading},
+        {"heading", obj.heading + 180.0f},
         {"acceleration", obj.acceleration},
         {"latitude", obj.latitude},
         {"longitude", obj.longitude},
