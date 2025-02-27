@@ -73,13 +73,17 @@ WORKDIR /usr/src/generation
 RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/spdlog.git
 RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/mobility-networks/fastdds-cpp-wrapper.git
 
+WORKDIR /usr/src
+RUN git -c http.sslVerify=false clone https://github.com/Tencent/rapidjson.git
+RUN mv rapidjson/include/rapidjson generation/rapidjson
+
 COPY *.cpp /usr/src/generation/
 COPY *.h /usr/src/generation/
 COPY *.hpp /usr/src/generation/
 COPY CMakeLists.txt /usr/src/generation/
 COPY nlohmann/json.hpp /usr/src/generation/nlohmann/json.hpp
-COPY rapidjson /usr/src/generation/rapidjson
 
+WORKDIR /usr/src/generation
 RUN cmake . && cmake --build . --parallel $(nproc)
 RUN chmod +x main
 
