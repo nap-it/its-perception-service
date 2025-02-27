@@ -100,7 +100,7 @@ json Builder::generateCPM(const std::vector<Object>& freshObjects,
         objJson["objectID"] = obj.cpmObjectID;
         objJson["sensorIDList"] = {obj.sensorID};
         objJson["measurementDeltaTime"] = getMeasurementDeltaTime(now, obj.timestamp*1000);
-        objJson["objectPerceptionQuality"] = obj.confidence/100.0;
+        objJson["objectPerceptionQuality"] = 1.0;
 
         // position
         double x, y;
