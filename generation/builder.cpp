@@ -52,10 +52,10 @@ json Builder::generateCPM(const std::vector<Object>& freshObjects,
         cpmContainers.push_back({
             {"containerId", 1},
             {"containerData", {
-                "orientationAngle", {
+                {"orientationAngle", {
                     {"value", stationHeading},
                     {"confidence", 1}
-                }
+                }}
             }}
         });
     } else if (stationType == 15) { // RSU
@@ -97,8 +97,8 @@ json Builder::generateCPM(const std::vector<Object>& freshObjects,
     json perceivedObjects = json::array();
     for (const auto& obj : freshObjects) {
         json objJson;
-        objJson["objectID"] = obj.cpmObjectID;
-        objJson["sensorIDList"] = {obj.sensorID};
+        objJson["objectId"] = obj.cpmObjectID;
+        objJson["sensorIdList"] = {obj.sensorID};
         objJson["measurementDeltaTime"] = getMeasurementDeltaTime(now, obj.timestamp*1000);
         objJson["objectPerceptionQuality"] = 1.0;
 
@@ -114,17 +114,17 @@ json Builder::generateCPM(const std::vector<Object>& freshObjects,
         objJson["position"] = {
             {"xCoordinate", {
                 {"value", x},
-                {"confidence", obj.cov_latitude != NOT_PRESENT_FLOAT ? sqrt(obj.cov_latitude) : 0}
+                {"confidence", obj.cov_latitude != NOT_PRESENT_FLOAT ? sqrt(obj.cov_latitude) : 1}
             }},
             {"yCoordinate", {
                 {"value", y},
-                {"confidence", obj.cov_longitude != NOT_PRESENT_FLOAT ? sqrt(obj.cov_longitude) : 0}
+                {"confidence", obj.cov_longitude != NOT_PRESENT_FLOAT ? sqrt(obj.cov_longitude) : 1}
             }}
         };
         if (obj.altitude != NOT_PRESENT_FLOAT) {
             objJson["position"]["zCoordinate"] = {
                 {"value", obj.altitude},
-                {"confidence", obj.cov_altitude != NOT_PRESENT_FLOAT ? sqrt(obj.cov_altitude) : 0}
+                {"confidence", obj.cov_altitude != NOT_PRESENT_FLOAT ? sqrt(obj.cov_altitude) : 1}
             };
         }
 
@@ -136,14 +136,14 @@ json Builder::generateCPM(const std::vector<Object>& freshObjects,
             yVelocity = obj.speed * sin(obj.heading * PI_RAD);
         }
 
-        objJson["velocity"] = {
+        objJson["velocity"]["cartesianVelocity"] = {
             {"xVelocity", {
                 {"value", xVelocity},
-                {"confidence", obj.cov_speed != NOT_PRESENT_FLOAT ? sqrt(obj.cov_speed) : 0}
+                {"confidence", obj.cov_speed != NOT_PRESENT_FLOAT ? sqrt(obj.cov_speed) : 1}
             }},
             {"yVelocity", {
                 {"value", yVelocity},
-                {"confidence", obj.cov_speed != NOT_PRESENT_FLOAT ? sqrt(obj.cov_speed) : 0}
+                {"confidence", obj.cov_speed != NOT_PRESENT_FLOAT ? sqrt(obj.cov_speed) : 1}
             }}
         };
 
@@ -162,7 +162,7 @@ json Builder::generateCPM(const std::vector<Object>& freshObjects,
             yAcc = obj.acceleration * sin(obj.heading * PI_RAD);
         }
 
-        objJson["acceleration"] = {
+        objJson["acceleration"]["cartesianAcceleration"] = {
             {"xAcceleration", {
                 {"value", xAcc},
                 {"confidence", 1}
@@ -177,7 +177,7 @@ json Builder::generateCPM(const std::vector<Object>& freshObjects,
         objJson["angles"] = {
             {"zAngle", {
                 {"value", obj.heading},
-                {"confidence", obj.cov_heading != NOT_PRESENT_FLOAT ? sqrt(obj.cov_heading) : 0}
+                {"confidence", obj.cov_heading != NOT_PRESENT_FLOAT ? sqrt(obj.cov_heading) : 1}
             }}
         };
 
