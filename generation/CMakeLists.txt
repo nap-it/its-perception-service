@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include_directories(${CMAKE_SOURCE_DIR}/spdlog/include)
 include_directories(${CMAKE_SOURCE_DIR}/fastdds-cpp-wrapper)
+include_directories(${CMAKE_SOURCE_DIR}/rapidjson)
 include_directories(${CMAKE_SOURCE_DIR})
 
 find_package(Threads REQUIRED)

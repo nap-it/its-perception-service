@@ -84,13 +84,10 @@ void Generation::runLoop() {
             spdlog::info("[Generation]: Station Latitude: {}, Longitude: {}, Type: {}", stationLatitude, stationLongitude, stationType);
 
             // Generate CPM
-            auto t1 = std::chrono::high_resolution_clock::now();
-            json cpm = builder_.generateCPM(freshObjects, sensorInfo, addSensor, stationLatitude, stationLongitude, stationHeading, stationType);
-            auto t2 = std::chrono::high_resolution_clock::now();
-            std::string cpm_str = cpm.dump();
-            auto t3 = std::chrono::high_resolution_clock::now();
+            std::string cpm_str = builder_.generateCPM(freshObjects, sensorInfo, addSensor, stationLatitude, stationLongitude, stationHeading, stationType);
+            //std::string cpm_str = cpm.dump();
 
-            spdlog::info("[Generation]: CPM generation took {} us, serialization took {} us", std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count(), std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2).count());
+            // spdlog::info("[Generation]: CPM generation took {} us, serialization took {} us", std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count(), std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2).count());
             spdlog::info("[Generation]: Publising CPM: {}", cpm_str);
 
             // Publish CPM

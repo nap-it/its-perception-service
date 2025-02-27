@@ -4,10 +4,14 @@
 #include <vector>
 #include <cmath>
 #include <unordered_map>
-#include <nlohmann/json.hpp>
 #include "aggregator.h"
 
-using json = nlohmann::json;
+// RapidJSON headers for fast JSON generation.
+#include "rapidjson/document.h"
+#include "rapidjson/writer.h"
+#include "rapidjson/stringbuffer.h"
+
+namespace rj = rapidjson;
 
 constexpr double R = 6371000;
 constexpr double PI_RAD = M_PI / 180.0;
@@ -17,7 +21,7 @@ constexpr long int time2004ms = 1072915200000;
 class Builder {
 public:
     /**
-     * @brief Generates a CPM JSON object.
+     * @brief Generates a CPM JSON string.
      * @param freshObjects A vector of fresh objects to include.
      * @param sensorInfo A map of sensorID to SensorInfo.
      * @param addSensor If true, include sensor information.
@@ -25,29 +29,30 @@ public:
      * @param stationLongitude The station longitude.
      * @param stationHeading The station heading.
      * @param stationType The station type.
-     * @return json The constructed CPM.
+     * @return std::string The constructed CPM as a JSON string.
      */
-    json generateCPM(const std::vector<Object>& freshObjects,
-                     const std::unordered_map<int, SensorInfo>& sensorInfo,
-                     bool addSensor,
-                     double stationLatitude,
-                     double stationLongitude,
-                     float stationHeading,
-                     int stationType);
+    std::string generateCPM(const std::vector<Object>& freshObjects,
+                            const std::unordered_map<int, SensorInfo>& sensorInfo,
+                            bool addSensor,
+                            double stationLatitude,
+                            double stationLongitude,
+                            float stationHeading,
+                            int stationType);
 
 private:
-
     /**
      * @brief Calculate the relative positions of two points.
      * @param stationLatitude The latitude of the station.
      * @param stationLongitude The longitude of the station.
      * @param objLatitude The latitude of the object.
      * @param objLongitude The longitude of the object.
-     * @param C The cosine of the latitude.
-     * @param x The calculated x position.
-     * @param y The calculated y position.
+     * @param C The cosine factor (R * cos(stationLatitude in radians)).
+     * @param x The calculated x position (output).
+     * @param y The calculated y position (output).
      */
-    void calculateRelativePositions(double stationLatitude, double stationLongitude, double objLatitude, double objLongitude, double C, double& x, double& y);
+    void calculateRelativePositions(double stationLatitude, double stationLongitude,
+                                    double objLatitude, double objLongitude,
+                                    double C, double& x, double& y);
 };
 
 #endif // BUILDER_H

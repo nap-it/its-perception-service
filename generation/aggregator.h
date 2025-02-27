@@ -8,7 +8,7 @@
 #include <thread>
 #include <atomic>
 #include <nlohmann/json.hpp>
-#include "fastdds-cpp-wrapper/dds.hpp"  // Adjust include if needed
+#include "fastdds-cpp-wrapper/dds.hpp"
 
 using json = nlohmann::json;
 

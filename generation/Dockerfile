@@ -78,6 +78,7 @@ COPY *.h /usr/src/generation/
 COPY *.hpp /usr/src/generation/
 COPY CMakeLists.txt /usr/src/generation/
 COPY nlohmann/json.hpp /usr/src/generation/nlohmann/json.hpp
+COPY rapidjson /usr/src/generation/rapidjson
 
 RUN cmake . && cmake --build . --parallel $(nproc)
 RUN chmod +x main
