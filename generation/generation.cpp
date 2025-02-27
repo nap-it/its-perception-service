@@ -52,6 +52,7 @@ void Generation::runLoop() {
     vector<Object> freshObjects;
     double stationLatitude;
     double stationLongitude;
+    float stationHeading;
     int stationType;
 
     while (!stopFlag_) {
@@ -71,6 +72,7 @@ void Generation::runLoop() {
 
             stationLatitude = locator_->getStationLatitude();
             stationLongitude = locator_->getStationLongitude();
+            stationHeading = locator_->getStationHeading();
             stationType = locator_->getStationType();
 
             spdlog::info("[Generation]: Station Latitude: {}, Longitude: {}, Type: {}", stationLatitude, stationLongitude, stationType);
@@ -86,7 +88,7 @@ void Generation::runLoop() {
 
         // Generate CPM
         auto t1 = std::chrono::high_resolution_clock::now();
-        json cpm = builder_.generateCPM(freshObjects, sensorInfo, addSensor, stationLatitude, stationLongitude, stationType);
+        json cpm = builder_.generateCPM(freshObjects, sensorInfo, addSensor, stationLatitude, stationLongitude, stationHeading, stationType);
         auto t2 = std::chrono::high_resolution_clock::now();
         std::string cpm_str = cpm.dump();
         auto t3 = std::chrono::high_resolution_clock::now();

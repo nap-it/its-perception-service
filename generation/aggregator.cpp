@@ -77,21 +77,23 @@ std::string serializeFreshObjects(const std::vector<ObjectEntity>& freshObjects)
     return j.dump();
 }
 
-// Utility function: convert epoch seconds to a formatted string.
-std::string formatTimestamp(long epochSeconds) {
-    std::time_t t = epochSeconds;
-    std::tm tm = *std::localtime(&t);
-    std::ostringstream oss;
-    oss << std::put_time(&tm, "%F %T"); // Format: YYYY-MM-DD HH:MM:SS
-    return oss.str();
+int Aggregator::calculateCpmObjectID(int sensorID, int objectID) {
+    int combinedId = (sensorID << 16) | (objectID & 0xFFFF);
+    if (idMap_.find(combinedId) != idMap_.end()) {
+        return idMap_[combinedId];
+    } else {
+        int newID = currentID_++;
+        if (currentID_ > 65535) currentID_ = 1;
+        idMap_.emplace(combinedId, newID);
+        return newID;
+    }
 }
 
 void Aggregator::cleanLastSent() {
     std::lock_guard<std::mutex> lock(objMtx_);
     for (auto it = all_objects_.begin(); it != all_objects_.end(); ) {
         // Get the current time in seconds (Unix epoch)
-        auto now = std::chrono::duration_cast<std::chrono::seconds>(
-                       std::chrono::system_clock::now().time_since_epoch()).count();
+        auto now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
         double raw_obj_ts = it->second.current.timestamp;
         unsigned long obj_ts = static_cast<unsigned long>(raw_obj_ts);
@@ -102,6 +104,8 @@ void Aggregator::cleanLastSent() {
         }
 
         if (now - obj_ts > maxObjectAge_) {
+            int combinedId = (it->second.current.sensorID << 16) | (it->second.current.objectID & 0xFFFF);
+            idMap_.erase(combinedId);
             it = all_objects_.erase(it);
         } else {
             ++it;
@@ -290,12 +294,17 @@ void Aggregator::on_message_dds(const std::string& topic, const std::string& mes
                     if ((obj.objectID == NOT_PRESENT_INT || obj.objectID < 0) && (spdlog::error("[Aggregator]: Mandatory (Object ID) not present in message: {}", message), true)) continue;
                     obj.sensorID = objJson.value("sensorID", NOT_PRESENT_INT);
                     if (obj.sensorID == NOT_PRESENT_INT && (spdlog::error("[Aggregator]: Mandatory (Sensor ID) not present in message: {}", message), true)) continue;
+                    obj.cpmObjectID = calculateCpmObjectID(obj.sensorID, obj.objectID);
                     obj.timestamp = objJson.value("timestamp", NOT_PRESENT_DOUBLE);
                     if (obj.timestamp == NOT_PRESENT_DOUBLE && (spdlog::error("[Aggregator]: Mandatory (Timestamp) not present in message: {}", message), true)) continue;
                     obj.classification = objJson.value("classification", 0);
                     obj.confidence = objJson.value("confidence", 0);
+                    if (obj.confidence < 0) obj.confidence = 0;
+                    if (obj.confidence > 100) obj.confidence = 100;
                     obj.speed = objJson.value("speed", 0.0f);
-                    obj.heading = objJson.value("heading", 0.0f);
+                    obj.heading = objJson.value("heading", NOT_PRESENT_FLOAT);
+                    if (obj.heading < 0) obj.heading = 0;
+                    if (obj.heading >= 360) obj.heading = 0;
                     obj.acceleration = objJson.value("acceleration", 0.0f);
                     obj.latitude = objJson.value("latitude", NOT_PRESENT_FLOAT);
                     if (obj.latitude == NOT_PRESENT_FLOAT && (spdlog::error("[Aggregator]: Mandatory (Latitude) not present in message: {}", message), true)) continue;

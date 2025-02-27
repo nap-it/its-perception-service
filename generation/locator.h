@@ -45,6 +45,7 @@ public:
     // Getters for location and station type.
     double getStationLatitude();
     double getStationLongitude();
+    float getStationHeading();
     int getStationType();
 
 private:
@@ -60,6 +61,7 @@ private:
     // Latest station dynamic location values (updated by client callbacks).
     double latestLatitude_;
     double latestLongitude_;
+    float latestHeading_;
 
     // Mutex to protect dynamic updates.
     std::mutex mtx_;

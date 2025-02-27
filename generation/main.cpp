@@ -65,7 +65,7 @@ int main() {
                                                 locator_dds_domain,
                                                 locator_dds_topic,
                                                 debug);
-    locator->run(); // (if you implement a run loop in Locator)
+    locator->run();
 
     // Aggregator configuration
     int aggregator_dds_domain = reader.GetInteger("aggregator", "domain_id", 0);

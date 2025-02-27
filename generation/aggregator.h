@@ -18,6 +18,7 @@ constexpr int NOT_PRESENT_INT = -999;
 
 struct Object {
     int objectID;
+    int cpmObjectID;
     int sensorID;
     double timestamp;
     int classification;
@@ -129,6 +130,10 @@ private:
     long maxObjectAge_;     // Maximum object age in seconds
     long cleanInterval_;    // Cleanup interval in seconds
 
+    // ID map for CPM object IDs
+    int currentID_ = 1;
+    std::unordered_map<int, int> idMap_;
+
     // Thread control for periodic cleanup
     std::atomic<bool> stopFlag_;
     std::thread runThread_;
@@ -152,6 +157,11 @@ private:
      * @brief Calculate the distance between two lat/lon coordinates (in meters) using the Haversine formula.
      */
     double calculateDistance(double lat1, double lon1, double lat2, double lon2);
+
+    /**
+     * @brief Calculate the CPM object ID based on the sensor and object IDs.
+     */
+    int calculateCpmObjectID(int sensorID, int objectID);
 
     // Static instance pointer for the DDS callback.
     static Aggregator* instance_;

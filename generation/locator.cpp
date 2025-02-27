@@ -16,14 +16,15 @@ Locator::Locator(ProviderType provider,
                    int ddsDomain,
                    std::string ddsTopic,
                    bool debug)
-    : provider_(provider),
-      stationType_(configStationType),
-      latestLatitude_(configLatitude),
-      latestLongitude_(configLongitude),
-      mqttClient_(nullptr),
-      dds_(nullptr),
-      mqttTopic_(mqttTopic),
-      ddsTopic_(ddsTopic)
+        : provider_(provider),
+        stationType_(configStationType),
+        latestLatitude_(configLatitude),
+        latestLongitude_(configLongitude),
+        latestHeading_(0.0),
+        mqttClient_(nullptr),
+        dds_(nullptr),
+        mqttTopic_(mqttTopic),
+        ddsTopic_(ddsTopic)
 {
     spdlog::info("[Locator] Constructing with provider type: {}", (provider_ == ProviderType::STATIC ? "STATIC" : (provider_ == ProviderType::MQTT ? "MQTT" : "DDS")));
 
@@ -99,6 +100,14 @@ double Locator::getStationLongitude() {
     return latestLongitude_;
 }
 
+float Locator::getStationHeading() {
+    std::lock_guard<std::mutex> lock(mtx_);
+    if (provider_ == ProviderType::STATIC) return 0.0;
+    if (latestHeading_ < 0.0) return 0.0;
+    if (latestHeading_ > 360.0) return 0.0;
+    return latestHeading_;
+}
+
 int Locator::getStationType() {
     std::lock_guard<std::mutex> lock(mtx_);
     return stationType_;
@@ -121,26 +130,29 @@ void Locator::parseAndUpdateLocation(const std::string& topic, const std::string
         if (topic == "vanetza/in/cam" || topic == "vanetza/own/cam") {
             double lat = j.value("latitude", latestLatitude_);
             double lon = j.value("longitude", latestLongitude_);
+            float heading = j.value("heading", 0.0);
         
             {
                 std::lock_guard<std::mutex> lock(mtx_);
                 latestLatitude_ = lat;
                 latestLongitude_ = lon;
+                latestHeading_ = heading;
             }
 
-            spdlog::debug("[Locator] Updated dynamic location: lat {:.6f}, lon {:.6f}", lat, lon);
+            spdlog::debug("[Locator] Updated dynamic location: lat {:.6f}, lon {:.6f}, heading {:.2f}", lat, lon, heading);
         
         } else if (topic == "vanetza/in/cam_full") {
             double lat = j.value("camParameters", json::object()).value("basicContainer", json::object()).value("referencePosition", json::object()).value("latitude", latestLatitude_);
             double lon = j.value("camParameters", json::object()).value("basicContainer", json::object()).value("referencePosition", json::object()).value("longitude", latestLongitude_);
-        
+            float heading = j.value("camParameters", json::object()).value("highFrequencyContainer", json::object()).value("basicVehicleContainerHighFrequency", json::object()).value("heading", json::object()).value("headingValue", 0.0);
             {
                 std::lock_guard<std::mutex> lock(mtx_);
                 latestLatitude_ = lat;
                 latestLongitude_ = lon;
+                latestHeading_ = heading;
             }
 
-            spdlog::debug("[Locator] Updated dynamic location: lat {:.6f}, lon {:.6f}", lat, lon);
+            spdlog::debug("[Locator] Updated dynamic location: lat {:.6f}, lon {:.6f}, heading {:.2f}", lat, lon, heading);
         
             } else {
             spdlog::warn("[Locator] Unknown topic: {}", topic);
