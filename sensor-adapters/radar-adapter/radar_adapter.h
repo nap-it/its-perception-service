@@ -7,7 +7,11 @@
 #include <thread>
 #include "mqttwrapper.h"
 #include "fastdds-cpp-wrapper/dds.hpp"
-#include <nlohmann/json.hpp>
+#include "rapidjson/document.h"
+#include "rapidjson/writer.h"
+#include "rapidjson/stringbuffer.h"
+
+namespace rj = rapidjson;
 
 struct Config {
     int domain_id;
@@ -29,17 +33,17 @@ struct Object {
     float acceleration;
     float latitude;
     float longitude;
-    float altitude = 0.0f;                  // Not used
+    float altitude = 0.0f;   // Not used
     float size_x = 0.0f;
-    float size_y = 0.0f;                    // Not used
-    float size_z = 0.0f;                    // Not used
-    float angular_velocity = 0.0f;          // Not used
-    float cov_latitude = 0.0f;              // Not used
-    float cov_longitude = 0.0f;             // Not used
-    float cov_altitude = 0.0f;              // Not used
-    float cov_heading = 0.0f;               // Not used
-    float cov_speed = 0.0f;                 // Not used
-    float cov_angular_velocity = 0.0f;      // Not used
+    float size_y = 0.0f;     // Not used
+    float size_z = 0.0f;     // Not used
+    float angular_velocity = 0.0f; // Not used
+    float cov_latitude = 0.0f;     // Not used
+    float cov_longitude = 0.0f;    // Not used
+    float cov_altitude = 0.0f;     // Not used
+    float cov_heading = 0.0f;      // Not used
+    float cov_speed = 0.0f;        // Not used
+    float cov_angular_velocity = 0.0f; // Not used
 };
 
 struct SensorInfo {
@@ -54,19 +58,7 @@ struct SensorInfo {
     int stationaryHorizontalOpeningAngleEnd;
 };
 
-inline nlohmann::json to_json(const SensorInfo &info){
-    return nlohmann::json{
-        {"sensorID", info.sensorID},
-        {"sensorType", info.sensorType},
-        {"shadowingApplies", info.shadowingApplies},
-        {"semiMajorRangeLength", info.semiMajorRangeLength},
-        {"semiMinorRangeLength", info.semiMinorRangeLength},
-        {"semiMajorRangeOrientation", info.semiMajorRangeOrientation},
-        {"range", info.range},
-        {"stationaryHorizontalOpeningAngleStart", info.stationaryHorizontalOpeningAngleStart},
-        {"stationaryHorizontalOpeningAngleEnd", info.stationaryHorizontalOpeningAngleEnd}
-    };
-}
+// Instead of using nlohmann::json for SensorInfo conversion, we leave that conversion to our adapter code.
 
 class RadarAdapter {
 public:
@@ -78,29 +70,24 @@ private:
     Dds* dds_;
     MqttWrapper* mqtt_wrapper;
 
-
     /**
-     * Callback function for MQTT messages
-     * @param topic Topic of the message
-     * @param message Message
+     * Callback function for MQTT messages.
      */
     void on_message_mqtt(const std::string& topic, const std::string& message);
 
     /**
-     * Callback function for DDS messages
-     * @param topic Topic of the message
-     * @param message Message
+     * Callback function for DDS messages.
      */
     static void on_message_dds(const std::string& topic, const std::string& message) {}
 
     /**
-     * Parse MQTT message to Object struct serialized as JSON
-     * @param message MQTT message
+     * Parse an incoming MQTT message (as JSON text) into an Object,
+     * and return the resulting JSON string for DDS publishing.
      */
     std::string parseMessage(const std::string& message);
 
     /**
-     * Get random number as string
+     * Returns a random number string.
      */
     std::string getRandomNumberString();
 };

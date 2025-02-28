@@ -4,3 +4,4 @@
 **/rapidjson
 **/spdlog
 **/.vscode
+**/paho-mqtt-cpp-wrapper

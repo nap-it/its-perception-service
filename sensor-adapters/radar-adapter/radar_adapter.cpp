@@ -1,8 +1,14 @@
 #include "radar_adapter.h"
 #include <chrono>
 #include <functional>
+#include <sstream>
+#include <iomanip>
+#include <spdlog/spdlog.h>
+#include "rapidjson/document.h"
+#include "rapidjson/writer.h"
+#include "rapidjson/stringbuffer.h"
 
-using json = nlohmann::json;
+namespace rj = rapidjson;
 
 RadarAdapter::RadarAdapter(const Config& config) : config(config) {
     if (config.debug) {
@@ -13,22 +19,33 @@ RadarAdapter::RadarAdapter(const Config& config) : config(config) {
         spdlog::info("Info logging enabled.");
     }
 
-    // DDS
+    // Initialize DDS client.
     dds_ = new Dds("RadarAdapter", config.domain_id, on_message_dds);
     dds_->provision_publisher("cps/objects");
     dds_->provision_publisher("cps/sensors");
-    
     std::this_thread::sleep_for(std::chrono::seconds(2));
 
-    // Publish sensor information
-    SensorInfo sensorInfo = {
-        1, 1, false, 75, 20, 3061, 100, 3601, 3601
-    };
-    string sensorInfoStr = to_json(sensorInfo).dump();
+    // Build sensor information using RapidJSON.
+    rj::Document sensorDoc;
+    sensorDoc.SetObject();
+    rj::Document::AllocatorType& alloc = sensorDoc.GetAllocator();
+    sensorDoc.AddMember("sensorID", 1, alloc);
+    sensorDoc.AddMember("sensorType", 1, alloc);
+    sensorDoc.AddMember("shadowingApplies", false, alloc);
+    sensorDoc.AddMember("semiMajorRangeLength", 75, alloc);
+    sensorDoc.AddMember("semiMinorRangeLength", 20, alloc);
+    sensorDoc.AddMember("semiMajorRangeOrientation", 3061, alloc);
+    sensorDoc.AddMember("range", 100, alloc);
+    sensorDoc.AddMember("stationaryHorizontalOpeningAngleStart", 3601, alloc);
+    sensorDoc.AddMember("stationaryHorizontalOpeningAngleEnd", 3601, alloc);
+    rj::StringBuffer sensorBuffer;
+    rj::Writer<rj::StringBuffer> sensorWriter(sensorBuffer);
+    sensorDoc.Accept(sensorWriter);
+    std::string sensorInfoStr = sensorBuffer.GetString();
     dds_->publish("cps/sensors", sensorInfoStr);
-    spdlog::info("Sensor information published {}", sensorInfoStr);
+    spdlog::info("Sensor information published: {}", sensorInfoStr);
 
-    // MQTT
+    // MQTT configuration.
     data_mqtt_server mqttInfo;
     mqttInfo.address = "tcp://" + config.mqtt_host + ":" + std::to_string(config.mqtt_port);
     mqttInfo.client_id = config.mqtt_client_id + "-" + std::to_string(config.domain_id) + getRandomNumberString();
@@ -38,8 +55,7 @@ RadarAdapter::RadarAdapter(const Config& config) : config(config) {
         this->on_message_mqtt(topic, message);
     });
 
-    int max_retries = 10;
-    int retries = 0;
+    int max_retries = 10, retries = 0;
     while (!mqtt_wrapper->is_connected()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         spdlog::info("Waiting for MQTT connection, retrying...");
@@ -53,16 +69,28 @@ RadarAdapter::RadarAdapter(const Config& config) : config(config) {
 void RadarAdapter::run() {
     spdlog::info("Radar Adapter started running...");
 
-    // Publish sensor information
-    SensorInfo sensorInfo = {
-        1, 1, false, 75, 20, 3061, 100, 3601, 3601
-    };
-    string sensorInfoStr = to_json(sensorInfo).dump();
-    
+    // Publish sensor information every 5 seconds.
+    rj::Document sensorDoc;
+    sensorDoc.SetObject();
+    rj::Document::AllocatorType& alloc = sensorDoc.GetAllocator();
+    sensorDoc.AddMember("sensorID", 1, alloc);
+    sensorDoc.AddMember("sensorType", 1, alloc);
+    sensorDoc.AddMember("shadowingApplies", false, alloc);
+    sensorDoc.AddMember("semiMajorRangeLength", 75, alloc);
+    sensorDoc.AddMember("semiMinorRangeLength", 20, alloc);
+    sensorDoc.AddMember("semiMajorRangeOrientation", 3061, alloc);
+    sensorDoc.AddMember("range", 100, alloc);
+    sensorDoc.AddMember("stationaryHorizontalOpeningAngleStart", 3601, alloc);
+    sensorDoc.AddMember("stationaryHorizontalOpeningAngleEnd", 3601, alloc);
+    rj::StringBuffer sensorBuffer;
+    rj::Writer<rj::StringBuffer> sensorWriter(sensorBuffer);
+    sensorDoc.Accept(sensorWriter);
+    std::string sensorInfoStr = sensorBuffer.GetString();
+
     while (true) {
         std::this_thread::sleep_for(std::chrono::seconds(5));
         dds_->publish("cps/sensors", sensorInfoStr);
-        spdlog::info("Sensor information published {}", sensorInfoStr);
+        spdlog::info("Sensor information published: {}", sensorInfoStr);
     }
 }
 
@@ -76,67 +104,74 @@ void RadarAdapter::on_message_mqtt(const std::string& topic, const std::string& 
 std::string RadarAdapter::parseMessage(const std::string& input) {
 
     auto t1 = std::chrono::high_resolution_clock::now();
-    Object obj;
-    try {
-        json j = json::parse(input);
-        auto t2 = std::chrono::high_resolution_clock::now();
 
-        obj.objectID = j.value("objectID", -1);
-        obj.sensorID = 1;  // Hardcoded sensor ID for Radar
-        obj.timestamp = j.value("timestamp", 0.0);
-        obj.classification = j.value("classification", 0);
-        obj.confidence = j.value("confidence", 0);
-        obj.speed = j.value("speed", 0.0f);
-        obj.heading = j.value("heading", 0.0f);
-        obj.latitude = j.value("latitude", 0.0f);
-        obj.longitude = j.value("longitude", 0.0f);
-        obj.size_x = j.value("length", 0.0f);
-
-        // Safe handling for acceleration
-        auto acc_value = j.value("acceleration", json(nullptr));
-        if (acc_value.is_number()) obj.acceleration = acc_value.get<float>();
-        else obj.acceleration = 0.0f;
-
-        auto t3 = std::chrono::high_resolution_clock::now();
-
-        spdlog::debug("Parsing time: {} | Extracting time: {}", 
-            std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count(),
-            std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2).count());
-
-    } catch (const nlohmann::json::type_error& e) {
-        spdlog::error("Type error: {} | Input: {}", e.what(), input);
-    } catch (const nlohmann::json::parse_error& e) {
-        spdlog::error("Parse error: {} | Input: {}", e.what(), input);
-    } catch (const std::exception& e) {
-        spdlog::error("Unexpected error: {} | Input: {}", e.what(), input);
+    rj::Document doc;
+    doc.Parse(input.c_str());
+    if (doc.HasParseError()) {
+        spdlog::error("Parse error in MQTT message: {}", input);
+        return "";
     }
+    
+    auto t2 = std::chrono::high_resolution_clock::now();
+
+    Object obj;
+    obj.objectID = (doc.HasMember("objectID") && doc["objectID"].IsInt()) ? doc["objectID"].GetInt() : -1;
+    if (obj.objectID == -1) { spdlog::error("Mandatory (Object ID) not present in message: {}", input); return ""; }
+    obj.sensorID = 1; // Hardcoded for Radar.
+    obj.timestamp = (doc.HasMember("timestamp") && doc["timestamp"].IsNumber()) ? doc["timestamp"].GetDouble() : 0.0;
+    if (obj.timestamp == 0.0) { spdlog::error("Mandatory (Timestamp) not present in message: {}", input); return ""; }
+    obj.classification = (doc.HasMember("classification") && doc["classification"].IsInt()) ? doc["classification"].GetInt() : 0;
+    obj.confidence = (doc.HasMember("confidence") && doc["confidence"].IsInt()) ? doc["confidence"].GetInt() : 0;
+    obj.speed = (doc.HasMember("speed") && doc["speed"].IsNumber()) ? static_cast<float>(doc["speed"].GetDouble()) : 0.0f;
+    obj.heading = (doc.HasMember("heading") && doc["heading"].IsNumber()) ? static_cast<float>(doc["heading"].GetDouble()) : 0.0f;
+    obj.acceleration = (doc.HasMember("acceleration") && doc["acceleration"].IsNumber()) ? static_cast<float>(doc["acceleration"].GetDouble()) : 0.0f;
+    obj.latitude = (doc.HasMember("latitude") && doc["latitude"].IsNumber()) ? static_cast<float>(doc["latitude"].GetDouble()) : 0.0f;
+    if (obj.latitude == 0.0f) { spdlog::error("Mandatory (Latitude) not present in message: {}", input); return ""; }
+    obj.longitude = (doc.HasMember("longitude") && doc["longitude"].IsNumber()) ? static_cast<float>(doc["longitude"].GetDouble()) : 0.0f;
+    if (obj.longitude == 0.0f) { spdlog::error("Mandatory (Longitude) not present in message: {}", input); return ""; }
+    obj.size_x = (doc.HasMember("length") && doc["length"].IsNumber()) ? static_cast<float>(doc["length"].GetDouble()) : 0.0f;
+    
+    auto t3 = std::chrono::high_resolution_clock::now();
+
+    // Build output JSON document.
+    rj::Document outDoc;
+    outDoc.SetObject();
+    rj::Document::AllocatorType& allocOut = outDoc.GetAllocator();
+    
+    rj::Value objects(rj::kArrayType);
+    rj::Value objVal(rj::kObjectType);
+    objVal.AddMember("objectID", obj.objectID, allocOut);
+    objVal.AddMember("sensorID", obj.sensorID, allocOut);
+    objVal.AddMember("timestamp", obj.timestamp, allocOut);
+    objVal.AddMember("classification", obj.classification, allocOut);
+    objVal.AddMember("confidence", obj.confidence, allocOut);
+    objVal.AddMember("speed", obj.speed, allocOut);
+    objVal.AddMember("heading", obj.heading, allocOut);
+    objVal.AddMember("acceleration", obj.acceleration, allocOut);
+    objVal.AddMember("latitude", obj.latitude, allocOut);
+    objVal.AddMember("longitude", obj.longitude, allocOut);
+    objVal.AddMember("size_x", obj.size_x, allocOut);
+    
+    objects.PushBack(objVal, allocOut);
+    outDoc.AddMember("objects", objects, allocOut);
 
     auto t4 = std::chrono::high_resolution_clock::now();
-    // Convert Object struct to JSON
-    json object = {
-        {"objectID", obj.objectID},
-        {"sensorID", obj.sensorID},
-        {"timestamp", obj.timestamp},
-        {"classification", obj.classification},
-        {"confidence", obj.confidence},
-        {"speed", obj.speed},
-        {"heading", obj.heading + 180.0f},
-        {"acceleration", obj.acceleration},
-        {"latitude", obj.latitude},
-        {"longitude", obj.longitude},
-        {"size_x", obj.size_x}
-    };
-
-    json output = {
-        {"objects", {object}}
-    };
+    
+    rj::StringBuffer buffer;
+    rj::Writer<rj::StringBuffer> writer(buffer);
+    outDoc.Accept(writer);
+    std::string output = buffer.GetString();
 
     auto t5 = std::chrono::high_resolution_clock::now();
 
-    spdlog::debug("JSON Building time: {}", 
-        std::chrono::duration_cast<std::chrono::microseconds>(t5 - t4).count());
+    spdlog::debug("Parse time: {}, Extract time: {}, Build time: {}, Serialize time: {}, Total time: {}", 
+        std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count(),
+        std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2).count(),
+        std::chrono::duration_cast<std::chrono::microseconds>(t4 - t3).count(),
+        std::chrono::duration_cast<std::chrono::microseconds>(t5 - t4).count(),
+        std::chrono::duration_cast<std::chrono::microseconds>(t5 - t1).count());
 
-    return output.dump();
+    return output;
 }
 
 std::string RadarAdapter::getRandomNumberString() {

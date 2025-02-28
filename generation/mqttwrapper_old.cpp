@@ -52,13 +52,14 @@ MqttWrapper::MqttWrapper(data_mqtt_server data)
 
     this->connOpts_.set_clean_session(false);
     this->connOpts_.set_automatic_reconnect(true);
+    this->connOpts_.set_keep_alive_interval(20);
 
     this->client_.set_callback(*this);
 
     // Start the connection
     try {
         spdlog::info("Connecting to the MQTT server...");
-        this->client_.connect();
+        this->client_.connect(this->connOpts_, nullptr, *this);
     } catch (const mqtt::exception& exc) {
         spdlog::error("Unable to connect to MQTT server: ", exc.what());
         exit(1);

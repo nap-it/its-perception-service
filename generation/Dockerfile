@@ -72,6 +72,8 @@ RUN ldconfig
 WORKDIR /usr/src/generation
 RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/spdlog.git
 RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/mobility-networks/fastdds-cpp-wrapper.git
+#RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/mobility-networks/paho-mqtt-cpp-wrapper.git
+COPY paho-mqtt-cpp-wrapper /usr/src/generation/paho-mqtt-cpp-wrapper
 
 WORKDIR /usr/src
 RUN git -c http.sslVerify=false clone https://github.com/Tencent/rapidjson.git

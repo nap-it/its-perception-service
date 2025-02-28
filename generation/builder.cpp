@@ -85,7 +85,7 @@ std::string Builder::generateCPM(const std::vector<Object>& freshObjects,
         container2.AddMember("containerData", containerData, alloc);
         cpmContainers.PushBack(container2, alloc);
     } else {
-        spdlog::error("Unknown station type: {}", stationType);
+        spdlog::error("[Builder] Unknown station type: {}", stationType);
         return "";
     }
 
@@ -136,7 +136,7 @@ std::string Builder::generateCPM(const std::vector<Object>& freshObjects,
         double x, y;
         calculateRelativePositions(stationLatitude, stationLongitude, obj.latitude, obj.longitude, C, x, y);
         if (x > 1310.72 || x < -1310.72 || y > 1310.72 || y < -1310.72) {
-            spdlog::warn("Object out of bounds: x={}, y={}", x, y);
+            spdlog::warn("[Builder] Object out of bounds: x={}, y={}", x, y);
             continue;
         }
         
@@ -266,7 +266,7 @@ std::string Builder::generateCPM(const std::vector<Object>& freshObjects,
 
     auto t2 = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
-    spdlog::info("CPM generation took {} us", duration);
+    spdlog::info("[Builder] CPM generation took {} us", duration);
 
     // Convert document to string.
     rj::StringBuffer buffer;
@@ -276,7 +276,7 @@ std::string Builder::generateCPM(const std::vector<Object>& freshObjects,
     
     auto t3 = std::chrono::high_resolution_clock::now();
     duration = std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2).count();
-    spdlog::info("CPM serialization took {} us", duration);
+    spdlog::info("[Builder] CPM serialization took {} us", duration);
 
     return cpm_str;
 }
