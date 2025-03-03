@@ -85,7 +85,6 @@ void Generation::runLoop() {
 
             // Generate CPM
             std::string cpm_str = builder_.generateCPM(freshObjects, sensorInfo, addSensor, stationLatitude, stationLongitude, stationHeading, stationType);
-            //std::string cpm_str = cpm.dump();
 
             // spdlog::info("[Generation]: CPM generation took {} us, serialization took {} us", std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count(), std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2).count());
             spdlog::info("[Generation]: Publising CPM: {}", cpm_str);

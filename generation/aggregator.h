@@ -7,10 +7,12 @@
 #include <mutex>
 #include <thread>
 #include <atomic>
-#include <nlohmann/json.hpp>
+#include "rapidjson/document.h"
+#include "rapidjson/writer.h"
+#include "rapidjson/stringbuffer.h"
 #include "fastdds-cpp-wrapper/dds.hpp"
 
-using json = nlohmann::json;
+namespace rj = rapidjson;
 
 constexpr float NOT_PRESENT_FLOAT = -999.0f;
 constexpr double NOT_PRESENT_DOUBLE = -999.0;

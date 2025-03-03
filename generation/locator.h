@@ -3,9 +3,13 @@
 
 #include <string>
 #include <mutex>
-#include <nlohmann/json.hpp>
+#include "rapidjson/document.h"
+#include "rapidjson/writer.h"
+#include "rapidjson/stringbuffer.h"
 #include "mqttwrapper.h"
 #include "fastdds-cpp-wrapper/dds.hpp"
+
+namespace rj = rapidjson;
 
 enum class ProviderType {
     STATIC,

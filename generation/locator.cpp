@@ -4,8 +4,6 @@
 #include <chrono>
 #include <thread>
 #include <spdlog/spdlog.h>
-#include <nlohmann/json.hpp>
-using json = nlohmann::json;
 
 Locator::Locator(ProviderType provider,
                    float configLatitude,
@@ -125,39 +123,61 @@ void Locator::on_message_dds(const std::string& topic, const std::string& messag
 
 void Locator::parseAndUpdateLocation(const std::string& topic, const std::string& message) {
     try {
-        json j = json::parse(message);
+        rj::Document doc;
+        doc.Parse(message.c_str());
+        if (doc.HasParseError()) {
+            spdlog::error("[Locator] Parse error in message: {}", message);
+            return;
+        }
+        
+        double lat = latestLatitude_;
+        double lon = latestLongitude_;
+        float heading = 0.0f;
         
         if (topic == "vanetza/in/cam" || topic == "vanetza/own/cam") {
-            double lat = j.value("latitude", latestLatitude_);
-            double lon = j.value("longitude", latestLongitude_);
-            float heading = j.value("heading", 0.0);
-        
-            {
-                std::lock_guard<std::mutex> lock(mtx_);
-                latestLatitude_ = lat;
-                latestLongitude_ = lon;
-                latestHeading_ = heading;
-            }
-
-            spdlog::debug("[Locator] Updated dynamic location: lat {:.6f}, lon {:.6f}, heading {:.2f}", lat, lon, heading);
-        
+            lat = (doc.HasMember("latitude") && doc["latitude"].IsNumber()) ? doc["latitude"].GetDouble() : latestLatitude_;
+            lon = (doc.HasMember("longitude") && doc["longitude"].IsNumber()) ? doc["longitude"].GetDouble() : latestLongitude_;
+            heading = (doc.HasMember("heading") && doc["heading"].IsNumber()) ? static_cast<float>(doc["heading"].GetDouble()) : 0.0f;
         } else if (topic == "vanetza/in/cam_full") {
-            double lat = j.value("camParameters", json::object()).value("basicContainer", json::object()).value("referencePosition", json::object()).value("latitude", latestLatitude_);
-            double lon = j.value("camParameters", json::object()).value("basicContainer", json::object()).value("referencePosition", json::object()).value("longitude", latestLongitude_);
-            float heading = j.value("camParameters", json::object()).value("highFrequencyContainer", json::object()).value("basicVehicleContainerHighFrequency", json::object()).value("heading", json::object()).value("headingValue", 0.0);
-            {
-                std::lock_guard<std::mutex> lock(mtx_);
-                latestLatitude_ = lat;
-                latestLongitude_ = lon;
-                latestHeading_ = heading;
+            // Navigate through nested objects.
+            if (doc.HasMember("camParameters") && doc["camParameters"].IsObject()) {
+                const rj::Value& camParameters = doc["camParameters"];
+                if (camParameters.HasMember("basicContainer") && camParameters["basicContainer"].IsObject()) {
+                    const rj::Value& basicContainer = camParameters["basicContainer"];
+                    if (basicContainer.HasMember("referencePosition") && basicContainer["referencePosition"].IsObject()) {
+                        const rj::Value& referencePosition = basicContainer["referencePosition"];
+                        lat = (referencePosition.HasMember("latitude") && referencePosition["latitude"].IsNumber())
+                              ? referencePosition["latitude"].GetDouble() : latestLatitude_;
+                        lon = (referencePosition.HasMember("longitude") && referencePosition["longitude"].IsNumber())
+                              ? referencePosition["longitude"].GetDouble() : latestLongitude_;
+                    }
+                }
+                if (camParameters.HasMember("highFrequencyContainer") && camParameters["highFrequencyContainer"].IsObject()) {
+                    const rj::Value& hfContainer = camParameters["highFrequencyContainer"];
+                    if (hfContainer.HasMember("basicVehicleContainerHighFrequency") && hfContainer["basicVehicleContainerHighFrequency"].IsObject()) {
+                        const rj::Value& basicVehicle = hfContainer["basicVehicleContainerHighFrequency"];
+                        if (basicVehicle.HasMember("heading") && basicVehicle["heading"].IsObject()) {
+                            const rj::Value& headingObj = basicVehicle["heading"];
+                            heading = (headingObj.HasMember("headingValue") && headingObj["headingValue"].IsNumber())
+                                      ? static_cast<float>(headingObj["headingValue"].GetDouble()) : 0.0f;
+                        }
+                    }
+                }
             }
-
-            spdlog::debug("[Locator] Updated dynamic location: lat {:.6f}, lon {:.6f}, heading {:.2f}", lat, lon, heading);
-        
-            } else {
+        } else {
             spdlog::warn("[Locator] Unknown topic: {}", topic);
+            return;
         }
-
+        
+        {
+            std::lock_guard<std::mutex> lock(mtx_);
+            latestLatitude_ = lat;
+            latestLongitude_ = lon;
+            latestHeading_ = heading;
+        }
+        
+        spdlog::debug("[Locator] Updated dynamic location: lat {:.6f}, lon {:.6f}, heading {:.2f}",
+                      lat, lon, heading);
     } catch (const std::exception& e) {
         spdlog::error("[Locator] Error parsing location message: {}", e.what());
     }

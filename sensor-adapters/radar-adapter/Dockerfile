@@ -72,7 +72,7 @@ RUN ldconfig
 WORKDIR /usr/src/radar-adapter
 RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/spdlog.git
 RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/mobility-networks/fastdds-cpp-wrapper.git
-COPY paho-mqtt-cpp-wrapper /usr/src/radar-adapter/paho-mqtt-cpp-wrapper
+RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/mobility-networks/paho-mqtt-cpp-wrapper.git
 
 WORKDIR /usr/src
 RUN git -c http.sslVerify=false clone https://github.com/Tencent/rapidjson.git
@@ -82,7 +82,6 @@ COPY *.cpp /usr/src/radar-adapter/
 COPY *.h /usr/src/radar-adapter/
 COPY *.hpp /usr/src/radar-adapter/
 COPY CMakeLists.txt /usr/src/radar-adapter/
-#COPY nlohmann/json.hpp /usr/src/radar-adapter/nlohmann/json.hpp
 
 WORKDIR /usr/src/radar-adapter
 RUN cmake . && cmake --build . --parallel $(nproc)

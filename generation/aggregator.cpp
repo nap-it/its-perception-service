@@ -57,24 +57,36 @@ void Aggregator::runLoop() {
 }
 
 std::string serializeFreshObjects(const std::vector<ObjectEntity>& freshObjects) {
-    json j;
-    j["objects"] = json::array();
-    for (const auto& obj : freshObjects) {
-        json objJson;
-        objJson["objectID"] = obj.current.objectID;
-        objJson["sensorID"] = obj.current.sensorID;
-        objJson["timestamp"] = obj.current.timestamp;
-        objJson["classification"] = obj.current.classification;
-        objJson["confidence"] = obj.current.confidence;
-        objJson["speed"] = obj.current.speed;
-        objJson["heading"] = obj.current.heading;
-        objJson["acceleration"] = obj.current.acceleration;
-        objJson["latitude"] = obj.current.latitude;
-        objJson["longitude"] = obj.current.longitude;
-        objJson["size_x"] = obj.current.size_x;
-        j["objects"].push_back(objJson);
+    rj::Document doc;
+    doc.SetObject();
+    rj::Document::AllocatorType& alloc = doc.GetAllocator();
+    
+    rj::Value objectsArray(rj::kArrayType);
+    
+    for (const auto& entity : freshObjects) {
+        const Object& obj = entity.current;
+        rj::Value objJson(rj::kObjectType);
+        objJson.AddMember("objectID", obj.objectID, alloc);
+        objJson.AddMember("sensorID", obj.sensorID, alloc);
+        objJson.AddMember("timestamp", obj.timestamp, alloc);
+        objJson.AddMember("classification", obj.classification, alloc);
+        objJson.AddMember("confidence", obj.confidence, alloc);
+        objJson.AddMember("speed", obj.speed, alloc);
+        objJson.AddMember("heading", obj.heading, alloc);
+        objJson.AddMember("acceleration", obj.acceleration, alloc);
+        objJson.AddMember("latitude", obj.latitude, alloc);
+        objJson.AddMember("longitude", obj.longitude, alloc);
+        objJson.AddMember("size_x", obj.size_x, alloc);
+    
+        objectsArray.PushBack(objJson, alloc);
     }
-    return j.dump();
+    
+    doc.AddMember("objects", objectsArray, alloc);
+    
+    rj::StringBuffer buffer;
+    rj::Writer<rj::StringBuffer> writer(buffer);
+    doc.Accept(writer);
+    return buffer.GetString();
 }
 
 int Aggregator::calculateCpmObjectID(int sensorID, int objectID) {
@@ -280,81 +292,76 @@ double Aggregator::calculateDistance(double lat1, double lon1, double lat2, doub
 
 
 void Aggregator::on_message_dds(const std::string& topic, const std::string& message) {
-    //spdlog::debug("[Aggregator] Received DDS message on topic '{}': {}", topic, message);
+    spdlog::debug("[Aggregator] Received DDS message on topic '{}': {}", topic, message);
     try {
-        json j = json::parse(message);
+        rj::Document doc;
+        doc.Parse(message.c_str());
+        if (doc.HasParseError()) {
+            spdlog::error("[Aggregator] Parse error in message: {}", message);
+            return;
+        }
+        
         if (topic == "cps/objects") {
-            if (j.contains("objects") && j["objects"].is_array()) {
-                auto raw = j["objects"][0]["timestamp"];
-                for (const auto& objJson : j["objects"]) {
-
-                    // Parse the object attributes.
+            if (doc.HasMember("objects") && doc["objects"].IsArray()) {
+                const rj::Value& objectsArray = doc["objects"];
+                for (auto& objJson : objectsArray.GetArray()) {
                     Object obj;
-                    obj.objectID = objJson.value("objectID", NOT_PRESENT_INT);
+
+                    obj.objectID = (objJson.HasMember("objectID") && objJson["objectID"].IsInt()) ? objJson["objectID"].GetInt() : NOT_PRESENT_INT;
                     if ((obj.objectID == NOT_PRESENT_INT || obj.objectID < 0) && (spdlog::error("[Aggregator]: Mandatory (Object ID) not present in message: {}", message), true)) continue;
-                    obj.sensorID = objJson.value("sensorID", NOT_PRESENT_INT);
-                    if (obj.sensorID == NOT_PRESENT_INT && (spdlog::error("[Aggregator]: Mandatory (Sensor ID) not present in message: {}", message), true)) continue;
+                    
+                    obj.sensorID = (objJson.HasMember("sensorID") && objJson["sensorID"].IsInt()) ? objJson["sensorID"].GetInt() : NOT_PRESENT_INT;
+                    if ((obj.sensorID == NOT_PRESENT_INT || obj.sensorID < 0) && (spdlog::error("[Aggregator]: Mandatory (Sensor ID) not present in message: {}", message), true)) continue;
                     obj.cpmObjectID = calculateCpmObjectID(obj.sensorID, obj.objectID);
-                    obj.timestamp = objJson.value("timestamp", NOT_PRESENT_DOUBLE);
-                    if (obj.timestamp == NOT_PRESENT_DOUBLE && (spdlog::error("[Aggregator]: Mandatory (Timestamp) not present in message: {}", message), true)) continue;
-                    obj.classification = objJson.value("classification", 0);
-                    obj.confidence = objJson.value("confidence", 0);
+                    
+                    obj.timestamp = (objJson.HasMember("timestamp") && objJson["timestamp"].IsNumber()) ? objJson["timestamp"].GetDouble() : NOT_PRESENT_DOUBLE;
+                    if ((obj.timestamp == NOT_PRESENT_DOUBLE || obj.timestamp < 0) && (spdlog::error("[Aggregator]: Mandatory (Timestamp) not present in message: {}", message), true)) continue;
+                    
+                    obj.classification = (objJson.HasMember("classification") && objJson["classification"].IsInt()) ? objJson["classification"].GetInt() : 0;
+                    obj.confidence = (objJson.HasMember("confidence") && objJson["confidence"].IsInt()) ? objJson["confidence"].GetInt() : 0;
                     if (obj.confidence < 0) obj.confidence = 0;
                     if (obj.confidence > 100) obj.confidence = 100;
-                    obj.speed = objJson.value("speed", 0.0f);
-                    obj.heading = objJson.value("heading", NOT_PRESENT_FLOAT);
+                    
+                    obj.speed = (objJson.HasMember("speed") && objJson["speed"].IsNumber()) ? static_cast<float>(objJson["speed"].GetDouble()) : 0.0f;
+                    obj.heading = (objJson.HasMember("heading") && objJson["heading"].IsNumber()) ? static_cast<float>(objJson["heading"].GetDouble()) : NOT_PRESENT_FLOAT;
                     if (obj.heading < 0) obj.heading = 0;
                     if (obj.heading >= 360) obj.heading = 0;
-                    obj.acceleration = objJson.value("acceleration", 0.0f);
-                    obj.latitude = objJson.value("latitude", NOT_PRESENT_FLOAT);
-                    if (obj.latitude == NOT_PRESENT_FLOAT && (spdlog::error("[Aggregator]: Mandatory (Latitude) not present in message: {}", message), true)) continue;
-                    obj.longitude = objJson.value("longitude", NOT_PRESENT_FLOAT);
-                    if (obj.longitude == NOT_PRESENT_FLOAT && (spdlog::error("[Aggregator]: Mandatory (Longitude) not present in message: {}", message), true)) continue;
-                    obj.altitude = objJson.value("altitude", NOT_PRESENT_FLOAT);
-                    obj.size_x = objJson.value("size_x", NOT_PRESENT_FLOAT);
-                    obj.size_y = objJson.value("size_y", NOT_PRESENT_FLOAT);
-                    obj.size_z = objJson.value("size_z", NOT_PRESENT_FLOAT);
-                    obj.angular_velocity = objJson.value("angular_velocity", NOT_PRESENT_FLOAT);
-                    obj.cov_latitude = objJson.value("cov_latitude", NOT_PRESENT_FLOAT);
-                    obj.cov_longitude = objJson.value("cov_longitude", NOT_PRESENT_FLOAT);
-                    obj.cov_altitude = objJson.value("cov_altitude", NOT_PRESENT_FLOAT);
-                    obj.cov_heading = objJson.value("cov_heading", NOT_PRESENT_FLOAT);
-                    obj.cov_speed = objJson.value("cov_speed", NOT_PRESENT_FLOAT);
-                    obj.cov_angular_velocity = objJson.value("cov_angular_velocity", NOT_PRESENT_FLOAT);
-
-                    // spdlog::debug("[Aggregator] Received object (ID: {}) from sensor (ID: {})", obj.objectID, obj.sensorID);
-
+                    
+                    obj.acceleration = (objJson.HasMember("acceleration") && objJson["acceleration"].IsNumber()) ? static_cast<float>(objJson["acceleration"].GetDouble()) : 0.0f;
+                    obj.latitude = (objJson.HasMember("latitude") && objJson["latitude"].IsNumber()) ? static_cast<float>(objJson["latitude"].GetDouble()) : NOT_PRESENT_FLOAT;
+                    if ((obj.latitude == NOT_PRESENT_FLOAT || obj.latitude < -90 || obj.latitude > 90) && (spdlog::error("[Aggregator]: Mandatory (Latitude) not present in message: {}", message), true)) continue;
+                    
+                    obj.longitude = (objJson.HasMember("longitude") && objJson["longitude"].IsNumber()) ? static_cast<float>(objJson["longitude"].GetDouble()) : NOT_PRESENT_FLOAT;
+                    if ((obj.longitude == NOT_PRESENT_FLOAT || obj.longitude < -180 || obj.longitude > 180) && (spdlog::error("[Aggregator]: Mandatory (Longitude) not present in message: {}", message), true)) continue;
+                    
+                    obj.altitude = (objJson.HasMember("altitude") && objJson["altitude"].IsNumber()) ? static_cast<float>(objJson["altitude"].GetDouble()) : NOT_PRESENT_FLOAT;
+                    obj.size_x = (objJson.HasMember("size_x") && objJson["size_x"].IsNumber()) ? static_cast<float>(objJson["size_x"].GetDouble()) : NOT_PRESENT_FLOAT;
+                    obj.size_y = (objJson.HasMember("size_y") && objJson["size_y"].IsNumber()) ? static_cast<float>(objJson["size_y"].GetDouble()) : NOT_PRESENT_FLOAT;
+                    obj.size_z = (objJson.HasMember("size_z") && objJson["size_z"].IsNumber()) ? static_cast<float>(objJson["size_z"].GetDouble()) : NOT_PRESENT_FLOAT;
+                    obj.angular_velocity = (objJson.HasMember("angular_velocity") && objJson["angular_velocity"].IsNumber()) ? static_cast<float>(objJson["angular_velocity"].GetDouble()) : NOT_PRESENT_FLOAT;
+                    obj.cov_latitude = (objJson.HasMember("cov_latitude") && objJson["cov_latitude"].IsNumber()) ? static_cast<float>(objJson["cov_latitude"].GetDouble()) : NOT_PRESENT_FLOAT;
+                    obj.cov_longitude = (objJson.HasMember("cov_longitude") && objJson["cov_longitude"].IsNumber()) ? static_cast<float>(objJson["cov_longitude"].GetDouble()) : NOT_PRESENT_FLOAT;
+                    obj.cov_altitude = (objJson.HasMember("cov_altitude") && objJson["cov_altitude"].IsNumber()) ? static_cast<float>(objJson["cov_altitude"].GetDouble()) : NOT_PRESENT_FLOAT;
+                    obj.cov_heading = (objJson.HasMember("cov_heading") && objJson["cov_heading"].IsNumber()) ? static_cast<float>(objJson["cov_heading"].GetDouble()) : NOT_PRESENT_FLOAT;
+                    obj.cov_speed = (objJson.HasMember("cov_speed") && objJson["cov_speed"].IsNumber()) ? static_cast<float>(objJson["cov_speed"].GetDouble()) : NOT_PRESENT_FLOAT;
+                    obj.cov_angular_velocity = (objJson.HasMember("cov_angular_velocity") && objJson["cov_angular_velocity"].IsNumber()) ? static_cast<float>(objJson["cov_angular_velocity"].GetDouble()) : NOT_PRESENT_FLOAT;
+                    
                     {
                         std::lock_guard<std::mutex> lock(objMtx_);
                         auto it = all_objects_.find(obj.objectID);
-
                         if (it == all_objects_.end()) {
-                            // Object not present: create a new entity
                             ObjectEntity entity;
                             entity.current = obj;
                             entity.last_sent = obj;
-                            entity.to_send = true;  // Mark it to be sent
-                            entity.priority = 100.0; // Default max priority
-                            
+                            entity.to_send = true;
+                            entity.priority = 100.0;
                             all_objects_[obj.objectID] = entity;
-                            //spdlog::debug("[Aggregator] New object (ID: {}) added to all objects.", obj.objectID);
                         } else {
-                            // Object already exists: update the current attributes.
                             it->second.current = obj;
-
-                            // Future: 
-                            // it->second.priority = calculatePriority(obj, it->second.last_sent);
-
-                            // If not already marked for sending, check if it is fresh compared to last_sent.
                             if (!it->second.to_send) {
-                                if(isFresh(obj, it->second.last_sent)) {
+                                if (isFresh(obj, it->second.last_sent)) {
                                     it->second.to_send = true;
-                                    //spdlog::debug("[Aggregator] Object (ID: {}) marked as fresh and to_send set to true.", obj.objectID);
-                                } else {
-                                    //spdlog::debug("[Aggregator] Object (ID: {}) discarded as not fresh enough., not makred for sending", obj.objectID);
                                 }
-                            } else {
-                                //spdlog::debug("[Aggregator] Object (ID: {}) already marked for sending, updated current attributes.", obj.objectID);
                             }
                         }
                     }
@@ -362,17 +369,17 @@ void Aggregator::on_message_dds(const std::string& topic, const std::string& mes
             }
         } else if (topic == "cps/sensors") {
             SensorInfo sensor;
-            sensor.sensorID = j.value("sensorID", NOT_PRESENT_INT);
-            if (sensor.sensorID == NOT_PRESENT_INT && (spdlog::error("[Aggregator]: Mandatory (Sensor ID) not present in message: {}", message), true)) return;
-            sensor.sensorType = j.value("sensorType", NOT_PRESENT_INT);
-            sensor.shadowingApplies = j.value("shadowingApplies", false);
-            sensor.semiMajorRangeLength = j.value("semiMajorRangeLength", NOT_PRESENT_INT);
-            sensor.semiMinorRangeLength = j.value("semiMinorRangeLength", NOT_PRESENT_INT);
-            sensor.semiMajorRangeOrientation = j.value("semiMajorRangeOrientation", NOT_PRESENT_INT);
-            sensor.range = j.value("range", NOT_PRESENT_INT);
-            sensor.stationaryHorizontalOpeningAngleStart = j.value("stationaryHorizontalOpeningAngleStart", NOT_PRESENT_INT);
-            sensor.stationaryHorizontalOpeningAngleEnd = j.value("stationaryHorizontalOpeningAngleEnd", NOT_PRESENT_INT);
-
+            sensor.sensorID = (doc.HasMember("sensorID") && doc["sensorID"].IsInt()) ? doc["sensorID"].GetInt() : NOT_PRESENT_INT;
+            if ((sensor.sensorID == NOT_PRESENT_INT || sensor.sensorID < 0) && (spdlog::error("[Aggregator]: Mandatory (Sensor ID) not present in message: {}", message), true)) return;
+            sensor.sensorType = (doc.HasMember("sensorType") && doc["sensorType"].IsInt()) ? doc["sensorType"].GetInt() : NOT_PRESENT_INT;
+            sensor.shadowingApplies = (doc.HasMember("shadowingApplies") && doc["shadowingApplies"].IsBool()) ? doc["shadowingApplies"].GetBool() : false;
+            sensor.semiMajorRangeLength = (doc.HasMember("semiMajorRangeLength") && doc["semiMajorRangeLength"].IsInt()) ? doc["semiMajorRangeLength"].GetInt() : NOT_PRESENT_INT;
+            sensor.semiMinorRangeLength = (doc.HasMember("semiMinorRangeLength") && doc["semiMinorRangeLength"].IsInt()) ? doc["semiMinorRangeLength"].GetInt() : NOT_PRESENT_INT;
+            sensor.semiMajorRangeOrientation = (doc.HasMember("semiMajorRangeOrientation") && doc["semiMajorRangeOrientation"].IsInt()) ? doc["semiMajorRangeOrientation"].GetInt() : NOT_PRESENT_INT;
+            sensor.range = (doc.HasMember("range") && doc["range"].IsInt()) ? doc["range"].GetInt() : NOT_PRESENT_INT;
+            sensor.stationaryHorizontalOpeningAngleStart = (doc.HasMember("stationaryHorizontalOpeningAngleStart") && doc["stationaryHorizontalOpeningAngleStart"].IsInt()) ? doc["stationaryHorizontalOpeningAngleStart"].GetInt() : NOT_PRESENT_INT;
+            sensor.stationaryHorizontalOpeningAngleEnd = (doc.HasMember("stationaryHorizontalOpeningAngleEnd") && doc["stationaryHorizontalOpeningAngleEnd"].IsInt()) ? doc["stationaryHorizontalOpeningAngleEnd"].GetInt() : NOT_PRESENT_INT;
+            
             {
                 std::lock_guard<std::mutex> lock(sensorMtx_);
                 sensor_info_[sensor.sensorID] = sensor;
@@ -381,8 +388,8 @@ void Aggregator::on_message_dds(const std::string& topic, const std::string& mes
         } else {
             spdlog::warn("[Aggregator] Received message on unknown topic: {}", topic);
         }
-    } catch (const json::parse_error& e) {
-        spdlog::error("[Aggregator] JSON parse error: {} in message: {}", e.what(), message);
+    } catch (const rj::ParseResult& e) {
+        spdlog::error("[Aggregator] RapidJSON parse error: {} in message: {}", e.Code(), message);
     } catch (const std::exception& e) {
         spdlog::error("[Aggregator] Error processing DDS message: {}", e.what());
     }
