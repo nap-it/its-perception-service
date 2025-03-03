@@ -18,8 +18,8 @@ int getMeasurementDeltaTime(unsigned long referenceTime, unsigned long obj_times
 void Builder::calculateRelativePositions(double stationLatitude, double stationLongitude,
                                            double objLatitude, double objLongitude,
                                            double C, double& x, double& y) {
-    x = ((objLatitude - stationLatitude) * R) * PI_RAD;
-    y = ((objLongitude - stationLongitude) * C) * PI_RAD;
+    y = ((objLatitude - stationLatitude) * R) * PI_RAD;
+    x = ((objLongitude - stationLongitude) * C) * PI_RAD;
 }
 
 std::string Builder::generateCPM(const std::vector<Object>& freshObjects,
