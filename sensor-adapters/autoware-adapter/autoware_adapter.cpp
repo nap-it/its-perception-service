@@ -142,7 +142,7 @@ std::string AutowareAdapter::parseMessage(const std::string& input) {
             objVal.AddMember("confidence", obj.confidence, allocOut);
             objVal.AddMember("speed", obj.speed, allocOut);
             objVal.AddMember("heading", obj.heading, allocOut);
-            objVal.AddMember("acceleration", obj.acceleration, allocOut);
+            //objVal.AddMember("acceleration", obj.acceleration, allocOut);
             objVal.AddMember("latitude", obj.latitude, allocOut);
             objVal.AddMember("longitude", obj.longitude, allocOut);
             objVal.AddMember("altitude", obj.altitude, allocOut);

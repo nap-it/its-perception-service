@@ -189,7 +189,7 @@ std::string Builder::generateCPM(const std::vector<Object>& freshObjects,
             int ang = static_cast<int>(obj.angular_velocity * inv_PI_RAD);
             zAngularVelocity.AddMember("value", ang, alloc);
             double angConf = (obj.cov_angular_velocity != NOT_PRESENT_FLOAT) ? sqrt(obj.cov_angular_velocity) : 1;
-            zAngularVelocity.AddMember("confidence", angConf, alloc);
+            zAngularVelocity.AddMember("confidence", 1, alloc);
             objJson.AddMember("zAngularVelocity", zAngularVelocity, alloc);
         }
         
