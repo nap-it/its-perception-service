@@ -314,7 +314,7 @@ void Aggregator::on_message_dds(const std::string& topic, const std::string& mes
                     if ((obj.sensorID == NOT_PRESENT_INT || obj.sensorID < 0) && (spdlog::error("[Aggregator]: Mandatory (Sensor ID) not present in message: {}", message), true)) continue;
                     obj.cpmObjectID = calculateCpmObjectID(obj.sensorID, obj.objectID);
                     
-                    obj.timestamp = (objJson.HasMember("timestamp") && objJson["timestamp"].IsNumber()) ? objJson["timestamp"].GetDouble() : NOT_PRESENT_DOUBLE;
+                    obj.timestamp = (objJson.HasMember("timestamp") && objJson["timestamp"].IsDouble()) ? objJson["timestamp"].GetDouble() : NOT_PRESENT_DOUBLE;
                     if ((obj.timestamp == NOT_PRESENT_DOUBLE || obj.timestamp < 0) && (spdlog::error("[Aggregator]: Mandatory (Timestamp) not present in message: {}", message), true)) continue;
                     
                     obj.classification = (objJson.HasMember("classification") && objJson["classification"].IsInt()) ? objJson["classification"].GetInt() : 0;
@@ -322,29 +322,29 @@ void Aggregator::on_message_dds(const std::string& topic, const std::string& mes
                     if (obj.confidence < 0) obj.confidence = 0;
                     if (obj.confidence > 100) obj.confidence = 100;
                     
-                    obj.speed = (objJson.HasMember("speed") && objJson["speed"].IsNumber()) ? static_cast<float>(objJson["speed"].GetDouble()) : 0.0f;
-                    obj.heading = (objJson.HasMember("heading") && objJson["heading"].IsNumber()) ? static_cast<float>(objJson["heading"].GetDouble()) : NOT_PRESENT_FLOAT;
+                    obj.speed = (objJson.HasMember("speed") && objJson["speed"].IsFloat()) ? objJson["speed"].GetFloat() : NOT_PRESENT_FLOAT;
+                    obj.heading = (objJson.HasMember("heading") && objJson["heading"].IsFloat()) ? objJson["heading"].GetFloat() : NOT_PRESENT_FLOAT;
                     if (obj.heading < 0) obj.heading = 0;
                     if (obj.heading >= 360) obj.heading = 0;
                     
-                    obj.acceleration = (objJson.HasMember("acceleration") && objJson["acceleration"].IsNumber()) ? static_cast<float>(objJson["acceleration"].GetDouble()) : 0.0f;
-                    obj.latitude = (objJson.HasMember("latitude") && objJson["latitude"].IsNumber()) ? static_cast<float>(objJson["latitude"].GetDouble()) : NOT_PRESENT_FLOAT;
+                    obj.acceleration = (objJson.HasMember("acceleration") && objJson["acceleration"].IsFloat()) ? objJson["acceleration"].GetFloat() : NOT_PRESENT_FLOAT;
+                    obj.latitude = (objJson.HasMember("latitude") && objJson["latitude"].IsFloat()) ? objJson["latitude"].GetFloat() : NOT_PRESENT_FLOAT;
                     if ((obj.latitude == NOT_PRESENT_FLOAT || obj.latitude < -90 || obj.latitude > 90) && (spdlog::error("[Aggregator]: Mandatory (Latitude) not present in message: {}", message), true)) continue;
                     
-                    obj.longitude = (objJson.HasMember("longitude") && objJson["longitude"].IsNumber()) ? static_cast<float>(objJson["longitude"].GetDouble()) : NOT_PRESENT_FLOAT;
+                    obj.longitude = (objJson.HasMember("longitude") && objJson["longitude"].IsFloat()) ? objJson["longitude"].GetFloat() : NOT_PRESENT_FLOAT;
                     if ((obj.longitude == NOT_PRESENT_FLOAT || obj.longitude < -180 || obj.longitude > 180) && (spdlog::error("[Aggregator]: Mandatory (Longitude) not present in message: {}", message), true)) continue;
                     
-                    obj.altitude = (objJson.HasMember("altitude") && objJson["altitude"].IsNumber()) ? static_cast<float>(objJson["altitude"].GetDouble()) : NOT_PRESENT_FLOAT;
-                    obj.size_x = (objJson.HasMember("size_x") && objJson["size_x"].IsNumber()) ? static_cast<float>(objJson["size_x"].GetDouble()) : NOT_PRESENT_FLOAT;
-                    obj.size_y = (objJson.HasMember("size_y") && objJson["size_y"].IsNumber()) ? static_cast<float>(objJson["size_y"].GetDouble()) : NOT_PRESENT_FLOAT;
-                    obj.size_z = (objJson.HasMember("size_z") && objJson["size_z"].IsNumber()) ? static_cast<float>(objJson["size_z"].GetDouble()) : NOT_PRESENT_FLOAT;
-                    obj.angular_velocity = (objJson.HasMember("angular_velocity") && objJson["angular_velocity"].IsNumber()) ? static_cast<float>(objJson["angular_velocity"].GetDouble()) : NOT_PRESENT_FLOAT;
-                    obj.cov_latitude = (objJson.HasMember("cov_latitude") && objJson["cov_latitude"].IsNumber()) ? static_cast<float>(objJson["cov_latitude"].GetDouble()) : NOT_PRESENT_FLOAT;
-                    obj.cov_longitude = (objJson.HasMember("cov_longitude") && objJson["cov_longitude"].IsNumber()) ? static_cast<float>(objJson["cov_longitude"].GetDouble()) : NOT_PRESENT_FLOAT;
-                    obj.cov_altitude = (objJson.HasMember("cov_altitude") && objJson["cov_altitude"].IsNumber()) ? static_cast<float>(objJson["cov_altitude"].GetDouble()) : NOT_PRESENT_FLOAT;
-                    obj.cov_heading = (objJson.HasMember("cov_heading") && objJson["cov_heading"].IsNumber()) ? static_cast<float>(objJson["cov_heading"].GetDouble()) : NOT_PRESENT_FLOAT;
-                    obj.cov_speed = (objJson.HasMember("cov_speed") && objJson["cov_speed"].IsNumber()) ? static_cast<float>(objJson["cov_speed"].GetDouble()) : NOT_PRESENT_FLOAT;
-                    obj.cov_angular_velocity = (objJson.HasMember("cov_angular_velocity") && objJson["cov_angular_velocity"].IsNumber()) ? static_cast<float>(objJson["cov_angular_velocity"].GetDouble()) : NOT_PRESENT_FLOAT;
+                    obj.altitude = (objJson.HasMember("altitude") && objJson["altitude"].IsFloat()) ? objJson["altitude"].GetFloat() : NOT_PRESENT_FLOAT;
+                    obj.size_x = (objJson.HasMember("size_x") && objJson["size_x"].IsFloat()) ? objJson["size_x"].GetFloat() : NOT_PRESENT_FLOAT;
+                    obj.size_y = (objJson.HasMember("size_y") && objJson["size_y"].IsFloat()) ? objJson["size_y"].GetFloat() : NOT_PRESENT_FLOAT;
+                    obj.size_z = (objJson.HasMember("size_z") && objJson["size_z"].IsFloat()) ? objJson["size_z"].GetFloat() : NOT_PRESENT_FLOAT;
+                    obj.angular_velocity = (objJson.HasMember("angular_velocity") && objJson["angular_velocity"].IsFloat()) ? objJson["angular_velocity"].GetFloat() : NOT_PRESENT_FLOAT;
+                    obj.cov_latitude = (objJson.HasMember("cov_latitude") && objJson["cov_latitude"].IsFloat()) ? objJson["cov_latitude"].GetFloat() : NOT_PRESENT_FLOAT;
+                    obj.cov_longitude = (objJson.HasMember("cov_longitude") && objJson["cov_longitude"].IsFloat()) ? objJson["cov_longitude"].GetFloat() : NOT_PRESENT_FLOAT;
+                    obj.cov_altitude = (objJson.HasMember("cov_altitude") && objJson["cov_altitude"].IsFloat()) ? objJson["cov_altitude"].GetFloat() : NOT_PRESENT_FLOAT;
+                    obj.cov_heading = (objJson.HasMember("cov_heading") && objJson["cov_heading"].IsFloat()) ? objJson["cov_heading"].GetFloat() : NOT_PRESENT_FLOAT;
+                    obj.cov_speed = (objJson.HasMember("cov_speed") && objJson["cov_speed"].IsFloat()) ? objJson["cov_speed"].GetFloat() : NOT_PRESENT_FLOAT;
+                    obj.cov_angular_velocity = (objJson.HasMember("cov_angular_velocity") && objJson["cov_angular_velocity"].IsFloat()) ? objJson["cov_angular_velocity"].GetFloat() : NOT_PRESENT_FLOAT;
                     
                     {
                         std::lock_guard<std::mutex> lock(objMtx_);
