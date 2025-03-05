@@ -10,8 +10,8 @@ Aggregator* Aggregator::instance_ = nullptr;
 
 
 // Constructor: sets up DDS and subscribes to the "cps/objects" topic.
-Aggregator::Aggregator(int ddsDomain, long maxObjectAge, long cleanInterval, bool debug)
-    : maxObjectAge_(maxObjectAge), cleanInterval_(cleanInterval), stopFlag_(false)
+Aggregator::Aggregator(int ddsDomain, long maxObjectAge, long cleanInterval, bool ignoreRules)
+    : maxObjectAge_(maxObjectAge), cleanInterval_(cleanInterval), stopFlag_(false), ignoreRules_(ignoreRules), currentID_(1)
 {
     // Set the static instance pointer to this object.
     instance_ = this;
@@ -22,11 +22,6 @@ Aggregator::Aggregator(int ddsDomain, long maxObjectAge, long cleanInterval, boo
     dds_->subscribe("cps/sensors");
     dds_->provision_publisher("cps/pending");
     spdlog::info("[Aggregator] Initialized on DDS domain {} and subscribed to 'cps/objects'", ddsDomain);
-
-    // Set the verbosity level for the logger.
-    if (debug) spdlog::set_level(spdlog::level::debug);
-    else spdlog::set_level(spdlog::level::info);
-    spdlog::debug("[Aggregator] Verbosity level set to {}", debug ? "debug" : "info");
 }
 
 Aggregator::~Aggregator() {
@@ -260,6 +255,10 @@ std::unordered_map<int, SensorInfo> Aggregator::getSensorInfo() {
 
 
 bool Aggregator::isFresh(const Object& newObj, const Object& oldObj) {
+    if (ignoreRules_) {
+        return true;
+    }
+    
     long new_ts = static_cast<long>(newObj.timestamp * 1000);
     long old_ts = static_cast<long>(oldObj.timestamp * 1000);
     long dt = new_ts - old_ts;

@@ -69,9 +69,9 @@ public:
      * @param domainId DDS domain ID.
      * @param maxObjectAge Maximum age (in seconds) for an object in the lastSent list (default: 5 minutes).
      * @param cleanInterval Interval (in seconds) to run the cleanup routine (default: 5 seconds).
-     * @param debugLevel Verbosity level for logging (default: 0).
+     * @param ignoreRules Ignore freshness rules (default: false).
      */
-    Aggregator(int domainId, long maxObjectAgeS = 300, long cleanInterval = 5, bool debug = false);
+    Aggregator(int domainId, long maxObjectAgeS = 300, long cleanInterval = 5, bool ignoreRules = false);
 
     /**
      * @brief Destroy the Aggregator object.
@@ -127,6 +127,7 @@ private:
     double minDistanceDiff_ = 4.0;   // Minimum distance difference in meters
     double minSpeedDiff_ = 0.5;      // Minimum speed difference (m/s)
     double minHeadingDiff_ = 4.0;    // Minimum heading difference (degrees)
+    bool ignoreRules_;               // Ignore freshness rules
 
     // Cleanup configuration
     long maxObjectAge_;     // Maximum object age in seconds

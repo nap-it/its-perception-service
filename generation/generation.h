@@ -16,11 +16,10 @@ public:
      * @param aggregator Aggregator object.
      * @param locator Locator object.
      * @param requestRateMs Initial request rate in milliseconds.
-     * @param debug Debug level (false = off, true = on).
      * @param ddsDomain DDS domain ID if provider is DDS.
      * @param ddsTopic DDS topic to subscribe for CAMs if provider is DDS.
      */
-    Generation(std::shared_ptr<Aggregator> aggregator, std::shared_ptr<Locator> locator, int requestRateMs, bool debug, int ddsDomain, std::string ddsTopic);
+    Generation(std::shared_ptr<Aggregator> aggregator, std::shared_ptr<Locator> locator, int requestRateMs, int ddsDomain, std::string ddsTopic);
 
     /**
      * @brief Destroy the Generation object.

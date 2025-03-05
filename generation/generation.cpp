@@ -2,16 +2,8 @@
 #include <chrono>
 #include <spdlog/spdlog.h>
 
-Generation::Generation(std::shared_ptr<Aggregator> aggregator, std::shared_ptr<Locator> locator, int requestRateMs, bool debug, int ddsDomain, std::string ddsTopic)
+Generation::Generation(std::shared_ptr<Aggregator> aggregator, std::shared_ptr<Locator> locator, int requestRateMs, int ddsDomain, std::string ddsTopic)
     : aggregator_(aggregator), locator_(locator), requestRateMs_(requestRateMs), stopFlag_(false), ddsTopic_(ddsTopic) {
-
-    if (debug) {
-        spdlog::set_level(spdlog::level::debug);
-        spdlog::debug("[Generation] Debug logging enabled.");
-    } else {
-        spdlog::set_level(spdlog::level::info);
-        spdlog::info("[Generation] Info logging enabled.");
-    }
     
     spdlog::info("[Generation] initialized with request rate {} ms", requestRateMs);
 

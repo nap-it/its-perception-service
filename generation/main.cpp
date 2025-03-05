@@ -20,9 +20,13 @@ int main() {
     bool debug = reader.GetBoolean("general", "debug", false);
     spdlog::info("[CONFIG] General debug: {}", debug);
 
+    if (debug) {
+        spdlog::set_level(spdlog::level::debug);
+    } else {
+        spdlog::set_level(spdlog::level::info);
+    }
+
     // Locator configuration
-    
-    
     int locator_dds_domain = reader.GetInteger("locator", "domain_id", 0);
     spdlog::info("[CONFIG] Locator DDS domain: {}", locator_dds_domain);
     int locator_station_type = reader.GetInteger("locator", "station_type", 0);
@@ -63,8 +67,7 @@ int main() {
                                                 locator_mqtt_broker,
                                                 locator_mqtt_topic,
                                                 locator_dds_domain,
-                                                locator_dds_topic,
-                                                debug);
+                                                locator_dds_topic);
     locator->run();
 
     // Aggregator configuration
@@ -74,11 +77,13 @@ int main() {
     spdlog::info("[CONFIG] Aggregator max object age: {}", aggregator_max_object_age);
     int aggregator_clean_interval = reader.GetInteger("aggregator", "clean_interval", 5);
     spdlog::info("[CONFIG] Aggregator clean interval: {}", aggregator_clean_interval);
+    bool ignore_rules = reader.GetBoolean("aggregator", "ignore_rules", false);
+    spdlog::info("[CONFIG] Aggregator ignore rules: {}", ignore_rules);
 
     auto aggregator = std::make_shared<Aggregator>(aggregator_dds_domain,
                                                     aggregator_max_object_age,
                                                     aggregator_clean_interval,
-                                                    debug);
+                                                    ignore_rules);
     aggregator->run();
 
     // Generation configuration
@@ -92,7 +97,6 @@ int main() {
     Generation generation(aggregator, 
                     locator, 
                     generation_interval, 
-                    debug, 
                     generation_dds_domain, 
                     generation_dds_topic);
     generation.run();

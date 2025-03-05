@@ -30,7 +30,6 @@ public:
      * @param mqttTopic MQTT topic to subscribe for CAMs if provider is MQTT.
      * @param ddsDomain DDS domain ID if provider is DDS.
      * @param ddsTopic DDS topic to subscribe for CAMs if provider is DDS.
-     * @param debug Debug level (0 = off, 1 = on).
      */
     Locator(ProviderType provider,
                    float configLatitude,
@@ -39,8 +38,7 @@ public:
                    std::string mqttBroker,
                    std::string mqttTopic, 
                    int ddsDomain,
-                   std::string ddsTopic,
-                   bool debug);
+                   std::string ddsTopic);
     
     ~Locator();
 

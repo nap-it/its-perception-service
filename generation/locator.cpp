@@ -12,8 +12,7 @@ Locator::Locator(ProviderType provider,
                    std::string mqttBroker,
                    std::string mqttTopic,
                    int ddsDomain,
-                   std::string ddsTopic,
-                   bool debug)
+                   std::string ddsTopic)
         : provider_(provider),
         stationType_(configStationType),
         latestLatitude_(configLatitude),
@@ -25,14 +24,6 @@ Locator::Locator(ProviderType provider,
         ddsTopic_(ddsTopic)
 {
     spdlog::info("[Locator] Constructing with provider type: {}", (provider_ == ProviderType::STATIC ? "STATIC" : (provider_ == ProviderType::MQTT ? "MQTT" : "DDS")));
-
-    if (debug) {
-        spdlog::set_level(spdlog::level::debug);
-        spdlog::debug("[Locator] Debug logging enabled.");
-    } else {
-        spdlog::set_level(spdlog::level::info);
-        spdlog::info("[Locator] Info logging enabled.");
-    }
 
     if(provider_ == ProviderType::STATIC) {
         spdlog::info("[Locator] Using STATIC provider. Fixed location: lat {:.6f}, lon {:.6f}, type {}", latestLatitude_, latestLongitude_, stationType_);
