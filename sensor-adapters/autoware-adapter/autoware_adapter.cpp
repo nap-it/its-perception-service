@@ -111,7 +111,8 @@ std::string AutowareAdapter::parseMessage(const std::string& input) {
             obj.objectID = (rj_obj.HasMember("objID") && rj_obj["objID"].IsInt()) ? rj_obj["objID"].GetInt() : -1;
             if (obj.objectID == -1) { spdlog::error("Mandatory (Object ID) not present in message: {}", input); return ""; }
             obj.sensorID = 12; // Hardcoded for Autoware Sensor Fusion
-            obj.timestamp = (rj_obj.HasMember("timestamp") && rj_obj["timestamp"].IsInt64()) ? static_cast<double>(rj_obj["timestamp"].GetInt64()/1000000) : 0.0;
+            obj.timestamp = (rj_obj.HasMember("timestamp") && rj_obj["timestamp"].IsInt64()) ? rj_obj["timestamp"].GetInt64()/1000000.0 : 0.0;
+            spdlog::debug("Input timestamp: {}, Output timestamp: {}", rj_obj["timestamp"].GetInt64(), obj.timestamp);
             if (obj.timestamp == 0.0) { spdlog::error("Mandatory (Timestamp) not present in message: {}", input); return ""; }
             obj.classification = (rj_obj.HasMember("classification") && rj_obj["classification"].IsArray() && rj_obj["classification"].Size() > 0) ? rj_obj["classification"][0]["objectClass"]["vehicleSubClass"].GetInt() : 0;
             obj.confidence = (rj_obj.HasMember("classification") && rj_obj["classification"].IsArray() && rj_obj["classification"].Size() > 0) ? rj_obj["classification"][0]["confidence"].GetInt() : 0;

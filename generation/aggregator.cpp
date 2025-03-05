@@ -263,6 +263,7 @@ bool Aggregator::isFresh(const Object& newObj, const Object& oldObj) {
     long new_ts = static_cast<long>(newObj.timestamp * 1000);
     long old_ts = static_cast<long>(oldObj.timestamp * 1000);
     long dt = new_ts - old_ts;
+    spdlog::debug("[Aggregator] Time difference {} = {} - {}", dt, new_ts, old_ts);
 
     // If at least one condition is met, we could return true:
     bool timeCondition = (dt >= minTimeDiff_);
