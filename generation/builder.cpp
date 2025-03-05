@@ -187,7 +187,7 @@ std::string Builder::generateCPM(const std::vector<Object>& freshObjects,
         xVelocityVal.AddMember("value", xVelocity, alloc);
         double speedConf = (obj.cov_speed != NOT_PRESENT_FLOAT) ? sqrt(obj.cov_speed) : 1;
         if (speedConf == 0) speedConf = 1.27;
-        if(speedConf > 12.5) speedConf = 12.6;
+        if(speedConf > 1.25) speedConf = 1.26;
         xVelocityVal.AddMember("confidence", speedConf, alloc);
         cartesianVelocity.AddMember("xVelocity", xVelocityVal, alloc);
 
