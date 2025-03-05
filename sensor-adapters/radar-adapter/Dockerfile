@@ -30,6 +30,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /usr/src
 RUN git clone https://github.com/eProsima/foonathan_memory_vendor.git && \
     mkdir /usr/src/foonathan_memory_vendor/build
+WORKDIR /usr/src/foonathan_memory_vendor
+RUN git checkout v1.3.1
 WORKDIR /usr/src/foonathan_memory_vendor/build
 RUN cmake .. -DBUILD_SHARED_LIBS=ON && \
     cmake --build . --target install --parallel $(nproc)
@@ -37,6 +39,8 @@ RUN cmake .. -DBUILD_SHARED_LIBS=ON && \
 WORKDIR /usr/src
 RUN git clone https://github.com/eProsima/Fast-CDR.git && \
     mkdir /usr/src/Fast-CDR/build
+WORKDIR /usr/src/Fast-CDR/
+RUN git checkout v2.2.6
 WORKDIR /usr/src/Fast-CDR/build
 RUN cmake .. && \
     cmake --build . --target install --parallel $(nproc)
