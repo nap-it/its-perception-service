@@ -1,15 +1,16 @@
-#include "autoware_adapter.h"
+#include "camera_adapter.h"
 #include <chrono>
 #include <functional>
 #include <sstream>
 #include <iomanip>
+#include <spdlog/spdlog.h>
 #include "rapidjson/document.h"
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
 
 namespace rj = rapidjson;
 
-AutowareAdapter::AutowareAdapter(const Config& config) : config(config) {
+CameraAdapter::CameraAdapter(const Config& config) : config(config) {
     if (config.debug) {
         spdlog::set_level(spdlog::level::debug);
         spdlog::debug("Debug logging enabled.");
@@ -19,20 +20,17 @@ AutowareAdapter::AutowareAdapter(const Config& config) : config(config) {
     }
 
     // Initialize DDS client.
-    dds_ = new Dds("AutowareCpmAdapter", config.domain_id, [this](std::string topic, std::string message) {
-            this->on_message_dds(topic, message);
-        });
+    dds_ = new Dds("CameraAdapter", config.domain_id, on_message_dds);
     dds_->provision_publisher("cps/objects");
     dds_->provision_publisher("cps/sensors");
-    dds_->subscribe("aw/out/perceived_objects");
     std::this_thread::sleep_for(std::chrono::seconds(2));
 
     // Build sensor information using RapidJSON.
     rj::Document sensorDoc;
     sensorDoc.SetObject();
     rj::Document::AllocatorType& alloc = sensorDoc.GetAllocator();
-    sensorDoc.AddMember("sensorID", 12, alloc);
-    sensorDoc.AddMember("sensorType", 12, alloc);
+    sensorDoc.AddMember("sensorID", 3, alloc);
+    sensorDoc.AddMember("sensorType", 3, alloc);
     sensorDoc.AddMember("shadowingApplies", false, alloc);
     sensorDoc.AddMember("semiMajorRangeLength", 75, alloc);
     sensorDoc.AddMember("semiMinorRangeLength", 20, alloc);
@@ -46,17 +44,37 @@ AutowareAdapter::AutowareAdapter(const Config& config) : config(config) {
     std::string sensorInfoStr = sensorBuffer.GetString();
     dds_->publish("cps/sensors", sensorInfoStr);
     spdlog::info("Sensor information published: {}", sensorInfoStr);
+
+    // MQTT configuration.
+    data_mqtt_server mqttInfo;
+    mqttInfo.address = "tcp://" + config.mqtt_host + ":" + std::to_string(config.mqtt_port);
+    mqttInfo.client_id = config.mqtt_client_id + "-" + std::to_string(config.domain_id) + getRandomNumberString();
+    mqttInfo.subscription_topic.push_back(config.mqtt_topic);
+
+    mqtt_wrapper = new MqttWrapper(mqttInfo, [this](const std::string& topic, const std::string& message) {
+        this->on_message_mqtt(topic, message);
+    });
+
+    int max_retries = 10, retries = 0;
+    while (!mqtt_wrapper->is_connected()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        spdlog::info("Waiting for MQTT connection, retrying...");
+        if (retries++ > max_retries) {
+            spdlog::error("Failed to connect to MQTT server, exiting...");
+            exit(1);
+        }
+    }
 }
 
-void AutowareAdapter::run() {
-    spdlog::info("Autoware Adapter started running...");
+void CameraAdapter::run() {
+    spdlog::info("Camera Adapter started running...");
 
     // Publish sensor information every 5 seconds.
     rj::Document sensorDoc;
     sensorDoc.SetObject();
     rj::Document::AllocatorType& alloc = sensorDoc.GetAllocator();
-    sensorDoc.AddMember("sensorID", 12, alloc);
-    sensorDoc.AddMember("sensorType", 12, alloc);
+    sensorDoc.AddMember("sensorID", 1, alloc);
+    sensorDoc.AddMember("sensorType", 1, alloc);
     sensorDoc.AddMember("shadowingApplies", false, alloc);
     sensorDoc.AddMember("semiMajorRangeLength", 75, alloc);
     sensorDoc.AddMember("semiMinorRangeLength", 20, alloc);
@@ -76,14 +94,14 @@ void AutowareAdapter::run() {
     }
 }
 
-void AutowareAdapter::on_message_dds(std::string topic, std::string message) {
-    spdlog::debug("Received DDS message on topic: {}", topic);
+void CameraAdapter::on_message_mqtt(const std::string& topic, const std::string& message) {
+    spdlog::debug("Received MQTT message on topic: {}", topic);
     std::string parsed_message = parseMessage(message);
     spdlog::debug("Parsed message: {}", parsed_message);
-    if(!parsed_message.empty()) dds_->publish("cps/objects", parsed_message);
+    dds_->publish("cps/objects", parsed_message);
 }
 
-std::string AutowareAdapter::parseMessage(const std::string& input) {
+std::string CameraAdapter::parseMessage(const std::string& input) {
 
     auto t1 = std::chrono::high_resolution_clock::now();
 
@@ -96,7 +114,7 @@ std::string AutowareAdapter::parseMessage(const std::string& input) {
 
     auto t2 = std::chrono::high_resolution_clock::now();
 
-    if(doc.HasMember("objects") && doc["objects"].IsArray()) {
+    if(doc.HasMember("listOfObjects") && doc["listOfObjects"].IsArray()) {
 
         // Build output JSON document.
         rj::Document outDoc;
@@ -105,35 +123,21 @@ std::string AutowareAdapter::parseMessage(const std::string& input) {
 
         rj::Value objects(rj::kArrayType);
 
-        for (rj::SizeType i = 0; i < doc["objects"].Size(); i++) {
-            const rj::Value& rj_obj = doc["objects"][i];
+        for (rj::SizeType i = 0; i < doc["listOfObjects"].Size(); i++) {
+            const rj::Value& rj_obj = doc["listOfObjects"][i];
             Object obj;
-            obj.objectID = (rj_obj.HasMember("objID") && rj_obj["objID"].IsInt()) ? rj_obj["objID"].GetInt() : -1;
+            obj.objectID = (rj_obj.HasMember("objectID") && rj_obj["objectID"].IsInt()) ? rj_obj["objectID"].GetInt() : -1;
             if (obj.objectID == -1) { spdlog::error("Mandatory (Object ID) not present in message: {}", input); return ""; }
-            obj.sensorID = 12; // Hardcoded for Autoware Sensor Fusion
-            obj.timestamp = (rj_obj.HasMember("timestamp") && rj_obj["timestamp"].IsInt64()) ? rj_obj["timestamp"].GetInt64()/1000000.0 : 0.0;
-            spdlog::debug("Input timestamp: {}, Output timestamp: {}", rj_obj["timestamp"].GetInt64(), obj.timestamp);
-            if (obj.timestamp == 0.0) { spdlog::error("Mandatory (Timestamp) not present in message: {}", input); return ""; }
-            obj.classification = (rj_obj.HasMember("classification") && rj_obj["classification"].IsArray() && rj_obj["classification"].Size() > 0) ? rj_obj["classification"][0]["objectClass"]["vehicleSubClass"].GetInt() : 0;
-            obj.confidence = (rj_obj.HasMember("classification") && rj_obj["classification"].IsArray() && rj_obj["classification"].Size() > 0) ? rj_obj["classification"][0]["confidence"].GetInt() : 0;
+            obj.sensorID = 3; // Hardcoded for Monovideo
+            obj.timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() / 1000.0;
+            obj.classification = (doc.HasMember("classification") && doc["classification"].IsInt()) ? doc["classification"].GetInt() : 0;
+            obj.confidence = (doc.HasMember("confidence") && doc["confidence"].IsInt()) ? doc["confidence"].GetInt() : 0;
             obj.speed = (rj_obj.HasMember("speed") && rj_obj["speed"].IsFloat()) ? rj_obj["speed"].GetFloat() : 0.0f;
-            obj.cov_speed = (rj_obj.HasMember("cov_speed") && rj_obj["cov_speed"].IsFloat()) ? rj_obj["cov_speed"].GetFloat() : 0.0f;
             obj.heading = (rj_obj.HasMember("heading") && rj_obj["heading"].IsFloat()) ? rj_obj["heading"].GetFloat() : 0.0f;
-            obj.cov_heading = (rj_obj.HasMember("cov_heading") && rj_obj["cov_heading"].IsFloat()) ? rj_obj["cov_heading"].GetFloat() : 0.0f;
             obj.latitude = (rj_obj.HasMember("latitude") && rj_obj["latitude"].IsFloat()) ? rj_obj["latitude"].GetFloat() : 0.0f;
             if (obj.latitude == 0.0f) { spdlog::error("Mandatory (Latitude) not present in message: {}", input); return ""; }
-            obj.cov_latitude = (rj_obj.HasMember("cov_y") && rj_obj["cov_y"].IsFloat()) ? rj_obj["cov_y"].GetFloat() : 0.0f;
             obj.longitude = (rj_obj.HasMember("longitude") && rj_obj["longitude"].IsFloat()) ? rj_obj["longitude"].GetFloat() : 0.0f;
             if (obj.longitude == 0.0f) { spdlog::error("Mandatory (Longitude) not present in message: {}", input); return ""; }
-            obj.cov_longitude = (rj_obj.HasMember("cov_x") && rj_obj["cov_x"].IsFloat()) ? rj_obj["cov_x"].GetFloat() : 0.0f;
-            obj.altitude = (rj_obj.HasMember("z") && rj_obj["z"].IsFloat()) ? rj_obj["z"].GetFloat() : 0.0f;
-            obj.cov_altitude = (rj_obj.HasMember("cov_z") && rj_obj["cov_z"].IsFloat()) ? rj_obj["cov_z"].GetFloat() : 0.0f;
-            obj.size_x = (rj_obj.HasMember("size_x") && rj_obj["size_x"].IsFloat()) ? rj_obj["size_x"].GetFloat() : 0.0f;
-            obj.size_y = (rj_obj.HasMember("size_y") && rj_obj["size_y"].IsFloat()) ? rj_obj["size_y"].GetFloat() : 0.0f;
-            obj.size_z = (rj_obj.HasMember("size_z") && rj_obj["size_z"].IsFloat()) ? rj_obj["size_z"].GetFloat() : 0.0f;
-            obj.angular_velocity = (rj_obj.HasMember("twist_angz") && rj_obj["twist_angz"].IsFloat()) ? rj_obj["twist_angz"].GetFloat() : 0.0f;
-            obj.cov_angular_velocity = (rj_obj.HasMember("cov_twist_angz") && rj_obj["cov_twist_angz"].IsFloat()) ? rj_obj["cov_twist_angz"].GetFloat() : 0.0f;
-            obj.acceleration = 0.0f; // Not available
             
             rj::Value objVal(rj::kObjectType);
             objVal.AddMember("objectID", obj.objectID, allocOut);
@@ -143,21 +147,9 @@ std::string AutowareAdapter::parseMessage(const std::string& input) {
             objVal.AddMember("confidence", obj.confidence, allocOut);
             objVal.AddMember("speed", obj.speed, allocOut);
             objVal.AddMember("heading", obj.heading, allocOut);
-            //objVal.AddMember("acceleration", obj.acceleration, allocOut);
             objVal.AddMember("latitude", obj.latitude, allocOut);
             objVal.AddMember("longitude", obj.longitude, allocOut);
-            objVal.AddMember("altitude", obj.altitude, allocOut);
-            objVal.AddMember("size_x", obj.size_x, allocOut);
-            objVal.AddMember("size_y", obj.size_y, allocOut);
-            objVal.AddMember("size_z", obj.size_z, allocOut);
-            objVal.AddMember("angular_velocity", obj.angular_velocity, allocOut);
-            objVal.AddMember("cov_latitude", obj.cov_latitude, allocOut);
-            objVal.AddMember("cov_longitude", obj.cov_longitude, allocOut);
-            objVal.AddMember("cov_altitude", obj.cov_altitude, allocOut);
-            objVal.AddMember("cov_heading", obj.cov_heading, allocOut);
-            objVal.AddMember("cov_speed", obj.cov_speed, allocOut);
-            objVal.AddMember("cov_angular_velocity", obj.cov_angular_velocity, allocOut);
-            
+    
             objects.PushBack(objVal, allocOut);
         }
 
@@ -183,4 +175,12 @@ std::string AutowareAdapter::parseMessage(const std::string& input) {
         spdlog::warn("No objects array found in message: {}", input);
         return "";
     }
+}
+
+std::string CameraAdapter::getRandomNumberString() {
+    int uniqueVar;
+    std::default_random_engine generator(static_cast<unsigned int>(
+        std::hash<std::size_t>{}(std::time(0)) ^ reinterpret_cast<std::size_t>(&uniqueVar)));
+    std::uniform_int_distribution<int> distribution(0, 10000);
+    return std::to_string(distribution(generator));
 }

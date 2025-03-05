@@ -24,7 +24,6 @@ RUN mkdir /tmp/foonathan_memory_vendor/build
 WORKDIR /tmp/foonathan_memory_vendor/build
 RUN cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local/ -DBUILD_SHARED_LIBS=ON
 RUN cmake --build . --target install --parallel $(nproc)
-RUN ldconfig
 WORKDIR /tmp
 RUN git clone https://github.com/eProsima/Fast-CDR.git
 RUN mkdir /tmp/Fast-CDR/build
@@ -40,34 +39,42 @@ WORKDIR /tmp/Fast-DDS/build
 RUN cmake ..
 RUN cmake --build . --target install --parallel $(nproc)
 
+# mqtt
 WORKDIR /
-RUN mkdir /cpm_adapter
-COPY *.cpp /cpm_adapter/
-COPY *.h /cpm_adapter/
-COPY *.hpp /cpm_adapter/
-COPY CMakeLists.txt /cpm_adapter/
-COPY package.xml /cpm_adapter/
+RUN git clone https://github.com/eclipse/paho.mqtt.c.git
+WORKDIR /paho.mqtt.c
+RUN git checkout v1.3.13
+RUN cmake -Bbuild -H. -DPAHO_ENABLE_TESTING=OFF -DPAHO_BUILD_STATIC=ON \
+        -DPAHO_WITH_SSL=ON -DPAHO_HIGH_PERFORMANCE=ON
+RUN cmake --build build/ --target install
+RUN ldconfig
 
-WORKDIR /cpm_adapter
-RUN git clone https://code.nap.av.it.pt/mobility-networks/fastdds-cpp-wrapper.git
-# COPY fastdds-cpp-wrapper /cpm_adapter/fastdds-cpp-wrapper
-COPY rapidjson /cpm_adapter/rapidjson
-COPY spdlog /cpm_adapter/spdlog
+WORKDIR /
+RUN git clone https://github.com/eclipse/paho.mqtt.cpp
+WORKDIR /paho.mqtt.cpp
+RUN git checkout v1.3.2
+RUN cmake -Bbuild -H. -DPAHO_BUILD_STATIC=ON \
+        -DPAHO_BUILD_DOCUMENTATION=OFF -DPAHO_BUILD_SAMPLES=ON
+RUN cmake --build build/ --target install
+RUN ldconfig
 
-# WORKDIR /cpm_adapter
-# RUN git clone https://github.com/tier4/autoware_auto_msgs.git
-# WORKDIR /cpm_adapter/autoware_auto_msgs
-# RUN /bin/bash -c 'source /opt/ros/humble/setup.bash && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-w"'
+WORKDIR /
+RUN mkdir /camera-adapter
+COPY *.cpp /camera-adapter/
+COPY *.h /camera-adapter/
+COPY *.hpp /camera-adapter/
+COPY CMakeLists.txt /camera-adapter/
 
-RUN mkdir -p /cpm_adapter/times
+WORKDIR /camera-adapter
+RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/rapidjson.git
+RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/spdlog.git
+RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/mobility-networks/fastdds-cpp-wrapper.git
 
-RUN mkdir -p /cpm_adapter/build
+WORKDIR /camera-adapter
+RUN cmake .
+RUN cmake --build .
+RUN chmod +x main
+ENTRYPOINT ["/camera-adapter/main"]
 
-RUN /bin/bash -c "cd /cpm_adapter/build && cmake .. && make -j$(nproc)"
-
-RUN chmod +x /cpm_adapter/build/main
-
-COPY start.sh /cpm_adapter/start.sh
-RUN chmod +x /cpm_adapter/start.sh
-
-ENTRYPOINT [ "/cpm_adapter/start.sh" ]
+#ENTRYPOINT ["sleep"]
+#CMD 50000
