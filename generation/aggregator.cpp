@@ -263,14 +263,17 @@ bool Aggregator::isFresh(const Object& newObj, const Object& oldObj) {
     long new_ts = static_cast<long>(newObj.timestamp * 1000);
     long old_ts = static_cast<long>(oldObj.timestamp * 1000);
     long dt = new_ts - old_ts;
-    spdlog::debug("[Aggregator] Time difference {} = {} - {}", dt, new_ts, old_ts);
 
     // If at least one condition is met, we could return true:
     bool timeCondition = (dt >= minTimeDiff_);
+    spdlog::debug("[Aggregator] (Object ID: {}) Time difference: {} ms", newObj.objectID, dt);
     double distance = calculateDistance(newObj.latitude, newObj.longitude, oldObj.latitude, oldObj.longitude);
+    spdlog::debug("[Aggregator] (Object ID: {}) Distance difference: {} = calculateDistance({}, {}, {}, {})", newObj.objectID, distance, newObj.latitude, newObj.longitude, oldObj.latitude, oldObj.longitude);
     bool distanceCondition = (distance >= minDistanceDiff_);
     bool speedCondition = (std::abs(newObj.speed - oldObj.speed) >= minSpeedDiff_);
+    spdlog::debug("[Aggregator] (Object ID: {}) Speed difference: {} = std::abs({} - {})", newObj.objectID, std::abs(newObj.speed - oldObj.speed), newObj.speed, oldObj.speed);
     bool headingCondition = (std::abs(newObj.heading - oldObj.heading) >= minHeadingDiff_);
+    spdlog::debug("[Aggregator] (Object ID: {}) Heading difference: {} = std::abs({} - {})", newObj.objectID, std::abs(newObj.heading - oldObj.heading), newObj.heading, oldObj.heading);
 
     if (timeCondition || distanceCondition || speedCondition || headingCondition) {
         return true;
