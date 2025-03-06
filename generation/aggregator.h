@@ -11,6 +11,8 @@
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
 #include "fastdds-cpp-wrapper/dds.hpp"
+#include "spdlog/spdlog.h"
+#include "spdlog/sinks/basic_file_sink.h"
 
 namespace rj = rapidjson;
 
@@ -70,8 +72,9 @@ public:
      * @param maxObjectAge Maximum age (in seconds) for an object in the lastSent list (default: 5 minutes).
      * @param cleanInterval Interval (in seconds) to run the cleanup routine (default: 5 seconds).
      * @param ignoreRules Ignore freshness rules (default: false).
+     * @param performanceLogs Enable performance logs (default: false).
      */
-    Aggregator(int domainId, long maxObjectAgeS = 300, long cleanInterval = 5, bool ignoreRules = false);
+    Aggregator(int domainId, long maxObjectAgeS = 300, long cleanInterval = 5, bool ignoreRules = false, bool performanceLogs = false);
 
     /**
      * @brief Destroy the Aggregator object.
@@ -114,6 +117,20 @@ public:
      */
     static void ddsCallback(const std::string& topic, const std::string& message);
 
+    /**
+     * @brief get the current timestamp as a string.
+     * @return std::string The current timestamp as a string.
+     */
+    std::string getCurrentTimestampString() {
+        auto now = std::chrono::system_clock::now();
+        std::time_t tt = std::chrono::system_clock::to_time_t(now);
+        std::tm tm = *std::localtime(&tt);
+        std::ostringstream oss;
+        // Format as: YYYY-MM-DD HH:MM:SS
+        oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
+        return oss.str();
+    }
+
 private:
     Dds* dds_;
     std::mutex objMtx_;
@@ -128,6 +145,7 @@ private:
     double minSpeedDiff_ = 0.5;      // Minimum speed difference (m/s)
     double minHeadingDiff_ = 4.0;    // Minimum heading difference (degrees)
     bool ignoreRules_;               // Ignore freshness rules
+    bool performanceLogs_;           // Enable performance logs
 
     // Cleanup configuration
     long maxObjectAge_;     // Maximum object age in seconds
@@ -140,6 +158,9 @@ private:
     // Thread control for periodic cleanup
     std::atomic<bool> stopFlag_;
     std::thread runThread_;
+
+    // File logger
+    std::shared_ptr<spdlog::logger> aggregator_file_logger_;
 
     /**
      * @brief The main loop that periodically cleans the lastSent list.

@@ -123,6 +123,6 @@ RUN ldconfig
 
 # ------------------------- Copy Generation Binary -------------------------
 COPY --from=builder /usr/src/generation/main /generation/main
-
+# RUN mkdir /generation/logs
 WORKDIR /generation
 ENTRYPOINT ["/generation/main"]

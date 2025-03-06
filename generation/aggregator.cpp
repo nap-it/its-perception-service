@@ -2,26 +2,41 @@
 #include <chrono>
 #include <cmath>
 #include <iomanip>
-#include <ctime>
-#include <spdlog/spdlog.h>
+#include <ctime>    
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 // Define the static instance pointer.
 Aggregator* Aggregator::instance_ = nullptr;
 
-
 // Constructor: sets up DDS and subscribes to the "cps/objects" topic.
-Aggregator::Aggregator(int ddsDomain, long maxObjectAge, long cleanInterval, bool ignoreRules)
-    : maxObjectAge_(maxObjectAge), cleanInterval_(cleanInterval), stopFlag_(false), ignoreRules_(ignoreRules), currentID_(1)
+Aggregator::Aggregator(int ddsDomain, long maxObjectAge, long cleanInterval, bool ignoreRules, bool performanceLogs)
+    : maxObjectAge_(maxObjectAge), cleanInterval_(cleanInterval), stopFlag_(false), ignoreRules_(ignoreRules), currentID_(1), performanceLogs_(performanceLogs)
 {
     // Set the static instance pointer to this object.
     instance_ = this;
+
+    // File logger
+    if (!fs::exists("./logs")) {
+        fs::create_directory("./logs");
+    } else if (fs::exists("./logs/aggregator.csv")) {
+        fs::remove("./logs/aggregator.csv");
+    }
+
+    if(performanceLogs_) {
+        aggregator_file_logger_ = spdlog::basic_logger_mt("aggregator_logger", "./logs/aggregator.csv");
+        aggregator_file_logger_->set_pattern("%v");
+        aggregator_file_logger_->flush_on(spdlog::level::info);
+    }
 
     // Initialize the DDS client.
     dds_ = new Dds("CPS-aggregator", ddsDomain, ddsCallback);
     dds_->subscribe("cps/objects");
     dds_->subscribe("cps/sensors");
-    dds_->provision_publisher("cps/pending");
+    //dds_->provision_publisher("cps/pending");
     spdlog::info("[Aggregator] Initialized on DDS domain {} and subscribed to 'cps/objects'", ddsDomain);
+
 }
 
 Aggregator::~Aggregator() {
@@ -137,7 +152,7 @@ std::vector<Object> Aggregator::getFreshObjects(int maxObjects) {
     std::vector<ObjectEntity> freshList;
     std::vector<ObjectEntity> pendingList;
 
-    print_all_objects(all_objects_);
+    //print_all_objects(all_objects_);
     // Transfer pending objects to freshList
     for (const auto& pair : all_objects_) {
         if (pair.second.to_send) {
@@ -231,19 +246,20 @@ std::vector<Object> Aggregator::getFreshObjects(int maxObjects) {
     }
 
 
-    std::string message = serializeFreshObjects(freshList);
-
-
-    dds_->publish("cps/pending", message);
-
-    auto t2 = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
-    spdlog::debug("[Aggregator] getFreshObjects() took {} us", duration);
+    // std::string message = serializeFreshObjects(freshList);
+    // dds_->publish("cps/pending", message);
     
     std::vector<Object> freshObjects;
     for (const auto& obj : freshList) {
         freshObjects.push_back(obj.current);
     }
+
+    auto t2 = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
+    spdlog::debug("[Aggregator] getFreshObjects() took {} us", duration);
+    if (performanceLogs_)
+        aggregator_file_logger_->info("Aggregator,getFreshObjects,{},{},{}", getCurrentTimestampString(), freshObjects.size(), duration);
+
     return freshObjects;
 }
 
@@ -258,7 +274,7 @@ bool Aggregator::isFresh(const Object& newObj, const Object& oldObj) {
     if (ignoreRules_) {
         return true;
     }
-    
+
     long new_ts = static_cast<long>(newObj.timestamp * 1000);
     long old_ts = static_cast<long>(oldObj.timestamp * 1000);
     long dt = new_ts - old_ts;
@@ -297,6 +313,7 @@ double Aggregator::calculateDistance(double lat1, double lon1, double lat2, doub
 void Aggregator::on_message_dds(const std::string& topic, const std::string& message) {
     spdlog::debug("[Aggregator] Received DDS message on topic '{}': {}", topic, message);
     try {
+        auto t1 = std::chrono::high_resolution_clock::now();
         rj::Document doc;
         doc.Parse(message.c_str());
         if (doc.HasParseError()) {
@@ -369,6 +386,10 @@ void Aggregator::on_message_dds(const std::string& topic, const std::string& mes
                         }
                     }
                 }
+                auto t2 = std::chrono::high_resolution_clock::now();
+                auto duration = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
+                if (performanceLogs_)
+                    aggregator_file_logger_->info("Aggregator,on_message_dds,{},{},{}", getCurrentTimestampString(), objectsArray.Size(), duration);
             }
         } else if (topic == "cps/sensors") {
             SensorInfo sensor;

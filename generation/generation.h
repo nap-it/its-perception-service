@@ -8,6 +8,8 @@
 #include <atomic>
 #include <thread>
 #include "fastdds-cpp-wrapper/dds.hpp"
+#include "spdlog/spdlog.h"
+#include "spdlog/sinks/basic_file_sink.h"
 
 class Generation {
 public:
@@ -18,8 +20,9 @@ public:
      * @param requestRateMs Initial request rate in milliseconds.
      * @param ddsDomain DDS domain ID if provider is DDS.
      * @param ddsTopic DDS topic to subscribe for CAMs if provider is DDS.
+     * @param performanceLogs Enable performance logs.
      */
-    Generation(std::shared_ptr<Aggregator> aggregator, std::shared_ptr<Locator> locator, int requestRateMs, int ddsDomain, std::string ddsTopic);
+    Generation(std::shared_ptr<Aggregator> aggregator, std::shared_ptr<Locator> locator, int requestRateMs, int ddsDomain, std::string ddsTopic, bool performanceLogs);
 
     /**
      * @brief Destroy the Generation object.
@@ -51,11 +54,14 @@ public:
 private:
     std::shared_ptr<Aggregator> aggregator_;
     std::shared_ptr<Locator> locator_;
-    bool debug_;
+    bool performanceLogs_;
     std::atomic<int> requestRateMs_;
     std::atomic<bool> stopFlag_;
     std::thread generationThread_;
     Builder builder_;
+
+    // File logger
+    std::shared_ptr<spdlog::logger> generation_file_logger_;
 
     // DDS client
     Dds* dds_;

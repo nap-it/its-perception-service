@@ -77,13 +77,16 @@ int main() {
     spdlog::info("[CONFIG] Aggregator max object age: {}", aggregator_max_object_age);
     int aggregator_clean_interval = reader.GetInteger("aggregator", "clean_interval", 5);
     spdlog::info("[CONFIG] Aggregator clean interval: {}", aggregator_clean_interval);
-    bool ignore_rules = reader.GetBoolean("aggregator", "ignore_rules", false);
-    spdlog::info("[CONFIG] Aggregator ignore rules: {}", ignore_rules);
+    bool aggregator_ignore_rules = reader.GetBoolean("aggregator", "ignore_rules", false);
+    spdlog::info("[CONFIG] Aggregator ignore rules: {}", aggregator_ignore_rules);
+    bool aggregator_performance_logs = reader.GetBoolean("aggregator", "performance_logs", false);
+    spdlog::info("[CONFIG] Aggregator performance logs: {}", aggregator_performance_logs);
 
     auto aggregator = std::make_shared<Aggregator>(aggregator_dds_domain,
                                                     aggregator_max_object_age,
                                                     aggregator_clean_interval,
-                                                    ignore_rules);
+                                                    aggregator_ignore_rules, 
+                                                    aggregator_performance_logs);
     aggregator->run();
 
     // Generation configuration
@@ -93,12 +96,15 @@ int main() {
     spdlog::info("[CONFIG] Generation DDS domain: {}", generation_dds_domain);
     std::string generation_dds_topic = reader.Get("generation", "dds_topic", "");
     spdlog::info("[CONFIG] Generation DDS topic: {}", generation_dds_topic);
+    bool generation_performance_logs = reader.GetBoolean("generation", "performance_logs", false);
+    spdlog::info("[CONFIG] Generation performance logs: {}", generation_performance_logs);
 
     Generation generation(aggregator, 
                     locator, 
                     generation_interval, 
                     generation_dds_domain, 
-                    generation_dds_topic);
+                    generation_dds_topic,
+                    generation_performance_logs);
     generation.run();
 
     while (true) {
