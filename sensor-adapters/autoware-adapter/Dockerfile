@@ -58,10 +58,7 @@ RUN cmake .. && \
 WORKDIR /usr/src/autoware-adapter
 RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/spdlog.git
 RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/mobility-networks/fastdds-cpp-wrapper.git
-
-WORKDIR /usr/src
-RUN git -c http.sslVerify=false clone https://github.com/Tencent/rapidjson.git
-RUN mv rapidjson/include/rapidjson /usr/src/autoware-adapter/
+RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/rapidjson.git
 
 COPY *.cpp /usr/src/autoware-adapter/
 COPY *.h /usr/src/autoware-adapter/

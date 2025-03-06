@@ -77,10 +77,7 @@ WORKDIR /usr/src/radar-adapter
 RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/spdlog.git
 RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/mobility-networks/fastdds-cpp-wrapper.git
 RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/mobility-networks/paho-mqtt-cpp-wrapper.git
-
-WORKDIR /usr/src
-RUN git -c http.sslVerify=false clone https://github.com/Tencent/rapidjson.git
-RUN mv rapidjson/include/rapidjson /usr/src/radar-adapter/
+RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/rapidjson.git
 
 COPY *.cpp /usr/src/radar-adapter/
 COPY *.h /usr/src/radar-adapter/
