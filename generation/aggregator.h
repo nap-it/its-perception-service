@@ -7,6 +7,7 @@
 #include <mutex>
 #include <thread>
 #include <atomic>
+#include <cmath>
 #include "rapidjson/document.h"
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
@@ -19,6 +20,20 @@ namespace rj = rapidjson;
 constexpr float NOT_PRESENT_FLOAT = -999.0f;
 constexpr double NOT_PRESENT_DOUBLE = -999.0;
 constexpr int NOT_PRESENT_INT = -999;
+
+constexpr double R_E = 6371000.0; // Earth radius in meters;
+constexpr double M_PI_180 = M_PI / 180.0;
+constexpr double M_180_PI = 180.0 / M_PI;
+
+// ETSI Priority limit values
+constexpr double P_MIN = 0.0;    // minPositionChangePriorityThreshold (m)
+constexpr double P_MAX = 8.0;    // maxPositionChangePriorityThreshold (m)
+constexpr double S_MIN = 0;      // minGroundSpeedChangePriorityThreshold (m/s)
+constexpr double S_MAX = 1.0;    // maxGroundSpeedChangePriorityThreshold (m/s)
+constexpr double O_MIN = 0;       // minGroundVelocityOrientationChangePriorityThreshold (degress)
+constexpr double O_MAX = 8.0;    // maxGroundVelocityOrientationChangePriorityThreshold (degress)
+constexpr double T_MIN = 100.0;    // minLastInclusionTimePriorityThreshold (ms)
+constexpr double T_MAX = 1000.0;    // minLastInclusionTimePriorityThreshold (ms)
 
 struct Object {
     int objectID;
@@ -146,6 +161,7 @@ private:
     double minHeadingDiff_ = 4.0;    // Minimum heading difference (degrees)
     bool ignoreRules_;               // Ignore freshness rules
     bool performanceLogs_;           // Enable performance logs
+    std::string priorityType_;       // Priority type
 
     // Cleanup configuration
     long maxObjectAge_;     // Maximum object age in seconds
@@ -180,12 +196,47 @@ private:
     /**
      * @brief Calculate the distance between two lat/lon coordinates (in meters) using the Haversine formula.
      */
-    double calculateDistance(double lat1, double lon1, double lat2, double lon2);
+    double calculateHaversineDistance(double lat1, double lon1, double lat2, double lon2);
 
     /**
      * @brief Calculate the CPM object ID based on the sensor and object IDs.
      */
     int calculateCpmObjectID(int sensorID, int objectID);
+
+    /**
+     * @brief Calculate the priority of an object.
+     * @return float Priority value.
+     */
+
+    float getPriority(Object last_sent, Object current);
+
+    /**
+     * @brief Calculate the priority of an object based the ETSI rules.
+     * @return float Priority value.
+     */
+    float priorityETSI(Object last_sent, Object current);
+
+    /**
+     * @brief Calculate the priority of an object based on movement predictor.
+     * @return float Priority value.
+     */
+    float priorityMovementPredictor(Object last_sent, Object current);
+
+    /**
+     * @brief Convert degrees to radians
+     * @return double Angle in radians
+     */
+    double deg2rad(double deg) {
+        return deg * M_PI_180;
+    }
+
+    /**
+     * @brief Convert radians to degrees
+     * @return double Angle in degrees
+     */
+    double rad2deg(double rad) {
+        return rad * M_180_PI;
+    }
 
     // Static instance pointer for the DDS callback.
     static Aggregator* instance_;

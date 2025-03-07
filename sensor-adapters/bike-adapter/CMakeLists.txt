@@ -26,8 +26,8 @@ file(GLOB FASTDDS_SRC
 
 add_executable(main main.cpp ${FASTDDS_SRC}
         config_reader.h
-        camera_adapter.cpp
-        camera_adapter.h
+        bike_adapter.cpp
+        bike_adapter.h
 )
 
 target_link_libraries(main 

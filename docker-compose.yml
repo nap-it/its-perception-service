@@ -1,10 +1,10 @@
 version: '2.4'
 services:
   cpm-generation:
-    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/cpm-generation:latest
+    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/generation:dcc
     restart: always
     volumes:
-      - ./config.ini:/config.ini
+      - ./generation/config.ini:/config.ini
     networks:
       deploymentslan:
 
@@ -12,29 +12,23 @@ services:
     image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/cpm-processing:latest
     restart: always
     volumes:
-      - ./config.ini:/config.ini
+      - ./processing/config.ini:/config.ini
     networks:
       deploymentslan:
 
   radar-adapter:
-    depends_on:
-      cpm-generation:
-        condition: service_started
-    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/radar-adapter:latest
+    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/radar-adapter:dcc
     restart: always
     volumes:
-      - ./config.ini:/config.ini
+      - ./radar-adapter/config.ini:/config.ini
     networks:
       deploymentslan:
 
   camera-adapter:
-    depends_on:
-      cpm-generation:
-        condition: service_started
-    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/camera-adapter:latest
+    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/camera-adapter:dcc
     restart: always
     volumes:
-      - ./config.ini:/config.ini
+      - ./camera-adapter/config.ini:/config.ini
     networks:
       deploymentslan:
 

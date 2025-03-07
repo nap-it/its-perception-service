@@ -152,7 +152,7 @@ std::vector<Object> Aggregator::getFreshObjects(int maxObjects) {
     std::vector<ObjectEntity> freshList;
     std::vector<ObjectEntity> pendingList;
 
-    //print_all_objects(all_objects_);
+    print_all_objects(all_objects_);
     // Transfer pending objects to freshList
     for (const auto& pair : all_objects_) {
         if (pair.second.to_send) {
@@ -281,14 +281,14 @@ bool Aggregator::isFresh(const Object& newObj, const Object& oldObj) {
 
     // If at least one condition is met, we could return true:
     bool timeCondition = (dt >= minTimeDiff_);
-    spdlog::debug("[Aggregator] (Object ID: {}) Time difference: {} ms", newObj.objectID, dt);
-    double distance = calculateDistance(newObj.latitude, newObj.longitude, oldObj.latitude, oldObj.longitude);
-    spdlog::debug("[Aggregator] (Object ID: {}) Distance difference: {} = calculateDistance({}, {}, {}, {})", newObj.objectID, distance, newObj.latitude, newObj.longitude, oldObj.latitude, oldObj.longitude);
+    //spdlog::debug("[Aggregator] (Object ID: {}) Time difference: {} ms", newObj.objectID, dt);
+    double distance = calculateHaversineDistance(newObj.latitude, newObj.longitude, oldObj.latitude, oldObj.longitude);
+    //spdlog::debug("[Aggregator] (Object ID: {}) Distance difference: {} = calculateHaversineDistance({}, {}, {}, {})", newObj.objectID, distance, newObj.latitude, newObj.longitude, oldObj.latitude, oldObj.longitude);
     bool distanceCondition = (distance >= minDistanceDiff_);
     bool speedCondition = (std::abs(newObj.speed - oldObj.speed) >= minSpeedDiff_);
-    spdlog::debug("[Aggregator] (Object ID: {}) Speed difference: {} = std::abs({} - {})", newObj.objectID, std::abs(newObj.speed - oldObj.speed), newObj.speed, oldObj.speed);
+    //spdlog::debug("[Aggregator] (Object ID: {}) Speed difference: {} = std::abs({} - {})", newObj.objectID, std::abs(newObj.speed - oldObj.speed), newObj.speed, oldObj.speed);
     bool headingCondition = (std::abs(newObj.heading - oldObj.heading) >= minHeadingDiff_);
-    spdlog::debug("[Aggregator] (Object ID: {}) Heading difference: {} = std::abs({} - {})", newObj.objectID, std::abs(newObj.heading - oldObj.heading), newObj.heading, oldObj.heading);
+    //spdlog::debug("[Aggregator] (Object ID: {}) Heading difference: {} = std::abs({} - {})", newObj.objectID, std::abs(newObj.heading - oldObj.heading), newObj.heading, oldObj.heading);
 
     if (timeCondition || distanceCondition || speedCondition || headingCondition) {
         return true;
@@ -296,17 +296,17 @@ bool Aggregator::isFresh(const Object& newObj, const Object& oldObj) {
     return false;
 }
 
-double Aggregator::calculateDistance(double lat1, double lon1, double lat2, double lon2) {
-    const double R = 6371000; // Earth's radius in meters
-    double radLat1 = lat1 * M_PI / 180.0;
-    double radLat2 = lat2 * M_PI / 180.0;
-    double dLat = (lat2 - lat1) * M_PI / 180.0;
-    double dLon = (lon2 - lon1) * M_PI / 180.0;
-    double a = std::sin(dLat / 2) * std::sin(dLat / 2) +
-               std::cos(radLat1) * std::cos(radLat2) *
-               std::sin(dLon / 2) * std::sin(dLon / 2);
+double Aggregator::calculateHaversineDistance(double lat1, double lon1, double lat2, double lon2) {
+    double phi1 = deg2rad(lat1);
+    double phi2 = deg2rad(lat2);
+    double delta_phi = deg2rad(lat2 - lat1);
+    double delta_lambda = deg2rad(lon2 - lon1);
+
+    double a = std::sin(delta_phi / 2.0) * std::sin(delta_phi / 2.0) +
+               std::cos(phi1) * std::cos(phi2) * std::sin(delta_lambda / 2.0) * std::sin(delta_lambda / 2.0);
     double c = 2 * std::atan2(std::sqrt(a), std::sqrt(1 - a));
-    return R * c;
+
+    return R_E * c;
 }
 
 
@@ -378,6 +378,7 @@ void Aggregator::on_message_dds(const std::string& topic, const std::string& mes
                             all_objects_[obj.objectID] = entity;
                         } else {
                             it->second.current = obj;
+                            it->second.priority = getPriority(it->second.last_sent, it->second.current);
                             if (!it->second.to_send) {
                                 if (isFresh(obj, it->second.last_sent)) {
                                     it->second.to_send = true;
@@ -425,4 +426,79 @@ void Aggregator::ddsCallback(const std::string& topic, const std::string& messag
     if (instance_) {
         instance_->on_message_dds(topic, message);
     }
+}
+
+float Aggregator::getPriority(Object last_sent, Object current) {
+    if (priorityType_ == "predictor") {
+        return priorityMovementPredictor(last_sent, current);
+    } else {
+        return priorityETSI(last_sent, current);
+    } 
+}
+
+float Aggregator::priorityMovementPredictor(Object last_sent, Object current) {
+    // Calculate prediction based on last data
+    double heading_rad = deg2rad(last_sent.heading);
+    double dt = current.timestamp - last_sent.timestamp;
+
+    double v_new = last_sent.speed + last_sent.acceleration * dt; // Apply acceleration
+    double delta_lat = (v_new * std::cos(heading_rad) * dt) / R_E;
+    double delta_lon = (v_new * std::sin(heading_rad) * dt) / (R_E * std::cos(deg2rad(last_sent.latitude)));
+
+    double lat_new = last_sent.latitude + rad2deg(delta_lat);
+    double lon_new = last_sent.longitude + rad2deg(delta_lon);
+
+    double prediction_error = calculateHaversineDistance(lat_new, lon_new, current.latitude, current.longitude);
+
+    return prediction_error;
+
+}
+
+float Aggregator::priorityETSI(Object last_sent, Object current) {
+    // Position change
+    double deltaPos = calculateHaversineDistance(last_sent.latitude, last_sent.longitude, current.latitude, current.longitude);
+    double ppos;
+    if (deltaPos < P_MIN) {
+        ppos = 0;
+    } else if (deltaPos < P_MAX) {
+        ppos = (deltaPos - P_MIN) / (P_MAX - P_MIN);
+    } else{
+        ppos = 1;
+    }
+
+    // Speed change
+    double deltaSpeed = abs(current.speed - last_sent.speed);
+    double pspeed;
+    if (deltaSpeed < S_MIN) {
+        pspeed = 0;
+    } else if (deltaSpeed < S_MAX) {
+        pspeed = (deltaSpeed - S_MIN) / (S_MAX - S_MIN);
+    } else{
+        pspeed = 1;
+    }
+
+    // Orientation change
+    double deltaOrient = abs(current.heading - last_sent.heading);
+    double porient;
+    if (deltaOrient < S_MIN) {
+        porient = 0;
+    } else if (deltaOrient < S_MAX) {
+        porient = (deltaOrient - S_MIN) / (S_MAX - S_MIN);
+    } else{
+        porient = 1;
+    }
+
+    // Last inclusion time
+    double deltaTime = (current.timestamp - last_sent.timestamp)*1000;
+    double ptime;
+    if (deltaTime < T_MIN) {
+        ptime = 0;
+    } else if (deltaTime < T_MAX) {
+        ptime = (deltaTime - T_MIN) / (T_MAX - T_MIN);
+    } else{
+        ptime = 1;
+    }
+
+    return ppos + pspeed + porient + ptime;
+
 }

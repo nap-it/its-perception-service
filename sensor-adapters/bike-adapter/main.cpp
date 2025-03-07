@@ -1,4 +1,4 @@
-#include <camera_adapter.h>
+#include <bike_adapter.h>
 #include "config_reader.h"
 
 /**
@@ -15,26 +15,26 @@ void readConfigFile(const std::string& path, Config& config) {
     }
 
     // Read configuration
-    config.domain_id = reader.GetInteger("camera-adapter", "domain_id", 0);
-    spdlog::info("[CAMERA-CONFIG] Domain ID: {}", config.domain_id);
-    config.debug = reader.GetBoolean("camera-adapter", "debug", false);
-    spdlog::info("[CAMERA-CONFIG] Debug: {}", config.debug);
-    config.mqtt_host = reader.Get("camera-adapter", "mqtt_host", "");
-    spdlog::info("[CAMERA-CONFIG] MQTT Host: {}", config.mqtt_host);
-    config.mqtt_port = reader.GetInteger("camera-adapter", "mqtt_port", 0);
-    spdlog::info("[CAMERA-CONFIG] MQTT Port: {}", config.mqtt_port);
-    config.mqtt_topic = reader.Get("camera-adapter", "mqtt_topic", "");
-    spdlog::info("[CAMERA-CONFIG] MQTT Topic: {}", config.mqtt_topic);
-    config.mqtt_client_id = reader.Get("camera-adapter", "mqtt_client_id", "");
-    spdlog::info("[CAMERA-CONFIG] MQTT Client ID: {}", config.mqtt_client_id);
+    config.domain_id = reader.GetInteger("bike-adapter", "domain_id", 0);
+    spdlog::info("[BIKE-CONFIG] Domain ID: {}", config.domain_id);
+    config.debug = reader.GetBoolean("bike-adapter", "debug", false);
+    spdlog::info("[BIKE-CONFIG] Debug: {}", config.debug);
+    config.mqtt_host = reader.Get("bike-adapter", "mqtt_host", "");
+    spdlog::info("[BIKE-CONFIG] MQTT Host: {}", config.mqtt_host);
+    config.mqtt_port = reader.GetInteger("bike-adapter", "mqtt_port", 0);
+    spdlog::info("[BIKE-CONFIG] MQTT Port: {}", config.mqtt_port);
+    config.mqtt_topic = reader.Get("bike-adapter", "mqtt_topic", "");
+    spdlog::info("[BIKE-CONFIG] MQTT Topic: {}", config.mqtt_topic);
+    config.mqtt_client_id = reader.Get("bike-adapter", "mqtt_client_id", "");
+    spdlog::info("[BIKE-CONFIG] MQTT Client ID: {}", config.mqtt_client_id);
 }
 
 int main(int argc, char* argv[]) {
     Config config;
     readConfigFile("../config.ini", config);
 
-    CameraAdapter adapter(config);
-    std::thread camera_thread(&CameraAdapter::run, &adapter);
+    BikeAdapter adapter(config);
+    std::thread camera_thread(&BikeAdapter::run, &adapter);
 
     camera_thread.join(); 
     return 0;
