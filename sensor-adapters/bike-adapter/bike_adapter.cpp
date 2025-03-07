@@ -1,4 +1,4 @@
-#include "camera_adapter.h"
+#include "bike_adapter.h"
 #include <chrono>
 #include <functional>
 #include <sstream>
@@ -10,7 +10,7 @@
 
 namespace rj = rapidjson;
 
-CameraAdapter::CameraAdapter(const Config& config) : config(config) {
+BikeAdapter::BikeAdapter(const Config& config) : config(config) {
     if (config.debug) {
         spdlog::set_level(spdlog::level::debug);
         spdlog::debug("Debug logging enabled.");
@@ -20,7 +20,7 @@ CameraAdapter::CameraAdapter(const Config& config) : config(config) {
     }
 
     // Initialize DDS client.
-    dds_ = new Dds("CameraAdapter", config.domain_id, on_message_dds);
+    dds_ = new Dds("BikeAdapter", config.domain_id, on_message_dds);
     dds_->provision_publisher("cps/objects");
     dds_->provision_publisher("cps/sensors");
     std::this_thread::sleep_for(std::chrono::seconds(2));
@@ -66,8 +66,8 @@ CameraAdapter::CameraAdapter(const Config& config) : config(config) {
     }
 }
 
-void CameraAdapter::run() {
-    spdlog::info("Camera Adapter started running...");
+void BikeAdapter::run() {
+    spdlog::info("Bike Adapter started running...");
 
     // Publish sensor information every 5 seconds.
     rj::Document sensorDoc;
@@ -94,14 +94,14 @@ void CameraAdapter::run() {
     }
 }
 
-void CameraAdapter::on_message_mqtt(const std::string& topic, const std::string& message) {
+void BikeAdapter::on_message_mqtt(const std::string& topic, const std::string& message) {
     spdlog::debug("Received MQTT message on topic: {}", topic);
     std::string parsed_message = parseMessage(message);
     spdlog::debug("Parsed message: {}", parsed_message);
     dds_->publish("cps/objects", parsed_message);
 }
 
-std::string CameraAdapter::parseMessage(const std::string& input) {
+std::string BikeAdapter::parseMessage(const std::string& input) {
 
     auto t1 = std::chrono::high_resolution_clock::now();
 
@@ -114,7 +114,7 @@ std::string CameraAdapter::parseMessage(const std::string& input) {
 
     auto t2 = std::chrono::high_resolution_clock::now();
 
-    if(doc.HasMember("listOfObjects") && doc["listOfObjects"].IsArray()) {
+    if(doc.HasMember("detections") && doc["detections"].IsArray()) {
 
         // Build output JSON document.
         rj::Document outDoc;
@@ -123,20 +123,18 @@ std::string CameraAdapter::parseMessage(const std::string& input) {
 
         rj::Value objects(rj::kArrayType);
 
-        for (rj::SizeType i = 0; i < doc["listOfObjects"].Size(); i++) {
-            const rj::Value& rj_obj = doc["listOfObjects"][i];
+        for (rj::SizeType i = 0; i < doc["detections"].Size(); i++) {
+            const rj::Value& rj_obj = doc["detections"][i];
             Object obj;
-            obj.objectID = (rj_obj.HasMember("objectID") && rj_obj["objectID"].IsInt()) ? rj_obj["objectID"].GetInt() : -1;
+            obj.objectID = (rj_obj.HasMember("object_id") && rj_obj["object_id"].IsInt()) ? rj_obj["object_id"].GetInt() : -1;
             if (obj.objectID == -1) { spdlog::error("Mandatory (Object ID) not present in message: {}", input); return ""; }
-            obj.sensorID = 3; // Hardcoded for Monovideo
-            obj.timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() / 1000.0;
-            obj.classification = (rj_obj.HasMember("classification") && rj_obj["classification"].IsInt()) ? rj_obj["classification"].GetInt() : 0;
+            obj.sensorID = 3; // Hardcoded for Monovideo from bike
+            obj.timestamp = (rj_obj.HasMember("timestamp") && rj_obj["timestamp"].IsDouble()) ? rj_obj["timestamp"].GetDouble() : 0.0;
+            obj.classification = (rj_obj.HasMember("class") && rj_obj["class"].IsInt()) ? rj_obj["class"].GetInt() : 0;
             obj.confidence = (rj_obj.HasMember("confidence") && rj_obj["confidence"].IsInt()) ? rj_obj["confidence"].GetInt() : 0;
-            obj.speed = (rj_obj.HasMember("speed") && rj_obj["speed"].IsFloat()) ? rj_obj["speed"].GetFloat() : 0.0f;
-            obj.heading = (rj_obj.HasMember("heading") && rj_obj["heading"].IsFloat()) ? rj_obj["heading"].GetFloat() : 0.0f;
-            obj.latitude = (rj_obj.HasMember("latitude") && rj_obj["latitude"].IsFloat()) ? rj_obj["latitude"].GetFloat() : 0.0f;
+            obj.latitude = (rj_obj.HasMember("lat") && rj_obj["lat"].IsFloat()) ? rj_obj["lat"].GetFloat() : 0.0f;
             if (obj.latitude == 0.0f) { spdlog::error("Mandatory (Latitude) not present in message: {}", input); return ""; }
-            obj.longitude = (rj_obj.HasMember("longitude") && rj_obj["longitude"].IsFloat()) ? rj_obj["longitude"].GetFloat() : 0.0f;
+            obj.longitude = (rj_obj.HasMember("lon") && rj_obj["lon"].IsFloat()) ? rj_obj["lon"].GetFloat() : 0.0f;
             if (obj.longitude == 0.0f) { spdlog::error("Mandatory (Longitude) not present in message: {}", input); return ""; }
             
             rj::Value objVal(rj::kObjectType);
@@ -145,8 +143,6 @@ std::string CameraAdapter::parseMessage(const std::string& input) {
             objVal.AddMember("timestamp", obj.timestamp, allocOut);
             objVal.AddMember("classification", obj.classification, allocOut);
             objVal.AddMember("confidence", obj.confidence, allocOut);
-            objVal.AddMember("speed", obj.speed, allocOut);
-            objVal.AddMember("heading", obj.heading, allocOut);
             objVal.AddMember("latitude", obj.latitude, allocOut);
             objVal.AddMember("longitude", obj.longitude, allocOut);
     
@@ -177,7 +173,7 @@ std::string CameraAdapter::parseMessage(const std::string& input) {
     }
 }
 
-std::string CameraAdapter::getRandomNumberString() {
+std::string BikeAdapter::getRandomNumberString() {
     int uniqueVar;
     std::default_random_engine generator(static_cast<unsigned int>(
         std::hash<std::size_t>{}(std::time(0)) ^ reinterpret_cast<std::size_t>(&uniqueVar)));
