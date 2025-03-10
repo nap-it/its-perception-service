@@ -130,7 +130,6 @@ void Locator::parseAndUpdateLocation(const std::string& topic, const std::string
             lon = (doc.HasMember("longitude") && doc["longitude"].IsNumber()) ? doc["longitude"].GetDouble() : latestLongitude_;
             heading = (doc.HasMember("heading") && doc["heading"].IsNumber()) ? static_cast<float>(doc["heading"].GetDouble()) : 0.0f;
         } else if (topic == "vanetza/in/cam_full") {
-            // Navigate through nested objects.
             if (doc.HasMember("camParameters") && doc["camParameters"].IsObject()) {
                 const rj::Value& camParameters = doc["camParameters"];
                 if (camParameters.HasMember("basicContainer") && camParameters["basicContainer"].IsObject()) {
@@ -152,6 +151,21 @@ void Locator::parseAndUpdateLocation(const std::string& topic, const std::string
                             heading = (headingObj.HasMember("headingValue") && headingObj["headingValue"].IsNumber())
                                       ? static_cast<float>(headingObj["headingValue"].GetDouble()) : 0.0f;
                         }
+                    }
+                }
+            }
+
+        } else if (topic == "vanetza/in/vam") {
+            if (doc.HasMember("vamParameters") && doc["vamParameters"].IsObject()) {
+                const rj::Value& vamParameters = doc["vamParameters"];
+                if (vamParameters.HasMember("basicContainer") && vamParameters["basicContainer"].IsObject()) {
+                    const rj::Value& basicContainer = vamParameters["basicContainer"];
+                    if (basicContainer.HasMember("referencePosition") && basicContainer["referencePosition"].IsObject()) {
+                        const rj::Value& referencePosition = basicContainer["referencePosition"];
+                        lat = (referencePosition.HasMember("latitude") && referencePosition["latitude"].IsNumber())
+                              ? referencePosition["latitude"].GetDouble() : latestLatitude_;
+                        lon = (referencePosition.HasMember("longitude") && referencePosition["longitude"].IsNumber())
+                              ? referencePosition["longitude"].GetDouble() : latestLongitude_;
                     }
                 }
             }
