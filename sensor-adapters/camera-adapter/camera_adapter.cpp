@@ -55,15 +55,11 @@ CameraAdapter::CameraAdapter(const Config& config) : config(config) {
         this->on_message_mqtt(topic, message);
     });
 
-    int max_retries = 10, retries = 0;
-    while (!mqtt_wrapper->is_connected()) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    while(!mqtt_wrapper->is_connected()){
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
         spdlog::info("Waiting for MQTT connection, retrying...");
-        if (retries++ > max_retries) {
-            spdlog::error("Failed to connect to MQTT server, exiting...");
-            exit(1);
-        }
     }
+    spdlog::info("[Locator] MQTT client connected to broker {} on topic {}", mqttInfo.address, config.mqtt_topic);
 }
 
 void CameraAdapter::run() {
