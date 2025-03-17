@@ -141,8 +141,8 @@ std::string CameraAdapter::parseMessage(const std::string& input) {
             objVal.AddMember("timestamp", obj.timestamp, allocOut);
             objVal.AddMember("classification", obj.classification, allocOut);
             objVal.AddMember("confidence", obj.confidence, allocOut);
-            objVal.AddMember("speed", obj.speed, allocOut);
-            objVal.AddMember("heading", obj.heading, allocOut);
+            // objVal.AddMember("speed", obj.speed, allocOut);
+            // objVal.AddMember("heading", obj.heading, allocOut);
             objVal.AddMember("latitude", obj.latitude, allocOut);
             objVal.AddMember("longitude", obj.longitude, allocOut);
     

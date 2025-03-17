@@ -179,25 +179,28 @@ std::string Builder::generateCPM(const std::vector<Object>& freshObjects,
         if (obj.speed != NOT_PRESENT_FLOAT && obj.heading != NOT_PRESENT_FLOAT) {
             xVelocity = obj.speed * cos(obj.heading * PI_RAD);
             yVelocity = obj.speed * sin(obj.heading * PI_RAD);
+            
+            rj::Value velocity(rj::kObjectType);
+            rj::Value cartesianVelocity(rj::kObjectType);
+
+            rj::Value xVelocityVal(rj::kObjectType);
+            xVelocityVal.AddMember("value", xVelocity, alloc);
+            double speedConf = (obj.cov_speed != NOT_PRESENT_FLOAT) ? sqrt(obj.cov_speed) : 1;
+            if (speedConf == 0) speedConf = 1.27;
+            if(speedConf > 1.25) speedConf = 1.26;
+            xVelocityVal.AddMember("confidence", speedConf, alloc);
+            cartesianVelocity.AddMember("xVelocity", xVelocityVal, alloc);
+
+            rj::Value yVelocityVal(rj::kObjectType);
+            yVelocityVal.AddMember("value", yVelocity, alloc);
+            yVelocityVal.AddMember("confidence", speedConf, alloc);
+            cartesianVelocity.AddMember("yVelocity", yVelocityVal, alloc);
+
+            velocity.AddMember("cartesianVelocity", cartesianVelocity, alloc);
+            
+            objJson.AddMember("velocity", velocity, alloc);
         }
-        rj::Value velocity(rj::kObjectType);
-        rj::Value cartesianVelocity(rj::kObjectType);
-
-        rj::Value xVelocityVal(rj::kObjectType);
-        xVelocityVal.AddMember("value", xVelocity, alloc);
-        double speedConf = (obj.cov_speed != NOT_PRESENT_FLOAT) ? sqrt(obj.cov_speed) : 1;
-        if (speedConf == 0) speedConf = 1.27;
-        if(speedConf > 1.25) speedConf = 1.26;
-        xVelocityVal.AddMember("confidence", speedConf, alloc);
-        cartesianVelocity.AddMember("xVelocity", xVelocityVal, alloc);
-
-        rj::Value yVelocityVal(rj::kObjectType);
-        yVelocityVal.AddMember("value", yVelocity, alloc);
-        yVelocityVal.AddMember("confidence", speedConf, alloc);
-        cartesianVelocity.AddMember("yVelocity", yVelocityVal, alloc);
-
-        velocity.AddMember("cartesianVelocity", cartesianVelocity, alloc);
-        objJson.AddMember("velocity", velocity, alloc);
+        
         
         /**
          * Angular velocity
@@ -218,32 +221,36 @@ std::string Builder::generateCPM(const std::vector<Object>& freshObjects,
         if (obj.acceleration != NOT_PRESENT_FLOAT && obj.heading != NOT_PRESENT_FLOAT) {
             xAcc = obj.acceleration * cos(obj.heading * PI_RAD);
             yAcc = obj.acceleration * sin(obj.heading * PI_RAD);
+
+            rj::Value acceleration(rj::kObjectType);
+            rj::Value cartesianAcceleration(rj::kObjectType);
+            rj::Value xAccVal(rj::kObjectType);
+            xAccVal.AddMember("value", xAcc, alloc);
+            xAccVal.AddMember("confidence", 1, alloc);
+            cartesianAcceleration.AddMember("xAcceleration", xAccVal, alloc);
+            rj::Value yAccVal(rj::kObjectType);
+            yAccVal.AddMember("value", yAcc, alloc);
+            yAccVal.AddMember("confidence", 1, alloc);
+            cartesianAcceleration.AddMember("yAcceleration", yAccVal, alloc);
+            acceleration.AddMember("cartesianAcceleration", cartesianAcceleration, alloc);
+            objJson.AddMember("acceleration", acceleration, alloc);
         }
-        rj::Value acceleration(rj::kObjectType);
-        rj::Value cartesianAcceleration(rj::kObjectType);
-        rj::Value xAccVal(rj::kObjectType);
-        xAccVal.AddMember("value", xAcc, alloc);
-        xAccVal.AddMember("confidence", 1, alloc);
-        cartesianAcceleration.AddMember("xAcceleration", xAccVal, alloc);
-        rj::Value yAccVal(rj::kObjectType);
-        yAccVal.AddMember("value", yAcc, alloc);
-        yAccVal.AddMember("confidence", 1, alloc);
-        cartesianAcceleration.AddMember("yAcceleration", yAccVal, alloc);
-        acceleration.AddMember("cartesianAcceleration", cartesianAcceleration, alloc);
-        objJson.AddMember("acceleration", acceleration, alloc);
+        
         
         /**
          * Heading
          */
-        rj::Value angles(rj::kObjectType);
-        rj::Value zAngle(rj::kObjectType);
-        zAngle.AddMember("value", obj.heading, alloc);
-        double headingConf = (obj.cov_heading != NOT_PRESENT_FLOAT) ? sqrt(obj.cov_heading) : 1;
-        if (headingConf == 0) headingConf = 12.7;
-        if(headingConf > 12.5) headingConf = 12.6;
-        zAngle.AddMember("confidence", headingConf, alloc);
-        angles.AddMember("zAngle", zAngle, alloc);
-        objJson.AddMember("angles", angles, alloc);
+        if (obj.heading != NOT_PRESENT_FLOAT) {
+            rj::Value angles(rj::kObjectType);
+            rj::Value zAngle(rj::kObjectType);
+            zAngle.AddMember("value", obj.heading, alloc);
+            double headingConf = (obj.cov_heading != NOT_PRESENT_FLOAT) ? sqrt(obj.cov_heading) : 1;
+            if (headingConf == 0) headingConf = 12.7;
+            if(headingConf > 12.5) headingConf = 12.6;
+            zAngle.AddMember("confidence", headingConf, alloc);
+            angles.AddMember("zAngle", zAngle, alloc);
+            objJson.AddMember("angles", angles, alloc);
+        }
         
         /**
          * Classification

@@ -344,8 +344,7 @@ void Aggregator::on_message_dds(const std::string& topic, const std::string& mes
                     
                     obj.speed = (objJson.HasMember("speed") && objJson["speed"].IsFloat()) ? objJson["speed"].GetFloat() : NOT_PRESENT_FLOAT;
                     obj.heading = (objJson.HasMember("heading") && objJson["heading"].IsFloat()) ? objJson["heading"].GetFloat() : NOT_PRESENT_FLOAT;
-                    if (obj.heading < 0) obj.heading = 0;
-                    if (obj.heading >= 360) obj.heading = 0;
+                    if ((obj.heading != NOT_PRESENT_FLOAT) && (obj.heading < 0 || obj.heading >= 360)) obj.heading = 0;
                     
                     obj.acceleration = (objJson.HasMember("acceleration") && objJson["acceleration"].IsFloat()) ? objJson["acceleration"].GetFloat() : NOT_PRESENT_FLOAT;
                     obj.latitude = (objJson.HasMember("latitude") && objJson["latitude"].IsFloat()) ? objJson["latitude"].GetFloat() : NOT_PRESENT_FLOAT;
