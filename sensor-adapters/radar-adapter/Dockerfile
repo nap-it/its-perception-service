@@ -48,7 +48,7 @@ RUN cmake .. && \
 WORKDIR /usr/src
 RUN git clone https://github.com/eProsima/Fast-DDS.git
 WORKDIR /usr/src/Fast-DDS/
-RUN git checkout v2.13.2
+RUN git checkout v2.14.4
 RUN mkdir /usr/src/Fast-DDS/build
 WORKDIR /usr/src/Fast-DDS/build
 RUN cmake .. && \
