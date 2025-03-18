@@ -99,13 +99,13 @@ std::string Builder::generateCPM(const std::vector<Object>& freshObjects,
             sensorJson.AddMember("sensorType", sensor.sensorType, alloc);
             sensorJson.AddMember("shadowingApplies", sensor.shadowingApplies, alloc);
 
-            rj::Value perceptionRegionShape(rj::kObjectType);
-            rj::Value radial(rj::kObjectType);
-            radial.AddMember("range", sensor.range, alloc);
-            radial.AddMember("horizontalOpeningAngleStart", sensor.stationaryHorizontalOpeningAngleStart, alloc);
-            radial.AddMember("horizontalOpeningAngleEnd", sensor.stationaryHorizontalOpeningAngleEnd, alloc);
-            perceptionRegionShape.AddMember("radial", radial, alloc);
-            sensorJson.AddMember("perceptionRegionShape", perceptionRegionShape, alloc);
+            // rj::Value perceptionRegionShape(rj::kObjectType);
+            // rj::Value radial(rj::kObjectType);
+            // radial.AddMember("range", sensor.range, alloc);
+            // radial.AddMember("horizontalOpeningAngleStart", sensor.stationaryHorizontalOpeningAngleStart, alloc);
+            // radial.AddMember("horizontalOpeningAngleEnd", sensor.stationaryHorizontalOpeningAngleEnd, alloc);
+            // perceptionRegionShape.AddMember("radial", radial, alloc);
+            // sensorJson.AddMember("perceptionRegionShape", perceptionRegionShape, alloc);
 
             sensorContainerData.PushBack(sensorJson, alloc);
         }
@@ -130,7 +130,6 @@ std::string Builder::generateCPM(const std::vector<Object>& freshObjects,
         
         long deltaTime = getMeasurementDeltaTime(now, static_cast<unsigned long>(obj.timestamp * 1000));
         objJson.AddMember("measurementDeltaTime", deltaTime, alloc);
-        objJson.AddMember("objectPerceptionQuality", obj.confidence / 100.0, alloc);
         
         /**
          * Position

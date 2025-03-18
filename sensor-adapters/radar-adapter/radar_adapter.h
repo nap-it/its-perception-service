@@ -46,18 +46,6 @@ struct Object {
     float cov_angular_velocity = 0.0f; // Not used
 };
 
-struct SensorInfo {
-    int sensorID;
-    int sensorType;
-    bool shadowingApplies;
-    int semiMajorRangeLength;
-    int semiMinorRangeLength;
-    int semiMajorRangeOrientation;
-    int range;
-    int stationaryHorizontalOpeningAngleStart;
-    int stationaryHorizontalOpeningAngleEnd;
-};
-
 class RadarAdapter {
 public:
     RadarAdapter(const Config& config);

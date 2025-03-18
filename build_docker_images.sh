@@ -1,9 +1,21 @@
 #!/bin/bash
 # build_docker_images.sh
 # This script builds several docker images with buildx and logs each step.
+# Usage: ./build_docker_images.sh [push]
+# If "push" is provided as an argument, the script will use --push.
+# Otherwise, it will use --load.
 
 # Log file path
 LOGFILE="build_docker_images.log"
+
+# Check for build mode argument
+if [ "$1" == "push" ]; then
+    BUILD_FLAG="--push"
+    echo "Building with push mode..."
+else
+    BUILD_FLAG="--load"
+    echo "Building with load mode..."
+fi
 
 # Function to print a timestamped message to stdout and the log file.
 log() {
@@ -33,7 +45,7 @@ build_image() {
   local start_time=$(date +%s)
   log "Running docker buildx build command..."
   
-  docker buildx build --platform=linux/arm64,linux/amd64 --push --tag "$tag" .
+  docker buildx build --platform=linux/arm64,linux/amd64 $BUILD_FLAG --tag "$tag" .
   local exit_code=$?
 
   local end_time=$(date +%s)
