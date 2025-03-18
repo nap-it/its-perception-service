@@ -71,12 +71,6 @@ struct SensorInfo {
     int sensorID = NOT_PRESENT_INT;
     int sensorType = NOT_PRESENT_INT;
     bool shadowingApplies = false;
-    // int semiMajorRangeLength = NOT_PRESENT_INT;
-    // int semiMinorRangeLength = NOT_PRESENT_INT;
-    // int semiMajorRangeOrientation = NOT_PRESENT_INT;
-    // int range = NOT_PRESENT_INT;
-    // int stationaryHorizontalOpeningAngleStart = NOT_PRESENT_INT;
-    // int stationaryHorizontalOpeningAngleEnd = NOT_PRESENT_INT;
 };
 
 class Aggregator {

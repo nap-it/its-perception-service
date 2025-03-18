@@ -98,15 +98,6 @@ std::string Builder::generateCPM(const std::vector<Object>& freshObjects,
             sensorJson.AddMember("sensorId", sensor.sensorID, alloc);
             sensorJson.AddMember("sensorType", sensor.sensorType, alloc);
             sensorJson.AddMember("shadowingApplies", sensor.shadowingApplies, alloc);
-
-            // rj::Value perceptionRegionShape(rj::kObjectType);
-            // rj::Value radial(rj::kObjectType);
-            // radial.AddMember("range", sensor.range, alloc);
-            // radial.AddMember("horizontalOpeningAngleStart", sensor.stationaryHorizontalOpeningAngleStart, alloc);
-            // radial.AddMember("horizontalOpeningAngleEnd", sensor.stationaryHorizontalOpeningAngleEnd, alloc);
-            // perceptionRegionShape.AddMember("radial", radial, alloc);
-            // sensorJson.AddMember("perceptionRegionShape", perceptionRegionShape, alloc);
-
             sensorContainerData.PushBack(sensorJson, alloc);
         }
         rj::Value container3(rj::kObjectType);

@@ -48,3 +48,27 @@
 2025-03-18 17:46:22 : Directory: ./processing
 2025-03-18 17:46:22 : ---------------------------------------------------
 2025-03-18 17:54:57 : All builds completed.
+2025-03-18 19:05:37 : ---------------------------------------------------
+2025-03-18 19:05:37 : Starting build for image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/generation:dcc
+2025-03-18 19:05:37 : Directory: ./generation
+2025-03-18 19:05:37 : ---------------------------------------------------
+2025-03-18 19:06:20 : ---------------------------------------------------
+2025-03-18 19:06:20 : Starting build for image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/camera-adapter:dcc
+2025-03-18 19:06:20 : Directory: ./sensor-adapters/camera-adapter
+2025-03-18 19:06:20 : ---------------------------------------------------
+2025-03-18 19:06:34 : ---------------------------------------------------
+2025-03-18 19:06:34 : Starting build for image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/radar-adapter:dcc
+2025-03-18 19:06:34 : Directory: ./sensor-adapters/radar-adapter
+2025-03-18 19:06:34 : ---------------------------------------------------
+2025-03-18 19:07:04 : ---------------------------------------------------
+2025-03-18 19:07:04 : Starting build for image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/bike-adapter:dcc
+2025-03-18 19:07:04 : Directory: ./sensor-adapters/bike-adapter
+2025-03-18 19:07:04 : ---------------------------------------------------
+2025-03-18 19:07:35 : ---------------------------------------------------
+2025-03-18 19:07:35 : Starting build for image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/autoware-adapter:dcc
+2025-03-18 19:07:35 : Directory: ./sensor-adapters/autoware-adapter
+2025-03-18 19:07:35 : ---------------------------------------------------
+2025-03-18 19:07:55 : ---------------------------------------------------
+2025-03-18 19:07:55 : Starting build for image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/processing:dcc
+2025-03-18 19:07:55 : Directory: ./processing
+2025-03-18 19:07:55 : ---------------------------------------------------

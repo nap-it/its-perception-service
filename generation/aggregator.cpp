@@ -397,12 +397,6 @@ void Aggregator::on_message_dds(const std::string& topic, const std::string& mes
             if ((sensor.sensorID == NOT_PRESENT_INT || sensor.sensorID < 0) && (spdlog::error("[Aggregator]: Mandatory (Sensor ID) not present in message: {}", message), true)) return;
             sensor.sensorType = (doc.HasMember("sensorType") && doc["sensorType"].IsInt()) ? doc["sensorType"].GetInt() : NOT_PRESENT_INT;
             sensor.shadowingApplies = (doc.HasMember("shadowingApplies") && doc["shadowingApplies"].IsBool()) ? doc["shadowingApplies"].GetBool() : false;
-            // sensor.semiMajorRangeLength = (doc.HasMember("semiMajorRangeLength") && doc["semiMajorRangeLength"].IsInt()) ? doc["semiMajorRangeLength"].GetInt() : NOT_PRESENT_INT;
-            // sensor.semiMinorRangeLength = (doc.HasMember("semiMinorRangeLength") && doc["semiMinorRangeLength"].IsInt()) ? doc["semiMinorRangeLength"].GetInt() : NOT_PRESENT_INT;
-            // sensor.semiMajorRangeOrientation = (doc.HasMember("semiMajorRangeOrientation") && doc["semiMajorRangeOrientation"].IsInt()) ? doc["semiMajorRangeOrientation"].GetInt() : NOT_PRESENT_INT;
-            // sensor.range = (doc.HasMember("range") && doc["range"].IsInt()) ? doc["range"].GetInt() : NOT_PRESENT_INT;
-            // sensor.stationaryHorizontalOpeningAngleStart = (doc.HasMember("stationaryHorizontalOpeningAngleStart") && doc["stationaryHorizontalOpeningAngleStart"].IsInt()) ? doc["stationaryHorizontalOpeningAngleStart"].GetInt() : NOT_PRESENT_INT;
-            // sensor.stationaryHorizontalOpeningAngleEnd = (doc.HasMember("stationaryHorizontalOpeningAngleEnd") && doc["stationaryHorizontalOpeningAngleEnd"].IsInt()) ? doc["stationaryHorizontalOpeningAngleEnd"].GetInt() : NOT_PRESENT_INT;
             
             {
                 std::lock_guard<std::mutex> lock(sensorMtx_);

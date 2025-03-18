@@ -34,12 +34,6 @@ AutowareAdapter::AutowareAdapter(const Config& config) : config(config) {
     sensorDoc.AddMember("sensorID", 12, alloc);
     sensorDoc.AddMember("sensorType", 12, alloc);
     sensorDoc.AddMember("shadowingApplies", false, alloc);
-    sensorDoc.AddMember("semiMajorRangeLength", 75, alloc);
-    sensorDoc.AddMember("semiMinorRangeLength", 20, alloc);
-    sensorDoc.AddMember("semiMajorRangeOrientation", 3061, alloc);
-    sensorDoc.AddMember("range", 100, alloc);
-    sensorDoc.AddMember("stationaryHorizontalOpeningAngleStart", 3601, alloc);
-    sensorDoc.AddMember("stationaryHorizontalOpeningAngleEnd", 3601, alloc);
     rj::StringBuffer sensorBuffer;
     rj::Writer<rj::StringBuffer> sensorWriter(sensorBuffer);
     sensorDoc.Accept(sensorWriter);
@@ -58,12 +52,6 @@ void AutowareAdapter::run() {
     sensorDoc.AddMember("sensorID", 12, alloc);
     sensorDoc.AddMember("sensorType", 12, alloc);
     sensorDoc.AddMember("shadowingApplies", false, alloc);
-    sensorDoc.AddMember("semiMajorRangeLength", 75, alloc);
-    sensorDoc.AddMember("semiMinorRangeLength", 20, alloc);
-    sensorDoc.AddMember("semiMajorRangeOrientation", 3061, alloc);
-    sensorDoc.AddMember("range", 100, alloc);
-    sensorDoc.AddMember("stationaryHorizontalOpeningAngleStart", 3601, alloc);
-    sensorDoc.AddMember("stationaryHorizontalOpeningAngleEnd", 3601, alloc);
     rj::StringBuffer sensorBuffer;
     rj::Writer<rj::StringBuffer> sensorWriter(sensorBuffer);
     sensorDoc.Accept(sensorWriter);
