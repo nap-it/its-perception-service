@@ -157,7 +157,7 @@ std::vector<Object> Aggregator::getFreshObjects(int maxObjects) {
     for (const auto& pair : all_objects_) {
         if (pair.second.to_send) {
             freshList.push_back(pair.second);
-        } else {
+        } else if (pair.second.has_updated) {
             pendingList.push_back(pair.second);
         }
     }
@@ -178,6 +178,7 @@ std::vector<Object> Aggregator::getFreshObjects(int maxObjects) {
 
             for (int i = 0; i < maxObjects; i++) {
                 all_objects_[freshList[i].current.objectID].to_send = false;
+                all_objects_[freshList[i].current.objectID].has_updated = false;
                 all_objects_[freshList[i].current.objectID].last_sent = freshList[i].current;
                 all_objects_[freshList[i].current.objectID].priority = 0.0;
             }
@@ -192,6 +193,7 @@ std::vector<Object> Aggregator::getFreshObjects(int maxObjects) {
                 // Update all_objects_ with the freshList
                 for (int i = 0; i < freshList.size(); i++) {
                     all_objects_[freshList[i].current.objectID].to_send = false;
+                    all_objects_[freshList[i].current.objectID].has_updated = false;
                     all_objects_[freshList[i].current.objectID].last_sent = freshList[i].current;
                     all_objects_[freshList[i].current.objectID].priority = 0.0;
                 }
@@ -205,6 +207,7 @@ std::vector<Object> Aggregator::getFreshObjects(int maxObjects) {
                 // Update all_objects_ firstly from the freshList
                 for (int i = 0; i < freshList.size(); i++) {
                     all_objects_[freshList[i].current.objectID].to_send = false;
+                    all_objects_[freshList[i].current.objectID].has_updated = false;
                     all_objects_[freshList[i].current.objectID].last_sent = freshList[i].current;
                     all_objects_[freshList[i].current.objectID].priority = 0.0;
                 }
@@ -221,6 +224,7 @@ std::vector<Object> Aggregator::getFreshObjects(int maxObjects) {
                 for (int i = 0; i < remaining; i++) {
                     freshList.push_back(pendingList[i]);
                     all_objects_[pendingList[i].current.objectID].to_send = false;
+                    all_objects_[freshList[i].current.objectID].has_updated = false;
                     all_objects_[pendingList[i].current.objectID].last_sent = pendingList[i].current;
                     all_objects_[pendingList[i].current.objectID].priority = 0.0;
                 }
@@ -230,6 +234,7 @@ std::vector<Object> Aggregator::getFreshObjects(int maxObjects) {
             spdlog::debug("[Aggregator] Requested {} fresh objects, and {} available.", maxObjects, freshList.size());
             for (int i = 0; i < freshList.size(); i++) {
                 all_objects_[freshList[i].current.objectID].to_send = false;
+                all_objects_[freshList[i].current.objectID].has_updated = false;
                 all_objects_[freshList[i].current.objectID].last_sent = freshList[i].current;
                 all_objects_[freshList[i].current.objectID].priority = 0.0;
             }
@@ -240,6 +245,7 @@ std::vector<Object> Aggregator::getFreshObjects(int maxObjects) {
         // Update all_objects_ with the freshList
         for (int i = 0; i < freshList.size(); i++) {
             all_objects_[freshList[i].current.objectID].to_send = false;
+            all_objects_[freshList[i].current.objectID].has_updated = false;
             all_objects_[freshList[i].current.objectID].last_sent = freshList[i].current;
             all_objects_[freshList[i].current.objectID].priority = 0.0;
         }
@@ -373,10 +379,12 @@ void Aggregator::on_message_dds(const std::string& topic, const std::string& mes
                             entity.current = obj;
                             entity.last_sent = obj;
                             entity.to_send = true;
+                            entity.has_updated = true;
                             entity.priority = 100.0;
                             all_objects_[obj.objectID] = entity;
                         } else {
                             it->second.current = obj;
+                            it->second.has_updated = true;
                             it->second.priority = getPriority(it->second.last_sent, it->second.current);
                             if (!it->second.to_send) {
                                 if (isFresh(obj, it->second.last_sent)) {

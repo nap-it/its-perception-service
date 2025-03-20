@@ -65,6 +65,7 @@ struct ObjectEntity {
     Object last_sent;
     Object current;
     double priority = 0.0;
+    bool has_updated = false;
 };
 
 struct SensorInfo {
