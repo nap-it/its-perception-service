@@ -126,9 +126,9 @@ void Locator::parseAndUpdateLocation(const std::string& topic, const std::string
         float heading = 0.0f;
         
         if (topic == "vanetza/in/cam" || topic == "vanetza/own/cam") {
-            lat = (doc.HasMember("latitude") && doc["latitude"].IsNumber()) ? doc["latitude"].GetDouble() : latestLatitude_;
-            lon = (doc.HasMember("longitude") && doc["longitude"].IsNumber()) ? doc["longitude"].GetDouble() : latestLongitude_;
-            heading = (doc.HasMember("heading") && doc["heading"].IsNumber()) ? static_cast<float>(doc["heading"].GetDouble()) : 0.0f;
+            lat = (doc.HasMember("latitude") && doc["latitude"].IsDouble()) ? doc["latitude"].GetDouble() : latestLatitude_;
+            lon = (doc.HasMember("longitude") && doc["longitude"].IsDouble()) ? doc["longitude"].GetDouble() : latestLongitude_;
+            heading = (doc.HasMember("heading") && doc["heading"].IsFloat()) ? doc["heading"].GetFloat() : 0.0f;
         } else if (topic == "vanetza/in/cam_full") {
             if (doc.HasMember("camParameters") && doc["camParameters"].IsObject()) {
                 const rj::Value& camParameters = doc["camParameters"];
@@ -136,9 +136,9 @@ void Locator::parseAndUpdateLocation(const std::string& topic, const std::string
                     const rj::Value& basicContainer = camParameters["basicContainer"];
                     if (basicContainer.HasMember("referencePosition") && basicContainer["referencePosition"].IsObject()) {
                         const rj::Value& referencePosition = basicContainer["referencePosition"];
-                        lat = (referencePosition.HasMember("latitude") && referencePosition["latitude"].IsNumber())
+                        lat = (referencePosition.HasMember("latitude") && referencePosition["latitude"].IsDouble())
                               ? referencePosition["latitude"].GetDouble() : latestLatitude_;
-                        lon = (referencePosition.HasMember("longitude") && referencePosition["longitude"].IsNumber())
+                        lon = (referencePosition.HasMember("longitude") && referencePosition["longitude"].IsDouble())
                               ? referencePosition["longitude"].GetDouble() : latestLongitude_;
                     }
                 }
@@ -148,8 +148,8 @@ void Locator::parseAndUpdateLocation(const std::string& topic, const std::string
                         const rj::Value& basicVehicle = hfContainer["basicVehicleContainerHighFrequency"];
                         if (basicVehicle.HasMember("heading") && basicVehicle["heading"].IsObject()) {
                             const rj::Value& headingObj = basicVehicle["heading"];
-                            heading = (headingObj.HasMember("headingValue") && headingObj["headingValue"].IsNumber())
-                                      ? static_cast<float>(headingObj["headingValue"].GetDouble()) : 0.0f;
+                            heading = (headingObj.HasMember("headingValue") && headingObj["headingValue"].IsFloat())
+                                      ? headingObj["headingValue"].GetFloat() : 0.0f;
                         }
                     }
                 }

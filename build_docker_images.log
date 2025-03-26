@@ -72,3 +72,17 @@
 2025-03-18 19:07:55 : Starting build for image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/processing:dcc
 2025-03-18 19:07:55 : Directory: ./processing
 2025-03-18 19:07:55 : ---------------------------------------------------
+2025-03-24 10:58:23 : ---------------------------------------------------
+2025-03-24 10:58:23 : Starting build for image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/generation:dcc
+2025-03-24 10:58:23 : Directory: ./generation
+2025-03-24 10:58:23 : ---------------------------------------------------
+2025-03-24 10:59:01 : All builds completed.
+2025-03-24 10:59:59 : ---------------------------------------------------
+2025-03-24 10:59:59 : Starting build for image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/generation:dcc
+2025-03-24 10:59:59 : Directory: ./generation
+2025-03-24 10:59:59 : ---------------------------------------------------
+2025-03-24 11:00:49 : ---------------------------------------------------
+2025-03-24 11:00:49 : Starting build for image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/generation:dcc
+2025-03-24 11:00:49 : Directory: ./generation
+2025-03-24 11:00:49 : ---------------------------------------------------
+2025-03-24 11:00:57 : All builds completed.
