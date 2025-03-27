@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(Generation)
+project(Processing)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -25,14 +25,10 @@ file(GLOB FASTDDS_SRC
 )
 
 add_executable(main main.cpp ${FASTDDS_SRC}
-        builder.cpp
-        builder.h
-        aggregator.cpp
-        aggregator.h
         locator.cpp
         locator.h
-        generation.cpp
-        generation.h
+        processor.cpp
+        processor.h
 )
 
 target_link_libraries(main 

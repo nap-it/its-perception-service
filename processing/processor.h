@@ -7,23 +7,12 @@
 #include <vector>
 #include "mqttwrapper.h"
 #include "fastdds-cpp-wrapper/dds.hpp"
+#include "locator.h"
 
-constexpr float NOT_PRESENT_FLOAT = -999.0f;
-constexpr double NOT_PRESENT_DOUBLE = -999.0;
-constexpr int NOT_PRESENT_INT = -999;
 constexpr long TIME_2004_MS = 1072915200000;
-
-struct SenderInfo {
-    int station_id;
-    int station_type;
-    float latitude;
-    float longitude;
-    float speed;        // optional
-    float heading;      // optional
-    float altitude;     // optional
-    float acceleration; // optional
-    std::chrono::steady_clock::time_point cam_timestamp;
-};
+constexpr double M_180_PI = 180.0 / M_PI;
+constexpr double M_PI_180 = M_PI / 180.0;
+constexpr double R = 6371000; // earth radius
 
 struct Object {
     int id;
@@ -97,7 +86,7 @@ public:
      *
      * @param config The configuration of the processor.
      */
-    Processor(const Config& config);
+    Processor(const Config& config, std::shared_ptr<Locator> locator);
     ~Processor();
 
     /**
@@ -118,7 +107,10 @@ public:
      */
     void on_message_dds(const std::string& topic, const std::string& message);
 
+
 private:
+    std::shared_ptr<Locator> locator_;
+
     // Map storing latest CAM data per station.
     std::unordered_map<int, SenderInfo> camDataMap_;
     std::mutex camMtx_;
@@ -138,6 +130,61 @@ private:
     // Thread control for periodic cleanup
     std::atomic<bool> stopFlag_;
 
+    map<int,string> sensor_type_ = {
+        {0, "undefined"},
+        {1, "radar"},
+        {2, "lidar"},
+        {3, "monovideo"},
+        {4, "stereovision"},
+        {5, "nightvision"},
+        {6, "ultrasonic"},
+        {7, "pmd"},
+        {8, "inductionLoop"},
+        {9, "sphericalCamera"},
+        {10, "uwb"},
+        {11, "acoustic"},
+        {12, "localAggregation"},
+        {13, "itsAggregation"}
+    };
+
+    map<int,string> vehicle_classes_ = {
+        {0, "unknown"},
+        {1, "pedestrian"},
+        {2, "cyclist"},
+        {3, "moped"},
+        {4, "motorcycle"},
+        {5, "passengerCar"},
+        {6, "bus"},
+        {7, "lightTruck"},
+        {8, "heavyTruck"},
+        {9, "trailer"},
+        {10, "Ambulance"},
+        {11, "tram"},
+        {12, "VRU"},
+        {13, "animal"},
+        {14, "agricultural vehicles"},
+        {15, "roadSideUnit"},
+        {16, "SafetyApp"},
+        {17, "Moliceiro"},
+        {18, "Test Device"},
+        {19, "others"}
+    };
+
+    map<int, string> person_classes_ = {
+        {0, "unknown"},
+        {1, "pedestrian"},
+        {2, "personInWheelchair"},
+        {3, "cyclist"},
+        {4, "personWithStroller"},
+        {5, "personOnSkates"},
+        {6, "personGroup"}
+    };
+
+    map<int, string> other_classes_ = {
+            {0, "unknown"},
+            {1, "roadSideUnit"}
+    };
+
     /**
      * @brief Process an incoming CPM
      * For a CPM, it looks up the corresponding CAM data and builds a new output message.
@@ -147,28 +194,6 @@ private:
      * @param output_full The full output message.  
      */
     void processCPM(const std::string& topic, const std::string& message, std::string& output, std::string& output_full);
-
-    /**
-     * @brief Process an incoming CAM
-     * For a CAM, it stores the data in the internal map.
-     * @param topic The topic of the message.
-     * @param message The raw message (JSON formatted).
-     */
-    void processCAM(const std::string& topic, const std::string& message);
-
-    /**
-     * @brief Check if the CAM data is fresh.
-     * @param camData The CAM data.
-     * @param threshold The threshold for freshness.
-     * @return True if the data is fresh, false otherwise.
-     */
-    bool isCamDataFresh(const SenderInfo& camData, std::chrono::steady_clock::duration threshold);
-
-    /**
-     * @brief Clean up stale CAM data.
-     * @param threshold The threshold for staleness.
-     */
-    void cleanupStaleCamData(std::chrono::steady_clock::duration threshold);
 
 };
 

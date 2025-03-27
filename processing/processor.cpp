@@ -7,7 +7,7 @@
 
 namespace rj = rapidjson;
 
-Processor::Processor(const Config& config) : config_(config) {
+Processor::Processor(const Config& config, std::shared_ptr<Locator> locator) : config_(config), locator_(locator) {
     
     if (config.debug) {
         spdlog::set_level(spdlog::level::debug);
@@ -68,7 +68,6 @@ void Processor::run() {
     spdlog::info("[Processor] Running...");
     while (!stopFlag_) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
-        cleanupStaleCamData(std::chrono::seconds(config_.cam_freshness_threshold));
     }
     spdlog::info("[Processor] Stopped.");
 }
@@ -82,155 +81,36 @@ void Processor::on_message_dds(const std::string& topic, const std::string& mess
         std::string full_output = "";
         this->processCPM(topic, message, output, full_output);
 
-        if (output.empty() || full_output.empty()) {
+        if (output.empty()) {
             spdlog::warn("[Processor] Empty output message");
             return;
         }
 
         dds_->publish(config_.dds_output_topic, output);
         dds_->publish(config_.dds_output_full_topic, full_output);
-        spdlog::debug("[Processor] Published DDS message on topic {} and {}", config_.dds_output_topic, config_.dds_output_full_topic);
+        spdlog::info("[Processor] Published DDS message on topic {} and {}", config_.dds_output_topic, config_.dds_output_full_topic);
 
         if(config_.local_mqtt_enabled) {
             local_mqtt_client_->publish(config_.local_mqtt_output_topic, output);
             local_mqtt_client_->publish(config_.local_mqtt_output_full_topic, full_output);
-            spdlog::debug("[Processor] Published Local MQTT message on topic {} and {}", config_.local_mqtt_output_topic, config_.local_mqtt_output_full_topic);
+            spdlog::info("[Processor] Published Local MQTT message on topic {} and {}", config_.local_mqtt_output_topic, config_.local_mqtt_output_full_topic);
         }
 
         if(config_.remote_mqtt_enabled) {
             remote_mqtt_client_->publish(config_.remote_mqtt_output_topic, output);
             remote_mqtt_client_->publish(config_.remote_mqtt_output_full_topic, full_output);
-            spdlog::debug("[Processor] Published Remote MQTT message on topic {} and {}", config_.remote_mqtt_output_topic, config_.remote_mqtt_output_full_topic);
+            spdlog::info("[Processor] Published Remote MQTT message on topic {} and {}", config_.remote_mqtt_output_topic, config_.remote_mqtt_output_full_topic);
         }
 
-    } else if (topic == config_.cam_topic) {
-        spdlog::debug("[Processor] Processing CAM message...");
-        this->processCAM(topic, message);
-        
     } else {
         spdlog::warn("[Processor] Received message on unknown topic: {}", topic);
     }
 }
 
-void Processor::processCAM(const std::string& topic, const std::string& message) {
-    try {
-        rj::Document doc;
-        doc.Parse(message.c_str());
-        if (doc.HasParseError()) {
-            spdlog::error("[Processor] Parse error in CAM message: {}", message);
-            return;
-        }
-
-        int station_id = NOT_PRESENT_INT;
-        float speed = NOT_PRESENT_FLOAT;
-        float acceleration = NOT_PRESENT_FLOAT;
-        float heading = NOT_PRESENT_FLOAT;
-
-        if (topic == "vanetza/in/cam" || topic == "vanetza/own/cam" || topic == "vanetza/out/cam") {
-            station_id = config_.host_station_id;
-            speed = (doc.HasMember("speed") && doc["speed"].IsFloat()) ? static_cast<float>(doc["speed"].GetFloat()) : NOT_PRESENT_FLOAT;
-            acceleration = (doc.HasMember("acceleration") && doc["acceleration"].IsFloat()) ? static_cast<float>(doc["acceleration"].GetFloat()) : NOT_PRESENT_FLOAT;
-            heading = (doc.HasMember("heading") && doc["heading"].IsFloat()) ? static_cast<float>(doc["heading"].GetFloat()) : NOT_PRESENT_FLOAT;
-        } else if (topic == "vanetza/in/cam_full") {
-            station_id = config_.host_station_id;
-            if (doc.HasMember("camParameters") && doc["camParameters"].IsObject()) {
-                const rj::Value& camParameters = doc["camParameters"];
-                if (camParameters.HasMember("highFrequencyContainer") && camParameters["highFrequencyContainer"].IsObject()) {
-                    const rj::Value& highFrequencyContainer = camParameters["highFrequencyContainer"];
-                    if (highFrequencyContainer.HasMember("basicVehicleContainerHighFrequency") && highFrequencyContainer["basicVehicleContainerHighFrequency"].IsObject()) {
-                        const rj::Value& basicVehicle = highFrequencyContainer["basicVehicleContainerHighFrequency"];
-                        heading = (basicVehicle.HasMember("heading") && basicVehicle["heading"].IsObject())
-                                  ? static_cast<float>(basicVehicle["heading"]["headingValue"].GetDouble()) : NOT_PRESENT_FLOAT;
-                        if (heading == 3601) heading = NOT_PRESENT_FLOAT;
-                        speed = (basicVehicle.HasMember("speed") && basicVehicle["speed"].IsObject())
-                                ? static_cast<float>(basicVehicle["speed"]["speedValue"].GetDouble()) : NOT_PRESENT_FLOAT;
-                        if (speed == 16383) speed = NOT_PRESENT_FLOAT;
-                        acceleration = (basicVehicle.HasMember("longitudinalAcceleration") && basicVehicle["longitudinalAcceleration"].IsObject())
-                                    ? static_cast<float>(basicVehicle["longitudinalAcceleration"]["longitudinalAccelerationValue"].GetDouble()) : NOT_PRESENT_FLOAT;
-                    }
-                }
-            }
-        } else if (topic == "vanetza/in/vam") {
-            station_id = config_.host_station_id;
-            if (doc.HasMember("vamParameters") && doc["vamParameters"].IsObject()) {
-                const rj::Value& vamParameters = doc["vamParameters"];
-                if (vamParameters.HasMember("vruHighFrequencyContainer") && vamParameters["vruHighFrequencyContainer"].IsObject()) {
-                    const rj::Value& vruHighFrequencyContainer = vamParameters["vruHighFrequencyContainer"];
-                    heading = (vruHighFrequencyContainer.HasMember("heading") && vruHighFrequencyContainer["heading"].IsObject())
-                                ? static_cast<float>(vruHighFrequencyContainer["heading"]["headingValue"].GetDouble()) : NOT_PRESENT_FLOAT;
-                    if (heading == 3601) heading = NOT_PRESENT_FLOAT;
-                    speed = (vruHighFrequencyContainer.HasMember("speed") && vruHighFrequencyContainer["speed"].IsObject())
-                            ? static_cast<float>(vruHighFrequencyContainer["speed"]["speedValue"].GetDouble()) : NOT_PRESENT_FLOAT;
-                    if (speed == 16383) speed = NOT_PRESENT_FLOAT;
-                    acceleration = (vruHighFrequencyContainer.HasMember("longitudinalAcceleration") && vruHighFrequencyContainer["longitudinalAcceleration"].IsObject())
-                                ? static_cast<float>(vruHighFrequencyContainer["longitudinalAcceleration"]["longitudinalAccelerationValue"].GetDouble()) : NOT_PRESENT_FLOAT;
-                }
-            }
-        } else if (topic == "vanetza/out/cam_full") {
-            station_id = (doc.HasMember("fields") && doc["fields"].IsObject())
-                ? static_cast<float>(doc["fields"]["header"]["statioNID"].GetDouble()) : NOT_PRESENT_FLOAT;
-            if (doc.HasMember("fields") && doc["fields"].IsObject() && doc["fields"].HasMember("cam") && doc["fields"]["cam"].IsObject()) {
-                const rj::Value& cam = doc["fields"]["cam"];
-                if (cam.HasMember("highFrequencyContainer") && cam["highFrequencyContainer"].IsObject()) {
-                    const rj::Value& highFrequencyContainer = cam["highFrequencyContainer"];
-                    if (highFrequencyContainer.HasMember("basicVehicleContainerHighFrequency") && highFrequencyContainer["basicVehicleContainerHighFrequency"].IsObject()) {
-                        const rj::Value& basicVehicle = highFrequencyContainer["basicVehicleContainerHighFrequency"];
-                        heading = (basicVehicle.HasMember("heading") && basicVehicle["heading"].IsObject())
-                                    ? static_cast<float>(basicVehicle["heading"]["headingValue"].GetDouble()) : NOT_PRESENT_FLOAT;
-                        if (heading == 3601) heading = NOT_PRESENT_FLOAT;
-                        speed = (basicVehicle.HasMember("speed") && basicVehicle["speed"].IsObject())
-                                ? static_cast<float>(basicVehicle["speed"]["speedValue"].GetDouble()) : NOT_PRESENT_FLOAT;
-                        if (speed == 16383) speed = NOT_PRESENT_FLOAT;
-                        acceleration = (basicVehicle.HasMember("longitudinalAcceleration") && basicVehicle["longitudinalAcceleration"].IsObject())
-                                    ? static_cast<float>(basicVehicle["longitudinalAcceleration"]["longitudinalAccelerationValue"].GetDouble()) : NOT_PRESENT_FLOAT;
-                    }
-                }
-
-            }
-        } else {
-            spdlog::warn("[Processor] Unknown CAM topic: {}", topic);
-            return;
-        }
-        
-        if (station_id == NOT_PRESENT_INT) {
-            spdlog::warn("[Processor] Missing station ID in CAM message: {}", message);
-            return;
-        }
-
-        auto now = std::chrono::steady_clock::now();
-        {
-            std::lock_guard<std::mutex> lock(camMtx_);
-            auto it = camDataMap_.find(station_id);
-            if (it != camDataMap_.end()) {
-                it->second.speed = speed;
-                it->second.acceleration = acceleration;
-                it->second.heading = heading;
-                it->second.cam_timestamp = now;
-            } 
-        }
-
-    } catch (const rj::ParseResult& e) {
-        spdlog::error("[Processor] RapidJSON parse error: {} in message: {}", e.Code(), message);
-    } catch (const std::exception& e) {
-        spdlog::error("[Processor] Error processing DDS message: {}", e.what());
-    }
-}
-
-void Processor::cleanupStaleCamData(std::chrono::steady_clock::duration threshold) {
-    auto now = std::chrono::steady_clock::now();
-    std::lock_guard<std::mutex> lock(camMtx_);
-    for (auto it = camDataMap_.begin(); it != camDataMap_.end(); ) {
-        if (now - it->second.cam_timestamp > threshold) {
-            spdlog::debug("[Processor] Removing stale CAM data for station {}", it->first);
-            it = camDataMap_.erase(it);
-        } else {
-            ++it;
-        }
-    }
-}
-
 void Processor::processCPM(const std::string& topic, const std::string& message, std::string& output, std::string& output_full){
     try {
+        auto t1 = std::chrono::high_resolution_clock::now();
+
         rj::Document doc;
         doc.Parse(message.c_str());
         if (doc.HasParseError()) {
@@ -246,6 +126,7 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
 
         // Station data and CPM
         if (topic == "vanetza/out/cpm"){
+            spdlog::debug("[Processor] Processing VANETZA CPM message from vanetza/out/cpm ...");
             sender_id = (doc.HasMember("stationID") && doc["stationID"].IsFloat()) ? static_cast<float>(doc["stationID"].GetFloat()) : NOT_PRESENT_FLOAT;
             receiver_id = (doc.HasMember("receiverID") && doc["receiverID"].IsFloat()) ? static_cast<float>(doc["receiverID"].GetFloat()) : NOT_PRESENT_FLOAT;
             receiver_type = (doc.HasMember("receiverType") && doc["receiverType"].IsFloat()) ? static_cast<float>(doc["receiverType"].GetFloat()) : NOT_PRESENT_FLOAT;
@@ -256,6 +137,7 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
                 return;
             }
         } else if (topic == "cps-v2/in/cpm" || topic == "vanetza/in/cpm") {
+            spdlog::debug("[Processor] Processing CPM message from cps-v2/in/cpm or vanetza/in/cpm ...");
             sender_id = config_.host_station_id;
             sender_type = config_.host_station_type;
             receiver_id = config_.host_station_id;
@@ -274,9 +156,15 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
             spdlog::error("[Processor] CPM does not have referenceTime");
             return;
         }
+        double cpm_reference_time_unix = static_cast<double>(cpm_reference_time + TIME_2004_MS) / 1000.0;
         unsigned long now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
         unsigned long local_gen_delta_time = now - TIME_2004_MS;
-        int age_cpm = local_gen_delta_time - cpm_reference_time;
+        unsigned long age_cpm = local_gen_delta_time - cpm_reference_time;
+        if (local_gen_delta_time < cpm_reference_time) {
+            spdlog::error("[Processor] CPM referenceTime is in the future: local {} < cpm {}", local_gen_delta_time, cpm_reference_time);
+        } else {
+            spdlog::debug("[Processor] CPM age: {} ms", age_cpm);
+        }
 
         int num_containers = cpm["cpmContainers"].GetArray().Size();
         if (num_containers == 0) {
@@ -304,28 +192,324 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
         float sender_longitude = (cpm.HasMember("managementContainer") && cpm["managementContainer"].HasMember("referencePosition") && cpm["managementContainer"]["referencePosition"].HasMember("longitude"))
             ? static_cast<float>(cpm["managementContainer"]["referencePosition"]["longitude"].GetFloat()) : NOT_PRESENT_FLOAT;
         
-        SenderInfo sender_info;
-        sender_info.station_id = sender_id;
-        sender_info.station_type = sender_type;
-        sender_info.latitude = sender_latitude;
-        sender_info.longitude = sender_longitude;
+        SenderInfo sender_info = locator_->getStationData(sender_id);
 
-        {
-            std::lock_guard<std::mutex> lock(camMtx_);
-            auto it = camDataMap_.find(sender_id);
-            // If SenderInfo is found, update the map with the latest CAM data.
-            if (it != camDataMap_.end()) {
-                it->second.latitude = sender_info.latitude;
-                
+        rj::Document objects_output;
+        objects_output.SetArray();
+        rj::Document objects_output_full;
+        objects_output_full.SetObject();
+        rj::Document::AllocatorType& allocator_output = objects_output.GetAllocator();
+        rj::Document::AllocatorType& allocator_output_full = objects_output_full.GetAllocator();
 
+        rj::Value station_data(rj::kObjectType);
+        station_data.AddMember("id", sender_info.station_id, allocator_output);
+        station_data.AddMember("type", sender_type, allocator_output);
+        station_data.AddMember("latitude", sender_latitude, allocator_output);
+        station_data.AddMember("longitude", sender_longitude, allocator_output);
+        if (sender_info.speed == NOT_PRESENT_FLOAT) station_data.AddMember("speed", rj::Value(rj::kNullType), allocator_output);
+        else station_data.AddMember("speed", sender_info.speed, allocator_output);
+        if (sender_info.heading == NOT_PRESENT_FLOAT) station_data.AddMember("heading", rj::Value(rj::kNullType), allocator_output);
+        else station_data.AddMember("heading", sender_info.heading, allocator_output);
+        if (sender_info.altitude == NOT_PRESENT_FLOAT) station_data.AddMember("altitude", rj::Value(rj::kNullType), allocator_output);
+        else station_data.AddMember("altitude", sender_info.altitude, allocator_output);
+        if (sender_info.acceleration == NOT_PRESENT_FLOAT) station_data.AddMember("acceleration", rj::Value(rj::kNullType), allocator_output);
+        else station_data.AddMember("acceleration", sender_info.acceleration, allocator_output);
+        objects_output_full.AddMember("sender", station_data, allocator_output);
+
+        rj::Value objects(rj::kArrayType);
+        rj::Value objects_full(rj::kArrayType);
+
+        int number_objects = perceivedObjectContainer["containerData"]["numberOfPerceivedObjects"].GetInt();
+
+        for(int i=0; i<number_objects; i++) {
+            rj::Value object(rj::kObjectType);
+            rj::Value object_full(rj::kObjectType);
+
+            const rj::Value& json_object = perceivedObjectContainer["containerData"]["perceivedObjects"][i];
+
+            // IDs and timestamps
+            int object_id = (json_object.HasMember("objectId") && json_object["objectId"].IsInt()) ? json_object["objectId"].GetInt() : NOT_PRESENT_INT;
+            if (object_id == NOT_PRESENT_INT) {
+                spdlog::error("[Processor] Object ID not found");
+                continue;
             }
-        }
-        
+            long object_age = age_cpm + json_object["measurementDeltaTime"].GetInt();
+            spdlog::debug("[Processor] Object ID: {}, object_age {} = age_cpm {} + measurementDeltaTime {}", object_id, object_age, age_cpm, json_object["measurementDeltaTime"].GetInt());
+            long object_timestamp = now - object_age;
+            spdlog::debug("[Processor] Object timestamp: {}", object_timestamp);
+            double object_timestamp_sec = static_cast<double>(object_timestamp) / 1000.0;
+            spdlog::debug("[Processor] Object timestamp in seconds: {}", object_timestamp_sec);
 
+            long long timestamp_secs = static_cast<long long>(now / 1000);
+            long long truncated_timestamp = (timestamp_secs / config_.repeat_id_interval) * config_.repeat_id_interval;
+            long long object_unique_id = (truncated_timestamp << 16) | (object_id & 0xFFFF);
+
+            // ------------- Sensor data -------------
+            int object_sensor_id = (json_object.HasMember("sensorIdList") && json_object["sensorIdList"].IsArray() && json_object["sensorIdList"].Size() > 0)
+                ? json_object["sensorIdList"][0].GetInt() : -1;
+            std::string object_sensor_str = "unknown";
+            try {
+                object_sensor_str = sensor_type_.at(object_sensor_id);
+            } catch(...) {
+                spdlog::error("[Processor] Sensor ID not found");
+            }
+
+            // ------------- Position data -------------
+            float object_x_distance = (json_object.HasMember("position") && json_object["position"].HasMember("xCoordinate") && json_object["position"]["xCoordinate"].HasMember("value"))
+                ? json_object["position"]["xCoordinate"]["value"].GetFloat() : NOT_PRESENT_FLOAT;
+            if (object_x_distance == NOT_PRESENT_FLOAT) {
+                spdlog::error("[Processor] Object xCoordinate not found");
+                continue;
+            }
+            float object_y_distance = (json_object.HasMember("position") && json_object["position"].HasMember("yCoordinate") && json_object["position"]["yCoordinate"].HasMember("value"))
+                ? json_object["position"]["yCoordinate"]["value"].GetFloat() : NOT_PRESENT_FLOAT;
+            if (object_y_distance == NOT_PRESENT_FLOAT) {
+                spdlog::error("[Processor] Object yCoordinate not found");
+                continue;
+            }
+            float object_z_distance = (json_object.HasMember("position") && json_object["position"].HasMember("zCoordinate") && json_object["position"]["zCoordinate"].HasMember("value"))
+                ? json_object["position"]["zCoordinate"]["value"].GetFloat() : NOT_PRESENT_FLOAT;
+            float object_x_cov = (json_object.HasMember("position") && json_object["position"].HasMember("xCoordinate") && json_object["position"]["xCoordinate"].HasMember("confidence"))
+                ? json_object["position"]["xCoordinate"]["confidence"].GetFloat() : NOT_PRESENT_FLOAT;
+            float object_y_cov = (json_object.HasMember("position") && json_object["position"].HasMember("yCoordinate") && json_object["position"]["yCoordinate"].HasMember("confidence"))
+                ? json_object["position"]["yCoordinate"]["confidence"].GetFloat() : NOT_PRESENT_FLOAT;
+            float object_z_cov = (json_object.HasMember("position") && json_object["position"].HasMember("zCoordinate") && json_object["position"]["zCoordinate"].HasMember("confidence"))
+                ? json_object["position"]["zCoordinate"]["confidence"].GetFloat() : NOT_PRESENT_FLOAT;
+
+            float object_latitude = sender_latitude + M_180_PI * (object_y_distance/R);
+            float object_longitude = sender_longitude + M_180_PI * (object_x_distance/R) / cos(M_PI_180 * sender_latitude);
+
+            // ------------- Velocity data -------------
+            float object_x_velocity = (json_object.HasMember("velocity") && json_object["velocity"].HasMember("cartesianVelocity") && json_object["velocity"]["cartesianVelocity"].HasMember("xVelocity") && json_object["velocity"]["cartesianVelocity"]["xVelocity"].HasMember("value"))
+                ? json_object["velocity"]["cartesianVelocity"]["xVelocity"]["value"].GetFloat() : NOT_PRESENT_FLOAT;
+            float object_y_velocity = (json_object.HasMember("velocity") && json_object["velocity"].HasMember("cartesianVelocity") && json_object["velocity"]["cartesianVelocity"].HasMember("yVelocity") && json_object["velocity"]["cartesianVelocity"]["yVelocity"].HasMember("value"))
+                ? json_object["velocity"]["cartesianVelocity"]["yVelocity"]["value"].GetFloat() : NOT_PRESENT_FLOAT;
+            float object_x_velocity_cov = (json_object.HasMember("velocity") && json_object["velocity"].HasMember("cartesianVelocity") && json_object["velocity"]["cartesianVelocity"].HasMember("xVelocity") && json_object["velocity"]["cartesianVelocity"]["xVelocity"].HasMember("confidence"))
+                ? json_object["velocity"]["cartesianVelocity"]["xVelocity"]["confidence"].GetFloat() : NOT_PRESENT_FLOAT;
+            float object_y_velocity_cov = (json_object.HasMember("velocity") && json_object["velocity"].HasMember("cartesianVelocity") && json_object["velocity"]["cartesianVelocity"].HasMember("yVelocity") && json_object["velocity"]["cartesianVelocity"]["yVelocity"].HasMember("confidence"))
+                ? json_object["velocity"]["cartesianVelocity"]["yVelocity"]["confidence"].GetFloat() : NOT_PRESENT_FLOAT;
+
+            float object_speed = NOT_PRESENT_FLOAT;
+            if (object_x_velocity != NOT_PRESENT_FLOAT && object_y_velocity != NOT_PRESENT_FLOAT) {
+                object_speed = std::sqrt(std::pow(object_x_velocity, 2) + std::pow(object_y_velocity, 2));
+            }
+
+            // ------------- Acceleration data -------------
+            float object_x_acceleration = (json_object.HasMember("acceleration") && json_object["acceleration"].HasMember("cartesianAcceleration") && json_object["acceleration"]["cartesianAcceleration"].HasMember("xAcceleration") && json_object["acceleration"]["cartesianAcceleration"]["xAcceleration"].HasMember("value"))
+                ? json_object["acceleration"]["cartesianAcceleration"]["xAcceleration"]["value"].GetFloat() : NOT_PRESENT_FLOAT;
+            float object_y_acceleration = (json_object.HasMember("acceleration") && json_object["acceleration"].HasMember("cartesianAcceleration") && json_object["acceleration"]["cartesianAcceleration"].HasMember("yAcceleration") && json_object["acceleration"]["cartesianAcceleration"]["yAcceleration"].HasMember("value"))
+                ? json_object["acceleration"]["cartesianAcceleration"]["yAcceleration"]["value"].GetFloat() : NOT_PRESENT_FLOAT;
+            float object_x_acceleration_cov = (json_object.HasMember("acceleration") && json_object["acceleration"].HasMember("cartesianAcceleration") && json_object["acceleration"]["cartesianAcceleration"].HasMember("xAcceleration") && json_object["acceleration"]["cartesianAcceleration"]["xAcceleration"].HasMember("confidence"))
+                ? json_object["acceleration"]["cartesianAcceleration"]["xAcceleration"]["confidence"].GetFloat() : NOT_PRESENT_FLOAT;
+            float object_y_acceleration_cov = (json_object.HasMember("acceleration") && json_object["acceleration"].HasMember("cartesianAcceleration") && json_object["acceleration"]["cartesianAcceleration"].HasMember("yAcceleration") && json_object["acceleration"]["cartesianAcceleration"]["yAcceleration"].HasMember("confidence"))
+                ? json_object["acceleration"]["cartesianAcceleration"]["yAcceleration"]["confidence"].GetFloat() : NOT_PRESENT_FLOAT;
+
+            float object_acceleration = NOT_PRESENT_FLOAT;
+            if (object_x_acceleration != NOT_PRESENT_FLOAT && object_y_acceleration != NOT_PRESENT_FLOAT) {
+                object_acceleration = std::sqrt(std::pow(object_x_acceleration, 2) + std::pow(object_y_acceleration, 2));
+            }
+
+            // ------------- Heading data -------------
+            float object_heading = (json_object.HasMember("angles") && json_object["angles"].HasMember("zAngle") && json_object["angles"]["zAngle"].HasMember("value"))
+                ? json_object["angles"]["zAngle"]["value"].GetFloat() : NOT_PRESENT_FLOAT;
+            float object_heading_cov = (json_object.HasMember("angles") && json_object["angles"].HasMember("zAngle") && json_object["angles"]["zAngle"].HasMember("confidence"))
+                ? json_object["angles"]["zAngle"]["confidence"].GetFloat() : NOT_PRESENT_FLOAT;
+
+            // ------------- Classification data -------------
+            int object_classification = (json_object.HasMember("classification") && json_object["classification"].IsArray() && json_object["classification"].Size() > 0 && json_object["classification"][0].HasMember("objectClass") && json_object["classification"][0]["objectClass"].HasMember("vehicleSubClass"))
+                ? json_object["classification"][0]["objectClass"]["vehicleSubClass"].GetInt() : -1;
+            std::string object_classification_str = "unclassified";
+            try {
+                object_classification_str = vehicle_classes_.at(object_classification);
+            } catch(...) {
+                spdlog::error("[Processor] Classification ID not found - vehicle");
+                object_classification_str = "unknown";
+            }
+            
+            if (object_classification == -1) {
+                object_classification = (json_object.HasMember("classification") && json_object["classification"].IsArray() && json_object["classification"].Size() > 0 && json_object["classification"][0].HasMember("objectClass") && json_object["classification"][0]["objectClass"].HasMember("vruSubClass"))
+                    ? json_object["classification"][0]["objectClass"]["vruSubClass"].GetInt() : -1;
+                try {
+                    object_classification_str = person_classes_.at(object_classification);
+                } catch(...) {
+                    spdlog::error("[Processor] Classification ID not found - person");
+                    object_classification_str = "unknown";
+                }
+            }
+
+            if (object_classification == -1) {
+                object_classification = (json_object.HasMember("classification") && json_object["classification"].IsArray() && json_object["classification"].Size() > 0 && json_object["classification"][0].HasMember("objectClass") && json_object["classification"][0]["objectClass"].HasMember("otherSubClass"))
+                    ? json_object["classification"][0]["objectClass"]["otherSubClass"].GetInt() : -1;
+                try {
+                    object_classification_str = other_classes_.at(object_classification);
+                } catch(...) {
+                    spdlog::error("[Processor] Classification ID not found - other");
+                    object_classification_str = "unknown";
+                }
+            }
+
+            int object_confidence = (json_object.HasMember("classification") && json_object["classification"].IsArray() && json_object["classification"].Size() > 0 && json_object["classification"][0].HasMember("confidence"))
+                ? json_object["classification"][0]["confidence"].GetInt() : -1;
+
+            // ------------- Angular velocity data -------------
+            float object_z_angular_velocity = (json_object.HasMember("zAngularVelocity") && json_object["zAngularVelocity"].HasMember("value"))
+                ? json_object["zAngularVelocity"]["value"].GetFloat() : NOT_PRESENT_FLOAT;
+            float object_z_angular_velocity_cov = (json_object.HasMember("zAngularVelocity") && json_object["zAngularVelocity"].HasMember("confidence"))
+                ? json_object["zAngularVelocity"]["confidence"].GetFloat() : NOT_PRESENT_FLOAT;
+
+            // ------------- Size data -------------
+            float object_size_x = (json_object.HasMember("objectDimensionX") && json_object["objectDimensionX"].HasMember("value"))
+                ? json_object["objectDimensionX"]["value"].GetFloat() : NOT_PRESENT_FLOAT;
+            float object_size_y = (json_object.HasMember("objectDimensionY") && json_object["objectDimensionY"].HasMember("value"))
+                ? json_object["objectDimensionY"]["value"].GetFloat() : NOT_PRESENT_FLOAT;
+            float object_size_z = (json_object.HasMember("objectDimensionZ") && json_object["objectDimensionZ"].HasMember("value"))
+                ? json_object["objectDimensionZ"]["value"].GetFloat() : NOT_PRESENT_FLOAT;
+
+            // ------------- Object simple output -------------
+            // Misc
+            object.AddMember("id", object_id, allocator_output);
+            object.AddMember("uniqueID", static_cast<int64_t>(object_unique_id), allocator_output);
+            object.AddMember("sensor", rj::Value(object_sensor_str.c_str(), allocator_output).Move(), allocator_output);
+            object.AddMember("sensorID", object_sensor_id, allocator_output);
+            if (object_confidence == -1) object.AddMember("confidence", rj::Value(rj::kNullType), allocator_output);
+            else object.AddMember("confidence", object_confidence, allocator_output);
+
+            // Attributes
+            object.AddMember("latitude", object_latitude, allocator_output);
+            object.AddMember("longitude", object_longitude, allocator_output);
+            if(object_speed == NOT_PRESENT_FLOAT) object.AddMember("speed", rj::Value(rj::kNullType), allocator_output);
+            else object.AddMember("speed", object_speed, allocator_output);
+            if(object_x_acceleration == NOT_PRESENT_FLOAT) object.AddMember("acceleration", rj::Value(rj::kNullType), allocator_output);
+            else object.AddMember("acceleration", object_acceleration, allocator_output);
+            if(object_heading == NOT_PRESENT_FLOAT) object.AddMember("heading", rj::Value(rj::kNullType), allocator_output);
+            else object.AddMember("heading", object_heading, allocator_output);
+            object.AddMember("classification", rj::Value(object_classification_str.c_str(), allocator_output).Move(), allocator_output);
+            object.AddMember("classificationID", object_classification, allocator_output);
+
+            // Station
+            object.AddMember("detectionStationType", sender_type, allocator_output);
+            object.AddMember("stationSenderID", sender_id, allocator_output);
+            object.AddMember("stationSenderType", sender_type, allocator_output);
+            object.AddMember("stationReceiverID", receiver_id, allocator_output);
+            object.AddMember("stationReceiverType", receiver_type, allocator_output);
+
+            // Timestamps
+            object.AddMember("objectAge", object_age, allocator_output_full);
+            object.AddMember("objectTimestamp", object_timestamp_sec, allocator_output_full);
+            object.AddMember("cpmAge", age_cpm, allocator_output_full);
+            object.AddMember("cpmTimestamp", cpm_reference_time, allocator_output_full);
+            object.AddMember("cpmTimestampUnix", cpm_reference_time_unix, allocator_output_full);
+
+            objects.PushBack(object, allocator_output);
+
+            // ------------- Object full output -------------
+            // Misc
+            object_full.AddMember("id", object_id, allocator_output_full);
+            object_full.AddMember("uniqueID", static_cast<int64_t>(object_unique_id), allocator_output_full);
+            object_full.AddMember("sensorType", rj::Value(object_sensor_str.c_str(), allocator_output_full).Move(), allocator_output_full);
+            object_full.AddMember("sensorID", object_sensor_id, allocator_output_full);
+            if (object_confidence == -1) object_full.AddMember("confidence", rj::Value(rj::kNullType), allocator_output_full);
+            else object_full.AddMember("confidence", object_confidence, allocator_output_full);
+
+            // Attributes
+            object_full.AddMember("latitude", object_latitude, allocator_output_full);
+            object_full.AddMember("longitude", object_longitude, allocator_output_full);
+            if (object_z_distance == NOT_PRESENT_FLOAT) object_full.AddMember("altitude", rj::Value(rj::kNullType), allocator_output_full);
+            else object_full.AddMember("altitude", object_z_distance, allocator_output_full);
+            object_full.AddMember("referenceLatitude", sender_latitude, allocator_output_full);
+            object_full.AddMember("referenceLongitude", sender_longitude, allocator_output_full);
+            object_full.AddMember("xDistance", object_x_distance, allocator_output_full);
+            object_full.AddMember("yDistance", object_y_distance, allocator_output_full);
+            if (object_x_cov == NOT_PRESENT_FLOAT) object_full.AddMember("xDistanceCov", rj::Value(rj::kNullType), allocator_output_full);
+            else object_full.AddMember("xDistanceCov", object_x_cov, allocator_output_full);
+            if (object_y_cov == NOT_PRESENT_FLOAT) object_full.AddMember("yDistanceCov", rj::Value(rj::kNullType), allocator_output_full);
+            else object_full.AddMember("yDistanceCov", object_y_cov, allocator_output_full);
+            if (object_z_cov == NOT_PRESENT_FLOAT) object_full.AddMember("altitudeCov", rj::Value(rj::kNullType), allocator_output_full);
+            else object_full.AddMember("altitudeCov", object_z_cov, allocator_output_full);
+            if (object_speed == NOT_PRESENT_FLOAT) object_full.AddMember("speed", rj::Value(rj::kNullType), allocator_output_full);
+            else object_full.AddMember("speed", object_speed, allocator_output_full);
+            if (object_x_velocity == NOT_PRESENT_FLOAT) object_full.AddMember("xVelocity", rj::Value(rj::kNullType), allocator_output_full);
+            else object_full.AddMember("xVelocity", object_x_velocity, allocator_output_full);
+            if (object_y_velocity == NOT_PRESENT_FLOAT) object_full.AddMember("yVelocity", rj::Value(rj::kNullType), allocator_output_full);
+            else object_full.AddMember("yVelocity", object_y_velocity, allocator_output_full);
+            if (object_x_velocity_cov == NOT_PRESENT_FLOAT) object_full.AddMember("xVelocityCov", rj::Value(rj::kNullType), allocator_output_full);
+            else object_full.AddMember("xVelocityCov", object_x_velocity_cov, allocator_output_full);
+            if (object_y_velocity_cov == NOT_PRESENT_FLOAT) object_full.AddMember("yVelocityCov", rj::Value(rj::kNullType), allocator_output_full);
+            else object_full.AddMember("yVelocityCov", object_y_velocity_cov, allocator_output_full);
+            if (object_acceleration == NOT_PRESENT_FLOAT) object_full.AddMember("acceleration", rj::Value(rj::kNullType), allocator_output_full);
+            else object_full.AddMember("acceleration", object_acceleration, allocator_output_full);
+            if (object_x_acceleration == NOT_PRESENT_FLOAT) object_full.AddMember("xAcceleration", rj::Value(rj::kNullType), allocator_output_full);
+            else object_full.AddMember("xAcceleration", object_x_acceleration, allocator_output_full);
+            if (object_y_acceleration == NOT_PRESENT_FLOAT) object_full.AddMember("yAcceleration", rj::Value(rj::kNullType), allocator_output_full);
+            else object_full.AddMember("yAcceleration", object_y_acceleration, allocator_output_full);
+            if (object_x_acceleration_cov == NOT_PRESENT_FLOAT) object_full.AddMember("xAccelerationCov", rj::Value(rj::kNullType), allocator_output_full);
+            else object_full.AddMember("xAccelerationCov", object_x_acceleration_cov, allocator_output_full);
+            if (object_y_acceleration_cov == NOT_PRESENT_FLOAT) object_full.AddMember("yAccelerationCov", rj::Value(rj::kNullType), allocator_output_full);
+            else object_full.AddMember("yAccelerationCov", object_y_acceleration_cov, allocator_output_full);
+            if (object_heading == NOT_PRESENT_FLOAT) object_full.AddMember("heading", rj::Value(rj::kNullType), allocator_output_full);
+            else object_full.AddMember("heading", object_heading, allocator_output_full);
+            if (object_heading_cov == NOT_PRESENT_FLOAT) object_full.AddMember("headingCov", rj::Value(rj::kNullType), allocator_output_full);
+            else object_full.AddMember("headingCov", object_heading_cov, allocator_output_full);
+            if (object_size_x == NOT_PRESENT_FLOAT) object_full.AddMember("xSize", rj::Value(rj::kNullType), allocator_output_full);
+            else object_full.AddMember("xSize", object_size_x, allocator_output_full);
+            if (object_size_y == NOT_PRESENT_FLOAT) object_full.AddMember("ySize", rj::Value(rj::kNullType), allocator_output_full);
+            else object_full.AddMember("ySize", object_size_y, allocator_output_full);
+            if (object_size_z == NOT_PRESENT_FLOAT) object_full.AddMember("zSize", rj::Value(rj::kNullType), allocator_output_full);
+            else object_full.AddMember("zSize", object_size_z, allocator_output_full);
+            if (object_z_angular_velocity == NOT_PRESENT_FLOAT) object_full.AddMember("angularVelocity", rj::Value(rj::kNullType), allocator_output_full);
+            else object_full.AddMember("angularVelocity", object_z_angular_velocity, allocator_output_full);
+            if (object_z_angular_velocity_cov == NOT_PRESENT_FLOAT) object_full.AddMember("angularVelocityCov", rj::Value(rj::kNullType), allocator_output_full);
+            else object_full.AddMember("angularVelocityCov", object_z_angular_velocity_cov, allocator_output_full);
+            object_full.AddMember("classification", rj::Value(object_classification_str.c_str(), allocator_output_full).Move(), allocator_output_full);
+            object_full.AddMember("classificationID", object_classification, allocator_output_full);
+            
+            // Station
+            object_full.AddMember("stationSenderID", sender_id, allocator_output_full);
+            object_full.AddMember("stationSenderType", sender_type, allocator_output_full);
+            object_full.AddMember("stationReceiverID", receiver_id, allocator_output_full);
+            object_full.AddMember("stationReceiverType", receiver_type, allocator_output_full);
+
+            // Timestamps
+            object_full.AddMember("objectAge", object_age, allocator_output_full);
+            object_full.AddMember("objectTimestamp", object_timestamp_sec, allocator_output_full);
+            object_full.AddMember("cpmAge", age_cpm, allocator_output_full);
+            object_full.AddMember("cpmTimestamp", cpm_reference_time, allocator_output_full);
+            object_full.AddMember("cpmTimestampUnix", cpm_reference_time_unix, allocator_output_full);
+
+            objects_full.PushBack(object_full, allocator_output_full);
+
+        }
+
+        // ------------- Serialize outputs -------------
+        objects_output.Swap(objects);
+        spdlog::debug("[Processor] Parsing {} objects ...", objects_output.Size());
+    
+        auto t2 = std::chrono::high_resolution_clock::now();
+
+        rj::StringBuffer buffer;
+        rj::Writer<rj::StringBuffer> writer(buffer);
+        objects_output.Accept(writer);
+        output = buffer.GetString();
+
+        objects_output_full.AddMember("objects", objects_full, allocator_output_full);
+        spdlog::debug("[Processor] Parsing {} full objects ...", objects_output_full["objects"].Size());
+
+        auto t3 = std::chrono::high_resolution_clock::now();
+
+        rj::StringBuffer buffer_full;
+        rj::Writer<rj::StringBuffer> writer_full(buffer_full);
+        objects_output_full.Accept(writer_full);
+        output_full = buffer_full.GetString();
+
+        auto t4 = std::chrono::high_resolution_clock::now();
+
+        auto processing_time = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
+        auto serialization_time = std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2).count();
+        auto serialization_full_time = std::chrono::duration_cast<std::chrono::microseconds>(t4 - t3).count();
+        auto total_time = std::chrono::duration_cast<std::chrono::microseconds>(t4 - t1).count();
+        spdlog::debug ("[Processor] Processing time: {} us\nSerialization time: {} us\nSerialization full time: {} us\nTotal time: {} us", processing_time, serialization_time, serialization_full_time, total_time);
     } catch (const rj::ParseResult& e) {
-        spdlog::error("[Processor] RapidJSON parse error: {} in message: {}", e.Code(), message);
-    } catch (const std::exception& e) {
-        spdlog::error("[Processor] Error processing DDS message: {}", e.what());
+        spdlog::error("[Processor] RapidJSON parse error: {} in message: {}", static_cast<int>(e.Code()), message);
     }
 }
     

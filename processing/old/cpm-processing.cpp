@@ -7,7 +7,7 @@
 #include <sstream>
 #include <cstring>
 
-const int   R = 6371000; // earth radius
+const int R = 6371000; // earth radius
 const double PI = 3.141592653589793238463;
 const long int time2004ms = 1072915200000;
 const double M_180_PI = 180.0 / M_PI;

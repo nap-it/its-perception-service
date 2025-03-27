@@ -1,0 +1,10 @@
+version: '2.4'
+services:
+  cpm-processing:
+    hostname: cpm-processing
+    container_name: cpm-processing
+    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/processing:dcc
+    volumes:
+      - ./config.ini:/config.ini
+    network_mode: host
+    ipc: host
