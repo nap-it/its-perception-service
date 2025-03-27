@@ -8,6 +8,11 @@
 # Log file path
 LOGFILE="build_docker_images.log"
 
+# Clear the log file at the beginning.
+: > "$LOGFILE"
+
+ORIG_DIR=$(pwd)
+
 # Check for build mode argument
 if [ "$1" == "push" ]; then
     BUILD_FLAG="--push"
@@ -19,7 +24,9 @@ fi
 
 # Function to print a timestamped message to stdout and the log file.
 log() {
+  pushd "$ORIG_DIR" > /dev/null
   echo "$(date +"%Y-%m-%d %H:%M:%S") : $*" | tee -a "$LOGFILE"
+  popd > /dev/null
 }
 
 # Function to build a docker image.
@@ -33,17 +40,16 @@ build_image() {
   log "---------------------------------------------------"
   log "Starting build for image: $tag"
   log "Directory: $build_dir"
-  log "---------------------------------------------------"
 
   if [ ! -d "$build_dir" ]; then
     log "ERROR: Directory $build_dir does not exist."
     return 1
   fi
-
+  
   pushd "$build_dir" > /dev/null || { log "ERROR: Could not change directory to $build_dir"; return 1; }
-
-  local start_time=$(date +%s)
   log "Running docker buildx build command..."
+  local start_time=$(date +%s)
+  
   
   docker buildx build --platform=linux/arm64,linux/amd64 $BUILD_FLAG --tag "$tag" .
   local exit_code=$?
@@ -58,15 +64,17 @@ build_image() {
   fi
 
   popd > /dev/null || log "WARNING: Could not return to previous directory."
+
+  log "---------------------------------------------------"
   return $exit_code
 }
 
 # Start builds sequentially.
 build_image "./generation" "code.nap.av.it.pt:5050/mobility-networks/cps-v2/generation:dcc" || exit 1
-#build_image "./sensor-adapters/camera-adapter" "code.nap.av.it.pt:5050/mobility-networks/cps-v2/camera-adapter:dcc" || exit 1
-#build_image "./sensor-adapters/radar-adapter" "code.nap.av.it.pt:5050/mobility-networks/cps-v2/radar-adapter:dcc" || exit 1
-#build_image "./sensor-adapters/bike-adapter" "code.nap.av.it.pt:5050/mobility-networks/cps-v2/bike-adapter:dcc" || exit 1
-#build_image "./sensor-adapters/autoware-adapter" "code.nap.av.it.pt:5050/mobility-networks/cps-v2/autoware-adapter:dcc" || exit 1
-#build_image "./processing" "code.nap.av.it.pt:5050/mobility-networks/cps-v2/processing:dcc" || exit 1
+build_image "./sensor-adapters/camera-adapter" "code.nap.av.it.pt:5050/mobility-networks/cps-v2/camera-adapter:dcc" || exit 1
+build_image "./sensor-adapters/radar-adapter" "code.nap.av.it.pt:5050/mobility-networks/cps-v2/radar-adapter:dcc" || exit 1
+build_image "./sensor-adapters/bike-adapter" "code.nap.av.it.pt:5050/mobility-networks/cps-v2/bike-adapter:dcc" || exit 1
+build_image "./sensor-adapters/autoware-adapter" "code.nap.av.it.pt:5050/mobility-networks/cps-v2/autoware-adapter:dcc" || exit 1
+build_image "./processing" "code.nap.av.it.pt:5050/mobility-networks/cps-v2/processing:dcc" || exit 1
 
 log "All builds completed."
