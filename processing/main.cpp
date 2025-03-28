@@ -79,7 +79,7 @@ int main() {
     spdlog::info("[CONFIG] Local MQTT output full topic: {}", config.local_mqtt_output_full_topic);
     config.remote_mqtt_enabled = reader.GetBoolean("processing", "remote_mqtt_enable_publisher", false);
     spdlog::info("[CONFIG] Remote MQTT enabled: {}", config.remote_mqtt_enabled);
-    config.remote_mqtt_host = reader.GetBoolean("processing", "remote_mqtt_host", "127.0.0.1");
+    config.remote_mqtt_host = reader.Get("processing", "remote_mqtt_host", "127.0.0.1");
     spdlog::info("[CONFIG] Remote MQTT host: {}", config.remote_mqtt_host);
     config.remote_mqtt_port = reader.GetInteger("processing", "remote_mqtt_port", 1883);
     spdlog::info("[CONFIG] Remote MQTT port: {}", config.remote_mqtt_port);
