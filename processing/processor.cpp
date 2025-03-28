@@ -373,6 +373,9 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
             object.AddMember("sensorID", object_sensor_id, allocator_output);
             if (object_confidence == -1) object.AddMember("confidence", rj::Value(rj::kNullType), allocator_output);
             else object.AddMember("confidence", object_confidence, allocator_output);
+            if (object_confidence == -1) object.AddMember("objectPerceptionQuality", rj::Value(rj::kNullType), allocator_output);
+            else object.AddMember("objectPerceptionQuality", static_cast<float>(object_confidence)/100.0, allocator_output);
+            
 
             // Attributes
             object.AddMember("latitude", object_latitude, allocator_output);
@@ -394,7 +397,7 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
             object.AddMember("stationReceiverType", receiver_type, allocator_output);
 
             // Timestamps
-            object.AddMember("objectAge", object_age, allocator_output_full);
+            object.AddMember("age", object_age, allocator_output_full);
             object.AddMember("objectTimestamp", object_timestamp_sec, allocator_output_full);
             object.AddMember("cpmAge", age_cpm, allocator_output_full);
             object.AddMember("cpmTimestamp", cpm_reference_time, allocator_output_full);
