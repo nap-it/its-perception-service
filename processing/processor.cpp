@@ -120,7 +120,7 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
 
         rj::Document cpm;
         float sender_id = NOT_PRESENT_FLOAT;
-        float sender_type = 5;
+        int sender_type = 5;
         float receiver_id = NOT_PRESENT_FLOAT;
         float receiver_type = NOT_PRESENT_FLOAT;
 
