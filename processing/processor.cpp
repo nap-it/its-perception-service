@@ -15,16 +15,6 @@ Processor::Processor(const Config& config, std::shared_ptr<Locator> locator) : c
         spdlog::set_level(spdlog::level::info);
     }
 
-    // Set up DDS client.
-    dds_ = new Dds("Processor", config.dds_domain, [this](const std::string& topic, const std::string& message){
-        this->on_message_dds(topic, message);
-    });
-    dds_->subscribe(config.cpm_topic);
-    if (config.cam_topic != "") dds_->subscribe(config.cam_topic);
-    dds_->provision_publisher(config.dds_output_topic);
-    dds_->provision_publisher(config.dds_output_full_topic);
-    spdlog::info("[Processor] DDS client subscribed to topic {} and {}", config.cpm_topic, config.cam_topic);
-
     // Set up Local MQTT client.
     if(config.local_mqtt_enabled) {
         data_mqtt_server mqttConfig;
@@ -54,6 +44,16 @@ Processor::Processor(const Config& config, std::shared_ptr<Locator> locator) : c
         }
         spdlog::info("[Processor] Remote MQTT client connected to broker {}", mqttConfig.address);
     }
+
+    // Set up DDS client.
+    dds_ = new Dds("Processor", config.dds_domain, [this](const std::string& topic, const std::string& message){
+        this->on_message_dds(topic, message);
+    });
+    dds_->subscribe(config.cpm_topic);
+    if (config.cam_topic != "") dds_->subscribe(config.cam_topic);
+    dds_->provision_publisher(config.dds_output_topic);
+    dds_->provision_publisher(config.dds_output_full_topic);
+    spdlog::info("[Processor] DDS client subscribed to topic {} and {}", config.cpm_topic, config.cam_topic);
 
 }
 

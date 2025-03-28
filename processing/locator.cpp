@@ -50,6 +50,8 @@ Locator::Locator(ProviderType provider,
     else {
         throw std::runtime_error("[Locator] Unknown provider type");
     }
+
+    camDataMap_ = {};
 }
 
 Locator::~Locator() {
