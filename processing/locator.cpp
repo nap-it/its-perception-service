@@ -143,20 +143,20 @@ void Locator::parseAndUpdateData(const std::string& topic, const std::string& me
             spdlog::debug("[Locator] Updated own station data: id={}, speed={}, heading={}, altitude={}, acceleration={}", id, speed, heading, altitude, acceleration);
         } else if (topic == "vanetza/in/cam_full") {
             if (doc.HasMember("camParameters") && doc["camParameters"].IsObject()) {
-            const rj::Value& camParameters = doc["camParameters"];
-            float speed = NOT_PRESENT_FLOAT;
-            float heading = NOT_PRESENT_FLOAT;
-            float altitude = NOT_PRESENT_FLOAT;
-            float acceleration = NOT_PRESENT_FLOAT;
-            int id = station_id_;
-            if (camParameters.HasMember("basicContainer") && camParameters["basicContainer"].IsObject()) {
-                const rj::Value& basicContainer = camParameters["basicContainer"];
-                if (basicContainer.HasMember("referencePosition") && basicContainer["referencePosition"].IsObject()) {
-                const rj::Value& referencePosition = basicContainer["referencePosition"];
-                altitude = (referencePosition.HasMember("altitude") && referencePosition["altitude"].IsObject() &&
-                        referencePosition["altitude"].HasMember("altitudeValue") &&
-                        referencePosition["altitude"]["altitudeValue"].IsFloat())
-                      ? referencePosition["altitude"]["altitudeValue"].GetFloat() : NOT_PRESENT_FLOAT;   
+                const rj::Value& camParameters = doc["camParameters"];
+                int id = station_id_;
+                float speed = NOT_PRESENT_FLOAT;
+                float heading = NOT_PRESENT_FLOAT;
+                float altitude = NOT_PRESENT_FLOAT;
+                float acceleration = NOT_PRESENT_FLOAT;
+                if (camParameters.HasMember("basicContainer") && camParameters["basicContainer"].IsObject()) {
+                    const rj::Value& basicContainer = camParameters["basicContainer"];
+                    if (basicContainer.HasMember("referencePosition") && basicContainer["referencePosition"].IsObject()) {
+                    const rj::Value& referencePosition = basicContainer["referencePosition"];
+                    altitude = (referencePosition.HasMember("altitude") && referencePosition["altitude"].IsObject() &&
+                            referencePosition["altitude"].HasMember("altitudeValue") &&
+                            referencePosition["altitude"]["altitudeValue"].IsFloat())
+                        ? referencePosition["altitude"]["altitudeValue"].GetFloat() : NOT_PRESENT_FLOAT;   
                 }
             }
             if (camParameters.HasMember("highFrequencyContainer") && camParameters["highFrequencyContainer"].IsObject()) {
@@ -285,8 +285,8 @@ void Locator::parseAndUpdateData(const std::string& topic, const std::string& me
                 spdlog::debug("[Locator] Updated station data: id={}, speed={}, heading={}, altitude={}, acceleration={}", station_id, speed, heading, altitude, acceleration);
             }
         } else {
-            spdlog::warn("[Locator] Unknown topic: {}", topic);
-            return;
+            spdlog::error("[Locator] Unknown topic: {}", topic);
+            throw std::runtime_error("[Locator] Unknown topic");
         }
     } catch (const std::exception& e) {
         spdlog::error("[Locator] Error parsing location message: {}", e.what());

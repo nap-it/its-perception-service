@@ -171,7 +171,7 @@ void Locator::parseAndUpdateLocation(const std::string& topic, const std::string
             }
         } else {
             spdlog::warn("[Locator] Unknown topic: {}", topic);
-            return;
+            throw std::runtime_error("[Locator] Unknown topic");
         }
         
         {
