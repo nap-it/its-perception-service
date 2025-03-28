@@ -236,7 +236,8 @@ void Locator::parseAndUpdateData(const std::string& topic, const std::string& me
             }
 
         } else if (topic == "vanetza/out/cam_full") {
-            int station_id = (doc.HasMember("station_id") && doc["station_id"].IsInt()) ? doc["station_id"].GetInt() : -1;
+            int station_id = (doc.HasMember("fields") && doc["fields"].IsObject() && doc["fields"].HasMember("header") && doc["fields"]["header"].IsObject() && doc["fields"]["header"].HasMember("stationID") && doc["fields"]["header"]["stationID"].IsInt())
+                ? doc["fields"]["header"]["stationID"].GetInt() : -1;
             if (station_id == -1) {
                 spdlog::warn("[Locator] No station ID in message: {}", message);
                 return;
