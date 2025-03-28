@@ -49,10 +49,10 @@ Processor::Processor(const Config& config, std::shared_ptr<Locator> locator) : c
     dds_ = new Dds("Processor", config.dds_domain, [this](const std::string& topic, const std::string& message){
         this->on_message_dds(topic, message);
     });
-    dds_->subscribe(config.cpm_topic);
-    if (config.cam_topic != "") dds_->subscribe(config.cam_topic);
     dds_->provision_publisher(config.dds_output_topic);
     dds_->provision_publisher(config.dds_output_full_topic);
+    dds_->subscribe(config.cpm_topic);
+    if (config.cam_topic != "") dds_->subscribe(config.cam_topic);
     spdlog::info("[Processor] DDS client subscribed to topic {} and {}", config.cpm_topic, config.cam_topic);
 
 }
@@ -86,23 +86,43 @@ void Processor::on_message_dds(const std::string& topic, const std::string& mess
             return;
         }
 
-        dds_->publish(config_.dds_output_topic, output);
-        dds_->publish(config_.dds_output_full_topic, full_output);
-        spdlog::info("[Processor] Published DDS message on topic {} and {}", config_.dds_output_topic, config_.dds_output_full_topic);
-
-        if(config_.local_mqtt_enabled) {
-            local_mqtt_client_->publish(config_.local_mqtt_output_topic, output);
-            local_mqtt_client_->publish(config_.local_mqtt_output_full_topic, full_output);
-            spdlog::info("[Processor] Published Local MQTT message on topic {} and {}", config_.local_mqtt_output_topic, config_.local_mqtt_output_full_topic);
+        try {
+            if (dds_) {
+                dds_->publish(config_.dds_output_topic, output);
+                dds_->publish(config_.dds_output_full_topic, full_output);
+                spdlog::info("[Processor] Published DDS message on topic {} and {}", config_.dds_output_topic, config_.dds_output_full_topic);
+            } else {
+                spdlog::error("[Processor] DDS client is not available");
+            }
+        } catch (const std::exception& e) {
+            spdlog::error("[Processor] Exception while publishing DDS message: {}", e.what());
         }
 
-        if(config_.remote_mqtt_enabled) {
-            remote_mqtt_client_->publish(config_.remote_mqtt_output_topic, output);
-            remote_mqtt_client_->publish(config_.remote_mqtt_output_full_topic, full_output);
-            spdlog::info("[Processor] Published Remote MQTT message on topic {} and {}", config_.remote_mqtt_output_topic, config_.remote_mqtt_output_full_topic);
+        try {
+            if (config_.local_mqtt_enabled && local_mqtt_client_) {
+                local_mqtt_client_->publish(config_.local_mqtt_output_topic, output);
+                local_mqtt_client_->publish(config_.local_mqtt_output_full_topic, full_output);
+                spdlog::info("[Processor] Published Local MQTT message on topic {} and {}", config_.local_mqtt_output_topic, config_.local_mqtt_output_full_topic);
+            } else if (config_.local_mqtt_enabled) {
+                spdlog::error("[Processor] Local MQTT client is not available");
+            }
+        } catch (const std::exception& e) {
+            spdlog::error("[Processor] Exception while publishing Local MQTT message: {}", e.what());
         }
 
-    } else {
+        try {
+            if (config_.remote_mqtt_enabled && remote_mqtt_client_) {
+                remote_mqtt_client_->publish(config_.remote_mqtt_output_topic, output);
+                remote_mqtt_client_->publish(config_.remote_mqtt_output_full_topic, full_output);
+                spdlog::info("[Processor] Published Remote MQTT message on topic {} and {}", config_.remote_mqtt_output_topic, config_.remote_mqtt_output_full_topic);
+            } else if (config_.remote_mqtt_enabled) {
+                spdlog::error("[Processor] Remote MQTT client is not available");
+            }
+        } catch (const std::exception& e) {
+            spdlog::error("[Processor] Exception while publishing Remote MQTT message: {}", e.what());
+        }
+
+        } else {
         spdlog::warn("[Processor] Received message on unknown topic: {}", topic);
     }
 }
