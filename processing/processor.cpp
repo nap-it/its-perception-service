@@ -139,17 +139,17 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
         }
 
         rj::Document cpm;
-        float sender_id = NOT_PRESENT_FLOAT;
+        int sender_id = NOT_PRESENT_INT;
         int sender_type = 5;
-        float receiver_id = NOT_PRESENT_FLOAT;
-        float receiver_type = NOT_PRESENT_FLOAT;
+        int receiver_id = NOT_PRESENT_INT;
+        int receiver_type = NOT_PRESENT_INT;
 
         // Station data and CPM
         if (topic == "vanetza/out/cpm"){
             spdlog::debug("[Processor] Processing VANETZA CPM message from vanetza/out/cpm ...");
-            sender_id = (doc.HasMember("stationID") && doc["stationID"].IsFloat()) ? static_cast<float>(doc["stationID"].GetFloat()) : NOT_PRESENT_FLOAT;
-            receiver_id = (doc.HasMember("receiverID") && doc["receiverID"].IsFloat()) ? static_cast<float>(doc["receiverID"].GetFloat()) : NOT_PRESENT_FLOAT;
-            receiver_type = (doc.HasMember("receiverType") && doc["receiverType"].IsFloat()) ? static_cast<float>(doc["receiverType"].GetFloat()) : NOT_PRESENT_FLOAT;
+            sender_id = (doc.HasMember("stationID") && doc["stationID"].IsInt()) ? doc["stationID"].GetInt() : NOT_PRESENT_INT;
+            receiver_id = (doc.HasMember("receiverID") && doc["receiverID"].IsInt()) ? doc["receiverID"].GetInt() : NOT_PRESENT_INT;
+            receiver_type = (doc.HasMember("receiverType") && doc["receiverType"].IsInt()) ? doc["receiverType"].GetInt() : NOT_PRESENT_INT;
             if (doc.HasMember("fields") && doc["fields"].IsObject() && doc["fields"].HasMember("payload") && doc["fields"]["payload"].IsObject()) {
                 cpm.CopyFrom(doc["fields"]["payload"], cpm.GetAllocator());
             } else {

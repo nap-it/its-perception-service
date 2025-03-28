@@ -251,9 +251,11 @@ void Locator::parseAndUpdateData(const std::string& topic, const std::string& me
                 if (camParameters.HasMember("basicContainer") && camParameters["basicContainer"].IsObject()) {
                     const rj::Value& basicContainer = camParameters["basicContainer"];
                     if (basicContainer.HasMember("referencePosition") && basicContainer["referencePosition"].IsObject()) {
-                        const rj::Value& referencePosition = basicContainer["referencePosition"];
-                        altitude = (referencePosition.HasMember("altitude") && referencePosition["altitude"].IsFloat())
-                              ? referencePosition["altitude"]["altitudeValue"].GetFloat() : NOT_PRESENT_FLOAT;
+                    const rj::Value& referencePosition = basicContainer["referencePosition"];
+                    altitude = (referencePosition.HasMember("altitude") && referencePosition["altitude"].IsObject() &&
+                            referencePosition["altitude"].HasMember("altitudeValue") &&
+                            referencePosition["altitude"]["altitudeValue"].IsFloat())
+                        ? referencePosition["altitude"]["altitudeValue"].GetFloat() : NOT_PRESENT_FLOAT;   
                     }
                 }
                 if (camParameters.HasMember("highFrequencyContainer") && camParameters["highFrequencyContainer"].IsObject()) {
