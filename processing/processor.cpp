@@ -373,9 +373,6 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
             object.AddMember("sensorID", object_sensor_id, allocator_output);
             if (object_confidence == -1) object.AddMember("confidence", rj::Value(rj::kNullType), allocator_output);
             else object.AddMember("confidence", object_confidence, allocator_output);
-            if (object_confidence == -1) object.AddMember("objectPerceptionQuality", rj::Value(rj::kNullType), allocator_output);
-            else object.AddMember("objectPerceptionQuality", static_cast<float>(object_confidence)/100.0, allocator_output);
-            
 
             // Attributes
             object.AddMember("latitude", object_latitude, allocator_output);
