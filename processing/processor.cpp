@@ -226,7 +226,7 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
         station_data.AddMember("type", sender_type, allocator_output);
         station_data.AddMember("latitude", sender_latitude, allocator_output);
         station_data.AddMember("longitude", sender_longitude, allocator_output);
-        if (sender_info.speed == NOT_PRESENT_FLOAT) station_data.AddMember("speed", rj::Value(rj::kNullType), allocator_output);
+        if (sender_info.speed == NOT_PRESENT_FLOAT) station_data.AddMember("speed", 0, allocator_output);
         else station_data.AddMember("speed", sender_info.speed, allocator_output);
         if (sender_info.heading == NOT_PRESENT_FLOAT) station_data.AddMember("heading", rj::Value(rj::kNullType), allocator_output);
         else station_data.AddMember("heading", sender_info.heading, allocator_output);
