@@ -156,7 +156,11 @@ void Locator::parseAndUpdateData(const std::string& topic, const std::string& me
                     altitude = (referencePosition.HasMember("altitude") && referencePosition["altitude"].IsObject() &&
                             referencePosition["altitude"].HasMember("altitudeValue") &&
                             referencePosition["altitude"]["altitudeValue"].IsFloat())
-                        ? referencePosition["altitude"]["altitudeValue"].GetFloat() : NOT_PRESENT_FLOAT;   
+                        ? referencePosition["altitude"]["altitudeValue"].GetFloat() : NOT_PRESENT_FLOAT;
+                    if (altitude > 5000.0f) {
+                        spdlog::warn("[Locator] Altitude value is too high: {}", altitude);
+                        altitude = NOT_PRESENT_FLOAT;
+                    }
                 }
             }
             if (camParameters.HasMember("highFrequencyContainer") && camParameters["highFrequencyContainer"].IsObject()) {
