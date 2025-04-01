@@ -128,7 +128,7 @@ void Locator::parseAndUpdateData(const std::string& topic, const std::string& me
             return;
         }
         
-        if (topic == "vanetza/in/cam" || topic == "vanetza/own/cam") {
+        if (topic == "vanetza/in/cam" || topic == "vanetza/own/cam" || topic == "vanetza/out/cam") {
             int id = station_id_;
             float speed = (doc.HasMember("speed") && doc["speed"].IsFloat()) ? doc["speed"].GetFloat() : NOT_PRESENT_FLOAT;
             float heading = (doc.HasMember("heading") && doc["heading"].IsFloat()) ? doc["heading"].GetFloat() : NOT_PRESENT_FLOAT;
