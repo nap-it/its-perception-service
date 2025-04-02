@@ -76,17 +76,17 @@ void RadarAdapter::run() {
         dds_->publish("cps/sensors", sensorInfoStr);
         spdlog::debug("Sensor information published: {}", sensorInfoStr);
         {
-            std::lock_guard<std::mutex> lock(counter_mutex);
-            spdlog::info("Received {} radar messages in the last 5 seconds", message_count);
-            message_count = 0;
+            std::lock_guard<std::mutex> lock(counter_mutex_);
+            spdlog::info("Received {} radar messages in the last 5 seconds", message_count_);
+            message_count_ = 0;
         }
     }
 }
 
 void RadarAdapter::on_message_mqtt(const std::string& topic, const std::string& message) {
     {
-        std::lock_guard<std::mutex> lock(counter_mutex);
-        message_count++;
+        std::lock_guard<std::mutex> lock(counter_mutex_);
+        message_count_++;
     }
     spdlog::debug("Received MQTT message on topic: {}", topic);
     std::string parsed_message = parseMessage(message);

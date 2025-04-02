@@ -6,4 +6,4 @@
 **/.vscode
 **/paho-mqtt-cpp-wrapper
 
-./build_docker_images.log
+**/build_docker_images.log

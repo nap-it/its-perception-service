@@ -52,6 +52,9 @@ public:
     void run();
 
 private:
+    int message_count_ = 0;
+    std::mutex counter_mutex_;
+
     Config config;
     Dds* dds_;
     MqttWrapper* mqtt_wrapper;

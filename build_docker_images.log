@@ -1,7 +1,6 @@
-2025-03-27 17:13:59 : ---------------------------------------------------
-2025-03-27 17:13:59 : Starting build for image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/generation:dcc
-2025-03-27 17:13:59 : Directory: ./generation
-2025-03-27 17:13:59 : Running docker buildx build command...
-2025-03-27 17:14:01 : SUCCESS: Build completed for image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/generation:dcc. Duration: 2 seconds.
-2025-03-27 17:14:01 : ---------------------------------------------------
-2025-03-27 17:14:01 : All builds completed.
+2025-04-02 16:52:20 : ---------------------------------------------------
+2025-04-02 16:52:20 : Starting build for image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/generation:dcc
+2025-04-02 16:52:20 : Directory: ./generation
+2025-04-02 16:52:20 : Running docker buildx build command...
+2025-04-02 16:52:25 : ERROR: Build failed for image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/generation:dcc. Duration: 5 seconds.
+2025-04-02 16:52:25 : ---------------------------------------------------
