@@ -1,6 +1,0 @@
-2025-04-02 16:52:20 : ---------------------------------------------------
-2025-04-02 16:52:20 : Starting build for image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/generation:dcc
-2025-04-02 16:52:20 : Directory: ./generation
-2025-04-02 16:52:20 : Running docker buildx build command...
-2025-04-02 16:52:25 : ERROR: Build failed for image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/generation:dcc. Duration: 5 seconds.
-2025-04-02 16:52:25 : ---------------------------------------------------
