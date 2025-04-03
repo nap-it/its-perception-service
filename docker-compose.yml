@@ -1,6 +1,6 @@
 version: '2.4'
 services:
-  cpm-generation:
+  generation:
     image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/generation:dcc
     restart: always
     volumes:
@@ -8,8 +8,8 @@ services:
     networks:
       deploymentslan:
 
-  cpm-processing:
-    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/cpm-processing:latest
+  processing:
+    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/processing:dcc
     restart: always
     volumes:
       - ./processing/config.ini:/config.ini
