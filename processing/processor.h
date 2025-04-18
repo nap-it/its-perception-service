@@ -61,7 +61,7 @@ struct Config {
     int host_station_id;
     int repeat_id_interval;
     int cam_freshness_threshold;
-    std::string cpm_topic;
+    std::string cpm_topics;
     std::string cam_topic;
     std::string dds_output_topic;
     std::string dds_output_full_topic;

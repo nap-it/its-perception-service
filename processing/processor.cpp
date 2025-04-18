@@ -51,9 +51,24 @@ Processor::Processor(const Config& config, std::shared_ptr<Locator> locator) : c
     });
     dds_->provision_publisher(config.dds_output_topic);
     dds_->provision_publisher(config.dds_output_full_topic);
-    dds_->subscribe(config.cpm_topic);
+    std::vector<std::string> topics;
+    std::istringstream ss(config.cpm_topics); // assume config.cpm_topic contains comma-separated topics
+    std::string token;
+    while (std::getline(ss, token, ',')) {
+        topics.push_back(token);
+    }
+    for (const auto& topic : topics) {
+        if (topic != "") {
+            if (topic == "vanetza/out/cpm" || topic == "cps-v2/in/cpm" || topic == "vanetza/in/cpm") {
+                dds_->subscribe(topic);
+            } else {
+                spdlog::warn("[Processor] Unknown topic: {}", topic);
+                spdlog::warn("[Processor] Only 'vanetza/out/cpm', 'cps-v2/in/cpm' and 'vanetza/in/cpm' are supported");
+            }
+        }
+    }
     if (config.cam_topic != "") dds_->subscribe(config.cam_topic);
-    spdlog::info("[Processor] DDS client subscribed to topic {} and {}", config.cpm_topic, config.cam_topic);
+    spdlog::info("[Processor] DDS client subscribed to topics {} and {}", config.cpm_topics, config.cam_topic);
 
 }
 
@@ -75,8 +90,8 @@ void Processor::run() {
 void Processor::on_message_dds(const std::string& topic, const std::string& message) {
     spdlog::debug("[Processor] Received message on topic {}: {}", topic, message);
 
-    if (topic == config_.cpm_topic) {
-        spdlog::debug("[Processor] Processing CPM message...");
+    if (topic == "vanetza/out/cpm" || topic == "cps-v2/in/cpm" || topic == "vanetza/in/cpm") {
+        spdlog::debug("[Processor] Processing CPM...");
         std::string output = "";
         std::string full_output = "";
         this->processCPM(topic, message, output, full_output);
@@ -146,7 +161,7 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
 
         // Station data and CPM
         if (topic == "vanetza/out/cpm"){
-            spdlog::debug("[Processor] Processing VANETZA CPM message from vanetza/out/cpm ...");
+            spdlog::debug("[Processor] Processing VANETZA CPM from vanetza/out/cpm ...");
             sender_id = (doc.HasMember("stationID") && doc["stationID"].IsInt()) ? doc["stationID"].GetInt() : NOT_PRESENT_INT;
             receiver_id = (doc.HasMember("receiverID") && doc["receiverID"].IsInt()) ? doc["receiverID"].GetInt() : NOT_PRESENT_INT;
             receiver_type = (doc.HasMember("receiverType") && doc["receiverType"].IsInt()) ? doc["receiverType"].GetInt() : NOT_PRESENT_INT;
@@ -157,7 +172,7 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
                 return;
             }
         } else if (topic == "cps-v2/in/cpm" || topic == "vanetza/in/cpm") {
-            spdlog::debug("[Processor] Processing CPM message from cps-v2/in/cpm or vanetza/in/cpm ...");
+            spdlog::debug("[Processor] Processing CPM from cps-v2/in/cpm or vanetza/in/cpm ...");
             sender_id = config_.host_station_id;
             sender_type = config_.host_station_type;
             receiver_id = config_.host_station_id;

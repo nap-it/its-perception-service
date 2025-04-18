@@ -59,8 +59,8 @@ int main() {
     spdlog::info("[CONFIG] Host station type: {}", config.host_station_type);
     config.host_station_id = reader.GetInteger("processing", "station_id", 1);
     spdlog::info("[CONFIG] Host station id: {}", config.host_station_id);
-    config.cpm_topic = reader.Get("processing", "cpm_topic", "cps-v2/in/cpm");
-    spdlog::info("[CONFIG] CPM topic: {}", config.cpm_topic);
+    config.cpm_topics = reader.Get("processing", "cpm_topic", "cps-v2/in/cpm");
+    spdlog::info("[CONFIG] CPM topics: {}", config.cpm_topics);
     config.dds_output_topic = reader.Get("processing", "dds_output_topic", "objects");
     spdlog::info("[CONFIG] DDS output topic: {}", config.dds_output_topic);
     config.dds_output_full_topic = reader.Get("processing", "dds_output_full_topic", "objects_full");
