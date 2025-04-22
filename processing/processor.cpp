@@ -61,13 +61,14 @@ Processor::Processor(const Config& config, std::shared_ptr<Locator> locator) : c
         if (topic != "") {
             if (topic == "vanetza/out/cpm" || topic == "cps-v2/in/cpm" || topic == "vanetza/in/cpm") {
                 dds_->subscribe(topic);
+                spdlog::info("[Processor] Subscribing to topic: {}", topic);
             } else {
                 spdlog::warn("[Processor] Unknown topic: {}", topic);
                 spdlog::warn("[Processor] Only 'vanetza/out/cpm', 'cps-v2/in/cpm' and 'vanetza/in/cpm' are supported");
             }
         }
     }
-    if (config.cam_topic != "") dds_->subscribe(config.cam_topic);
+    //if (config.cam_topic != "") dds_->subscribe(config.cam_topic);
     spdlog::info("[Processor] DDS client subscribed to topics {} and {}", config.cpm_topics, config.cam_topic);
 
 }
@@ -171,6 +172,7 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
                 spdlog::error("[Processor] CPM message does not have fields/payload");
                 return;
             }
+            spdlog::debug("[Processor] Sender ID: {}, Sender Type: {}, Receiver ID: {}, Receiver Type: {}", sender_id, sender_type, receiver_id, receiver_type);
         } else if (topic == "cps-v2/in/cpm" || topic == "vanetza/in/cpm") {
             spdlog::debug("[Processor] Processing CPM from cps-v2/in/cpm or vanetza/in/cpm ...");
             sender_id = config_.host_station_id;
