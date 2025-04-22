@@ -188,7 +188,15 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
         // Timestamps
         unsigned long cpm_reference_time = NOT_PRESENT_INT;
         if (cpm.HasMember("managementContainer") && cpm["managementContainer"].HasMember("referenceTime")) {
+            // if (topic == "vanetza/out/cpm") {
+            //     float cpm_reference_time_float = static_cast<float>((cpm["managementContainer"]["referenceTime"].GetDouble()) * 1000.0f);
+            //     spdlog::debug("[Processor] CPM referenceTime: {}f ms", cpm_reference_time_float);
+            //     cpm_reference_time = static_cast<unsigned long>(cpm_reference_time_float);
+            //     spdlog::debug("[Processor] CPM referenceTime: {} ms", cpm_reference_time);
+            // } else {
             cpm_reference_time = cpm["managementContainer"]["referenceTime"].GetInt64();
+            spdlog::debug("[Processor] CPM referenceTime: {} ms", cpm_reference_time);
+            // }
         } else {
             spdlog::error("[Processor] CPM does not have referenceTime");
             return;
@@ -230,6 +238,8 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
             ? static_cast<float>(cpm["managementContainer"]["referencePosition"]["longitude"].GetFloat()) : NOT_PRESENT_FLOAT;
         
         SenderInfo sender_info = locator_->getStationData(sender_id);
+
+        spdlog::debug("[Processor] Sender Type: {}", sender_type);
 
         rj::Document objects_output;
         objects_output.SetArray();
