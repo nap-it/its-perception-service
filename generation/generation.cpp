@@ -79,6 +79,29 @@ void Generation::runLoop() {
 
         if (freshObjects.empty()) {
             spdlog::info("[Generation]: No fresh objects retrieved this cycle.");
+
+            if(addSensor) {
+                stationLatitude = locator_->getStationLatitude();
+                stationLongitude = locator_->getStationLongitude();
+                stationHeading = locator_->getStationHeading();
+                stationType = locator_->getStationType();
+                spdlog::info("[Generation]: Station Latitude: {}, Longitude: {}, Type: {}", stationLatitude, stationLongitude, stationType);
+
+                // Generate CPM
+                auto t1 = std::chrono::high_resolution_clock::now();
+                std::string cpm_str = builder_.generateCPM(freshObjects, sensorInfo, addSensor, stationLatitude, stationLongitude, stationHeading, stationType);
+                auto t2 = std::chrono::high_resolution_clock::now();
+
+                if (performanceLogs_) {
+                    generation_file_logger_->info("Generation,generateCPM,{},{},{}", aggregator_->getCurrentTimestampString(), freshObjects.size(), std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count());
+                    generation_file_logger_->flush();
+                }
+
+                spdlog::info("[Generation]: Publising CPM: {}", cpm_str);
+
+                // Publish CPM
+                dds_->publish(ddsTopic_, cpm_str);
+            }
         } else {
             spdlog::info("[Generation]: Retrieved {} fresh objects.", freshObjects.size());
             

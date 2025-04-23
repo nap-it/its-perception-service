@@ -268,6 +268,11 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
 
         int number_objects = perceivedObjectContainer["containerData"]["numberOfPerceivedObjects"].GetInt();
 
+        if (number_objects == 0) {
+            spdlog::error("[Processor] No objects received!");
+            return;
+        }
+
         for(int i=0; i<number_objects; i++) {
             rj::Value object(rj::kObjectType);
             rj::Value object_full(rj::kObjectType);
