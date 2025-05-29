@@ -269,7 +269,7 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
         int number_objects = perceivedObjectContainer["containerData"]["numberOfPerceivedObjects"].GetInt();
 
         if (number_objects == 0) {
-            spdlog::error("[Processor] No objects received!");
+            spdlog::warn("[Processor] No objects received!");
             return;
         }
 
@@ -303,20 +303,20 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
             try {
                 object_sensor_str = sensor_type_.at(object_sensor_id);
             } catch(...) {
-                spdlog::error("[Processor] Sensor ID not found");
+                spdlog::error("[Processor] Sensor ID not found for object ID {}", object_id);
             }
 
             // ------------- Position data -------------
             float object_x_distance = (json_object.HasMember("position") && json_object["position"].HasMember("xCoordinate") && json_object["position"]["xCoordinate"].HasMember("value"))
                 ? json_object["position"]["xCoordinate"]["value"].GetFloat() : NOT_PRESENT_FLOAT;
             if (object_x_distance == NOT_PRESENT_FLOAT) {
-                spdlog::error("[Processor] Object xCoordinate not found");
+                spdlog::error("[Processor] Object xCoordinate not found for object ID {}", object_id);
                 continue;
             }
             float object_y_distance = (json_object.HasMember("position") && json_object["position"].HasMember("yCoordinate") && json_object["position"]["yCoordinate"].HasMember("value"))
                 ? json_object["position"]["yCoordinate"]["value"].GetFloat() : NOT_PRESENT_FLOAT;
             if (object_y_distance == NOT_PRESENT_FLOAT) {
-                spdlog::error("[Processor] Object yCoordinate not found");
+                spdlog::error("[Processor] Object yCoordinate not found for object ID {}", object_id);
                 continue;
             }
             float object_z_distance = (json_object.HasMember("position") && json_object["position"].HasMember("zCoordinate") && json_object["position"]["zCoordinate"].HasMember("value"))
@@ -374,7 +374,7 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
             try {
                 object_classification_str = vehicle_classes_.at(object_classification);
             } catch(...) {
-                spdlog::error("[Processor] Classification ID not found - vehicle");
+                spdlog::error("[Processor] Classification ID not found - vehicle for object ID {}", object_id);
                 object_classification_str = "unknown";
             }
             
@@ -384,7 +384,7 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
                 try {
                     object_classification_str = person_classes_.at(object_classification);
                 } catch(...) {
-                    spdlog::error("[Processor] Classification ID not found - person");
+                    spdlog::error("[Processor] Classification ID not found - person for object ID {}", object_id);
                     object_classification_str = "unknown";
                 }
             }
@@ -395,7 +395,7 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
                 try {
                     object_classification_str = other_classes_.at(object_classification);
                 } catch(...) {
-                    spdlog::error("[Processor] Classification ID not found - other");
+                    spdlog::error("[Processor] Classification ID not found - other for object ID {}", object_id);
                     object_classification_str = "unknown";
                 }
             }

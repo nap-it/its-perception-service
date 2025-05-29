@@ -52,7 +52,7 @@ int main() {
 
     Config config;
     config.debug = reader.GetBoolean("processing", "debug", false);
-    spdlog::info("[CONFIG] Processir debug mode: {}", config.debug);
+    spdlog::info("[CONFIG] Processing debug mode: {}", config.debug);
     config.dds_domain = reader.GetInteger("processing", "domain_id", 0);
     spdlog::info("[CONFIG] DDS domain: {}", config.dds_domain);
     config.host_station_type = reader.GetInteger("processing", "station_type", 5);

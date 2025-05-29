@@ -41,10 +41,11 @@ std::string Builder::generateCPM(const std::vector<Object>& freshObjects,
     // Get current time (in milliseconds) and calculate the reference time.
     auto now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     unsigned long referenceTime = now - time2004ms;
+    double referenceTimeSec = static_cast<double>(referenceTime) / 1000.0;
 
     // Build the management container.
     rj::Value managementContainer(rj::kObjectType);
-    managementContainer.AddMember("referenceTime", referenceTime, alloc);
+    managementContainer.AddMember("referenceTime", referenceTimeSec, alloc);
 
     rj::Value referencePosition(rj::kObjectType);
     referencePosition.AddMember("latitude", stationLatitude, alloc);
