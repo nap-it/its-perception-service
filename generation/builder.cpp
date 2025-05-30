@@ -45,7 +45,7 @@ std::string Builder::generateCPM(const std::vector<Object>& freshObjects,
 
     // Build the management container.
     rj::Value managementContainer(rj::kObjectType);
-    managementContainer.AddMember("referenceTime", referenceTime, alloc);
+    managementContainer.AddMember("referenceTime", referenceTimeSec, alloc);
 
     rj::Value referencePosition(rj::kObjectType);
     referencePosition.AddMember("latitude", stationLatitude, alloc);
