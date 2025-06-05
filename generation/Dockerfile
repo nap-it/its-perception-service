@@ -36,7 +36,6 @@ WORKDIR /workspace
 RUN git clone https://github.com/eclipse-zenoh/zenoh-c.git
 WORKDIR /workspace/zenoh-c
 RUN git checkout 1.4.0
-# Example for zenoh-c
 RUN mkdir build && cd build && \
     cmake .. -DZENOHC_BUILD_WITH_UNSTABLE_API=true -DZENOHC_BUILD_WITH_SHARED_MEMORY=true -DCMAKE_INSTALL_PREFIX=/usr/local && \
     cmake --build . --config Release && \
@@ -132,7 +131,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libtinyxml2-8 \
     libcurl4-openssl-dev \
     libssl-dev \
-    python3 \
     && rm -rf /var/lib/apt/lists/*
 
 # ------------------------- Copy Built Libraries -------------------------
