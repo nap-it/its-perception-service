@@ -1,5 +1,5 @@
 # ==============================
-# 1️⃣  BUILDER STAGE
+# BUILDER STAGE
 # ==============================
 FROM debian:bullseye-slim AS builder
 
@@ -20,13 +20,38 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libtinyxml2-dev \
     libcurl4-openssl-dev \
     libssl-dev \
+    clang \
     git \
     ca-certificates \
-    python3 \
-    python3-pip \
+    curl \
+    pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
-# ------------------------- Build Fast-DDS -------------------------
+# Install Rust toolchain (needed to build zenoh-c)
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | bash -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# ------------------------- Zenoh C -------------------------
+WORKDIR /workspace
+RUN git clone https://github.com/eclipse-zenoh/zenoh-c.git
+WORKDIR /workspace/zenoh-c
+RUN git checkout 1.4.0
+# Example for zenoh-c
+RUN mkdir build && cd build && \
+    cmake .. -DZENOHC_BUILD_WITH_UNSTABLE_API=true -DZENOHC_BUILD_WITH_SHARED_MEMORY=true -DCMAKE_INSTALL_PREFIX=/usr/local && \
+    cmake --build . --config Release && \
+    cmake --build . --target install
+
+# ------------------------- Zenoh CPP -------------------------
+WORKDIR /workspace
+RUN git clone https://github.com/eclipse-zenoh/zenoh-cpp.git
+WORKDIR /workspace/zenoh-cpp
+RUN git checkout 1.4.0
+RUN mkdir build && cd build && \
+    cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local -DZENOHCXX_ENABLE_TESTS=OFF -DZENOHCXX_ENABLE_EXAMPLES=OFF -Dzenohc_DIR=/usr/local/lib/cmake/zenohc && \
+    cmake --build . --target install
+
+# ------------------------- Fast-DDS -------------------------
 WORKDIR /usr/src
 RUN git clone https://github.com/eProsima/foonathan_memory_vendor.git && \
     mkdir /usr/src/foonathan_memory_vendor/build
@@ -54,7 +79,7 @@ WORKDIR /usr/src/Fast-DDS/build
 RUN cmake .. && \
     cmake --build . --target install --parallel $(nproc)
 
-# ------------------------- Build MQTT C -------------------------
+# ------------------------- MQTT C -------------------------
 WORKDIR /usr/src
 RUN git clone https://github.com/eclipse/paho.mqtt.c.git
 WORKDIR /usr/src/paho.mqtt.c
@@ -63,7 +88,7 @@ RUN cmake -Bbuild -H. -DPAHO_ENABLE_TESTING=OFF -DPAHO_BUILD_STATIC=ON -DPAHO_WI
 RUN cmake --build build/ --target install
 RUN ldconfig
 
-# ------------------------- Build MQTT C++ -------------------------
+# ------------------------- MQTT C++ -------------------------
 WORKDIR /usr/src
 RUN git clone https://github.com/eclipse/paho.mqtt.cpp
 WORKDIR /usr/src/paho.mqtt.cpp
@@ -90,7 +115,7 @@ RUN chmod +x main
 
 
 # ==============================
-# 2️⃣  FINAL RUNTIME STAGE
+# FINAL RUNTIME STAGE
 # ==============================
 FROM debian:bullseye-slim AS runtime
 
@@ -117,6 +142,7 @@ COPY --from=builder /usr/local/lib/libfastcdr.so* /usr/local/lib/
 COPY --from=builder /usr/local/lib/libfastrtps.so* /usr/local/lib/
 COPY --from=builder /usr/local/lib/libfoonathan_memory* /usr/local/lib/
 COPY --from=builder /usr/local/lib/libspdlog.so* /usr/local/lib/
+COPY --from=builder /usr/local/lib/libzenoh* /usr/local/lib/
 
 # Ensure shared libraries are found
 RUN ldconfig

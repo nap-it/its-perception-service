@@ -11,8 +11,8 @@ namespace fs = std::filesystem;
 Aggregator* Aggregator::instance_ = nullptr;
 
 // Constructor: sets up DDS and subscribes to the "cps/objects" topic.
-Aggregator::Aggregator(int ddsDomain, long maxObjectAge, long cleanInterval, bool ignoreRules, bool performanceLogs)
-    : maxObjectAge_(maxObjectAge), cleanInterval_(cleanInterval), stopFlag_(false), ignoreRules_(ignoreRules), currentID_(1), performanceLogs_(performanceLogs)
+Aggregator::Aggregator(int ddsDomain, long maxObjectAge, long cleanInterval, bool ignoreRules, bool performanceLogs, const std::string& zenohEndpoint)
+    : maxObjectAge_(maxObjectAge), cleanInterval_(cleanInterval), stopFlag_(false), ignoreRules_(ignoreRules), currentID_(1), performanceLogs_(performanceLogs), zenohEndpoint_(zenohEndpoint)
 {
     // Set the static instance pointer to this object.
     instance_ = this;
@@ -24,6 +24,7 @@ Aggregator::Aggregator(int ddsDomain, long maxObjectAge, long cleanInterval, boo
         fs::remove("./logs/aggregator.csv");
     }
 
+    // Logger initialization
     if(performanceLogs_) {
         aggregator_file_logger_ = spdlog::basic_logger_mt("aggregator_logger", "./logs/aggregator.csv");
         aggregator_file_logger_->set_pattern("%v");
@@ -37,6 +38,28 @@ Aggregator::Aggregator(int ddsDomain, long maxObjectAge, long cleanInterval, boo
     //dds_->provision_publisher("cps/pending");
     spdlog::info("[Aggregator] Initialized on DDS domain {} and subscribed to 'cps/objects'", ddsDomain);
 
+    // Initialize Zenoh client
+    zenoh::Config config = zenoh::Config::create_default();
+    zenoh::ZResult *err = nullptr;
+    config.insert_json5("mode", "\"peer\"", err);
+    if (!zenohEndpoint.empty()) {
+        config.insert_json5("connect/endpoints", fmt::format("[\"tcp/{}:7447\"]", zenohEndpoint), err);
+    } 
+    config.insert_json5("connect/retry", "{\"interval_ms\":1000,\"max_retries\":-1}", err);
+    config.insert_json5("connect/exit_on_failure", "false", err);
+    config.insert_json5("open/return_conditions/connect_scouted", "true", err);
+    if (err) {
+        spdlog::error("[Aggregator] Error in Zenoh configuration: {}", static_cast<const void*>(err));
+    } else {
+        spdlog::debug("[Aggregator] Zenoh configuration: {}", config.to_string());
+    }
+
+    spdlog::info("[Aggregator] Opening Zenoh session ...");
+    zenoh::Session session = zenoh::Session::open(std::move(config));
+    spdlog::info("[Aggregator] Zenoh session opened successfully.");
+    
+    zenoh::KeyExpr topic("zenoh/metrics");
+    zenoh::Subscriber sub = session.declare_subscriber(topic, &zenohCallback, zenoh::closures::none);
 }
 
 Aggregator::~Aggregator() {
@@ -316,7 +339,7 @@ double Aggregator::calculateHaversineDistance(double lat1, double lon1, double l
 }
 
 
-void Aggregator::on_message_dds(const std::string& topic, const std::string& message) {
+void Aggregator::on_message(const std::string& topic, const std::string& message) {
     spdlog::debug("[Aggregator] Received DDS message on topic '{}': {}", topic, message);
     try {
         auto t1 = std::chrono::high_resolution_clock::now();
@@ -397,7 +420,7 @@ void Aggregator::on_message_dds(const std::string& topic, const std::string& mes
                 auto t2 = std::chrono::high_resolution_clock::now();
                 auto duration = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
                 if (performanceLogs_)
-                    aggregator_file_logger_->info("Aggregator,on_message_dds,{},{},{}", getCurrentTimestampString(), objectsArray.Size(), duration);
+                    aggregator_file_logger_->info("Aggregator,on_message,{},{},{}", getCurrentTimestampString(), objectsArray.Size(), duration);
             }
         } else if (topic == "cps/sensors") {
             SensorInfo sensor;
@@ -415,17 +438,26 @@ void Aggregator::on_message_dds(const std::string& topic, const std::string& mes
             spdlog::warn("[Aggregator] Received message on unknown topic: {}", topic);
         }
     } catch (const rj::ParseResult& e) {
-        spdlog::error("[Aggregator] RapidJSON parse error: {} in message: {}", e.Code(), message);
+        spdlog::error("[Aggregator] RapidJSON parse error: {} in message: {}", static_cast<int>(e.Code()), message);
     } catch (const std::exception& e) {
         spdlog::error("[Aggregator] Error processing DDS message: {}", e.what());
     }
 }
 
+void Aggregator::zenohCallback(zenoh::Sample &sample) {
+    // Forward the callback to the instance method.
+    if (instance_) {
+        auto topic = sample.get_keyexpr().as_string_view();
+        std::string message = sample.get_payload().as_string();
+        spdlog::debug("[Aggregator] Received Zenoh message: {}", message);
+        instance_->on_message("cps/objects", message);
+    }
+}
 
 void Aggregator::ddsCallback(const std::string& topic, const std::string& message) {
     // Forward the callback to the instance method.
     if (instance_) {
-        instance_->on_message_dds(topic, message);
+        instance_->on_message(topic, message);
     }
 }
 

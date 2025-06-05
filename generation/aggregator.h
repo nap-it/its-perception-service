@@ -14,6 +14,7 @@
 #include "fastdds-cpp-wrapper/dds.hpp"
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/basic_file_sink.h"
+#include <zenoh.hxx>
 
 namespace rj = rapidjson;
 
@@ -83,8 +84,9 @@ public:
      * @param cleanInterval Interval (in seconds) to run the cleanup routine (default: 5 seconds).
      * @param ignoreRules Ignore freshness rules (default: false).
      * @param performanceLogs Enable performance logs (default: false).
+     * @param zenohEndpoint Zenoh endpoint to connect to (default: none).
      */
-    Aggregator(int domainId, long maxObjectAgeS = 300, long cleanInterval = 5, bool ignoreRules = false, bool performanceLogs = false);
+    Aggregator(int domainId, long maxObjectAgeS = 300, long cleanInterval = 5, bool ignoreRules = false, bool performanceLogs = false, const std::string& zenohEndpoint = "");
 
     /**
      * @brief Destroy the Aggregator object.
@@ -114,18 +116,25 @@ public:
     std::unordered_map<int, SensorInfo> getSensorInfo();
 
     /**
-     * @brief Non-static DDS message handler.
-     * Called when a new DDS message arrives on "cps/objects".
-     * @param topic The DDS topic.
+     * @brief Non-static message handler.
+     * Called when a new DDS/Zenoh message arrives on "cps/objects".
+     * @param topic The DDS/Zenoh topic.
      * @param message The received message (JSON formatted).
      */
-    void on_message_dds(const std::string& topic, const std::string& message);
+    void on_message(const std::string& topic, const std::string& message);
 
     /**
      * @brief Static DDS callback that forwards the call to the Aggregator instance.
      * This is needed because the DDS client does not allow passing a context pointer.
      */
     static void ddsCallback(const std::string& topic, const std::string& message);
+
+    /**
+     * @brief Static Zenoh callback that forwards the call to the Aggregator instance.
+     * This is needed because the Zenoh client does not allow passing a context pointer.
+     */
+
+    static void zenohCallback(zenoh::Sample &sample);
 
     /**
      * @brief get the current timestamp as a string.
@@ -156,6 +165,7 @@ private:
     double minHeadingDiff_ = 4.0;    // Minimum heading difference (degrees)
     bool ignoreRules_;               // Ignore freshness rules
     bool performanceLogs_;           // Enable performance logs
+    std::string zenohEndpoint_;      // Zenoh endpoint for communication
     std::string priorityType_;       // Priority type
 
     // Cleanup configuration

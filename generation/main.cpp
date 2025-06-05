@@ -81,12 +81,16 @@ int main() {
     spdlog::info("[CONFIG] Aggregator ignore rules: {}", aggregator_ignore_rules);
     bool aggregator_performance_logs = reader.GetBoolean("aggregator", "performance_logs", false);
     spdlog::info("[CONFIG] Aggregator performance logs: {}", aggregator_performance_logs);
+    std::string zenoh_endpoint = reader.Get("aggregator", "zenoh_endpoint", "");
+    spdlog::info("[CONFIG] Aggregator Zenoh endpoint: {}", zenoh_endpoint);
 
     auto aggregator = std::make_shared<Aggregator>(aggregator_dds_domain,
                                                     aggregator_max_object_age,
                                                     aggregator_clean_interval,
                                                     aggregator_ignore_rules, 
-                                                    aggregator_performance_logs);
+                                                    aggregator_performance_logs,
+                                                    zenoh_endpoint);
+
     aggregator->run();
 
     // Generation configuration
