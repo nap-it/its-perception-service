@@ -130,11 +130,17 @@ public:
     static void ddsCallback(const std::string& topic, const std::string& message);
 
     /**
-     * @brief Static Zenoh callback that forwards the call to the Aggregator instance.
+     * @brief Static Zenoh objects callback that forwards the call to the Aggregator instance.
      * This is needed because the Zenoh client does not allow passing a context pointer.
      */
 
-    static void zenohCallback(zenoh::Sample &sample);
+    static void zenohObjsCallback(zenoh::Sample &sample);
+
+    /**
+     * @brief Static Zenoh sensors callback that forwards the call to the Aggregator instance.
+     * This is needed because the Zenoh client does not allow passing a context pointer.
+     */
+    static void zenohSensorsCallback(zenoh::Sample &sample);
 
     /**
      * @brief get the current timestamp as a string.
