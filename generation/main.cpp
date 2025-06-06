@@ -81,6 +81,8 @@ int main() {
     spdlog::info("[CONFIG] Aggregator ignore rules: {}", aggregator_ignore_rules);
     bool aggregator_performance_logs = reader.GetBoolean("aggregator", "performance_logs", false);
     spdlog::info("[CONFIG] Aggregator performance logs: {}", aggregator_performance_logs);
+    std::string aggregator_priority_type = reader.Get("aggregator", "priority", "etsi");
+    spdlog::info("[CONFIG] Aggregator priority type: {}", aggregator_priority_type);
     std::string zenoh_endpoint = reader.Get("aggregator", "zenoh_endpoint", "");
     spdlog::info("[CONFIG] Aggregator Zenoh endpoint: {}", zenoh_endpoint);
 
@@ -89,7 +91,8 @@ int main() {
                                                     aggregator_clean_interval,
                                                     aggregator_ignore_rules, 
                                                     aggregator_performance_logs,
-                                                    zenoh_endpoint);
+                                                    zenoh_endpoint,
+                                                    aggregator_priority_type);
 
     aggregator->run();
 
@@ -102,13 +105,16 @@ int main() {
     spdlog::info("[CONFIG] Generation DDS topic: {}", generation_dds_topic);
     bool generation_performance_logs = reader.GetBoolean("generation", "performance_logs", false);
     spdlog::info("[CONFIG] Generation performance logs: {}", generation_performance_logs);
+    int generation_max_objects = reader.GetInteger("generation", "max_objects", -1);
+    spdlog::info("[CONFIG] Generation max objects: {}", generation_max_objects);
 
     Generation generation(aggregator, 
                     locator, 
                     generation_interval, 
                     generation_dds_domain, 
                     generation_dds_topic,
-                    generation_performance_logs);
+                    generation_performance_logs,
+                    generation_max_objects);
     generation.run();
 
     while (true) {

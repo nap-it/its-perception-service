@@ -11,22 +11,29 @@ namespace fs = std::filesystem;
 Aggregator* Aggregator::instance_ = nullptr;
 
 // Constructor: sets up DDS and subscribes to the "cps/objects" topic.
-Aggregator::Aggregator(int ddsDomain, long maxObjectAge, long cleanInterval, bool ignoreRules, bool performanceLogs, const std::string& zenohEndpoint)
-    : maxObjectAge_(maxObjectAge), cleanInterval_(cleanInterval), stopFlag_(false), ignoreRules_(ignoreRules), currentID_(1), performanceLogs_(performanceLogs), zenohEndpoint_(zenohEndpoint)
+Aggregator::Aggregator(int ddsDomain, long maxObjectAge, long cleanInterval, bool ignoreRules, bool performanceLogs, const std::string& zenohEndpoint, const std::string& proprityType) 
+    :   maxObjectAge_(maxObjectAge), 
+        cleanInterval_(cleanInterval), 
+        stopFlag_(false), 
+        ignoreRules_(ignoreRules), 
+        currentID_(1), 
+        performanceLogs_(performanceLogs), 
+        zenohEndpoint_(zenohEndpoint),
+        priorityType_(proprityType)
 {
     // Set the static instance pointer to this object.
     instance_ = this;
 
     // File logger
-    if (!fs::exists("./logs")) {
-        fs::create_directory("./logs");
-    } else if (fs::exists("./logs/aggregator.csv")) {
-        fs::remove("./logs/aggregator.csv");
+    if (!fs::exists("/logs")) {
+        fs::create_directory("/logs");
+    } else if (fs::exists("/logs/aggregator.csv")) {
+        fs::remove("/logs/aggregator.csv");
     }
 
     // Logger initialization
     if(performanceLogs_) {
-        aggregator_file_logger_ = spdlog::basic_logger_mt("aggregator_logger", "./logs/aggregator.csv");
+        aggregator_file_logger_ = spdlog::basic_logger_mt("aggregator_logger", "/logs/aggregator.csv");
         aggregator_file_logger_->set_pattern("%v");
         aggregator_file_logger_->flush_on(spdlog::level::info);
     }
@@ -35,7 +42,6 @@ Aggregator::Aggregator(int ddsDomain, long maxObjectAge, long cleanInterval, boo
     dds_ = new Dds("CPS-aggregator", ddsDomain, ddsCallback);
     dds_->subscribe("cps/objects");
     dds_->subscribe("cps/sensors");
-    //dds_->provision_publisher("cps/pending");
     spdlog::info("[Aggregator] Initialized on DDS domain {} and subscribed to 'cps/objects'", ddsDomain);
 
     // Initialize Zenoh client
@@ -178,6 +184,7 @@ std::vector<Object> Aggregator::getFreshObjects(int maxObjects) {
     std::vector<ObjectEntity> pendingList;
 
     print_all_objects(all_objects_);
+    
     // Transfer pending objects to freshList
     for (const auto& pair : all_objects_) {
         if (pair.second.to_send) {
@@ -186,6 +193,14 @@ std::vector<Object> Aggregator::getFreshObjects(int maxObjects) {
             pendingList.push_back(pair.second);
         }
     }
+    spdlog::debug("[Aggregator] Total objects in all_objects_: {}, only {} with to_send = true and {} with to_send = false", all_objects_.size(), freshList.size(), pendingList.size());
+
+    if (performanceLogs_){
+        aggregator_file_logger_->info("Aggregator,all_objects_.to_send,{},{},{}", getCurrentTimestampString(), "true", freshList.size());
+        aggregator_file_logger_->info("Aggregator,all_objects_.to_send,{},{},{}", getCurrentTimestampString(), "false", pendingList.size());
+    }
+
+
 
     if (freshList.empty()) {
         spdlog::debug("[Aggregator] No fresh objects available.");

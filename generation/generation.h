@@ -21,8 +21,9 @@ public:
      * @param ddsDomain DDS domain ID if provider is DDS.
      * @param ddsTopic DDS topic to subscribe for CAMs if provider is DDS.
      * @param performanceLogs Enable performance logs.
+     * @param maxObjects Maximum number of objects to get from the aggregator (default: -1 for no limit).
      */
-    Generation(std::shared_ptr<Aggregator> aggregator, std::shared_ptr<Locator> locator, int requestRateMs, int ddsDomain, std::string ddsTopic, bool performanceLogs);
+    Generation(std::shared_ptr<Aggregator> aggregator, std::shared_ptr<Locator> locator, int requestRateMs, int ddsDomain, std::string ddsTopic, bool performanceLogs = false, int maxObjects = -1);
 
     /**
      * @brief Destroy the Generation object.
@@ -55,6 +56,7 @@ private:
     std::shared_ptr<Aggregator> aggregator_;
     std::shared_ptr<Locator> locator_;
     bool performanceLogs_;
+    int maxObjects_;
     std::atomic<int> requestRateMs_;
     std::atomic<bool> stopFlag_;
     std::thread generationThread_;

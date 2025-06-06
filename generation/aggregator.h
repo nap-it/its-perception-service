@@ -85,8 +85,9 @@ public:
      * @param ignoreRules Ignore freshness rules (default: false).
      * @param performanceLogs Enable performance logs (default: false).
      * @param zenohEndpoint Zenoh endpoint to connect to (default: none).
+     * @param priorityType Type of priority calculation to use (default: "etsi"), options: "etsi", "predictor".
      */
-    Aggregator(int domainId, long maxObjectAgeS = 300, long cleanInterval = 5, bool ignoreRules = false, bool performanceLogs = false, const std::string& zenohEndpoint = "");
+    Aggregator(int domainId, long maxObjectAgeS = 300, long cleanInterval = 5, bool ignoreRules = false, bool performanceLogs = false, const std::string& zenohEndpoint = "", const std::string& priorityType = "etsi");
 
     /**
      * @brief Destroy the Aggregator object.
@@ -151,8 +152,11 @@ public:
         std::time_t tt = std::chrono::system_clock::to_time_t(now);
         std::tm tm = *std::localtime(&tt);
         std::ostringstream oss;
-        // Format as: YYYY-MM-DD HH:MM:SS
+        // Format as: YYYY-MM-DD HH:MM:SS.MSMSMS
         oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
+        // Add milliseconds.
+        auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
+        oss << '.' << std::setfill('0') << std::setw(3) << ms.count();
         return oss.str();
     }
 
@@ -160,8 +164,8 @@ private:
     Dds* dds_;
 
     zenoh::Session* session_ = nullptr;
-    zenoh::Subscriber<void>* subscriber_objects_   = nullptr; 
-    zenoh::Subscriber<void>* subscriber_sensors_    = nullptr;
+    zenoh::Subscriber<void>* subscriber_objects_ = nullptr; 
+    zenoh::Subscriber<void>* subscriber_sensors_ = nullptr;
     
     std::mutex objMtx_;
     std::unordered_map<int, ObjectEntity> all_objects_; // All objects received

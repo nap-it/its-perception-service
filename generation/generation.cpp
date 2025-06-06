@@ -4,17 +4,17 @@
 
 namespace fs = std::filesystem;
 
-Generation::Generation(std::shared_ptr<Aggregator> aggregator, std::shared_ptr<Locator> locator, int requestRateMs, int ddsDomain, std::string ddsTopic, bool performanceLogs)
-    : aggregator_(aggregator), locator_(locator), requestRateMs_(requestRateMs), stopFlag_(false), ddsTopic_(ddsTopic), performanceLogs_(performanceLogs) {
+Generation::Generation(std::shared_ptr<Aggregator> aggregator, std::shared_ptr<Locator> locator, int requestRateMs, int ddsDomain, std::string ddsTopic, bool performanceLogs, int maxObjects)
+    : aggregator_(aggregator), locator_(locator), requestRateMs_(requestRateMs), stopFlag_(false), ddsTopic_(ddsTopic), performanceLogs_(performanceLogs), maxObjects_(maxObjects) {
     
     spdlog::info("[Generation] initialized with request rate {} ms", requestRateMs);
 
     // File logger
-    if (fs::exists("./logs/generation.csv")) {
-        fs::remove("./logs/generation.csv");
+    if (fs::exists("/logs/generation.csv")) {
+        fs::remove("/logs/generation.csv");
     }
     if(performanceLogs_) {
-        generation_file_logger_ = spdlog::basic_logger_mt("generation_logger", "./logs/generation.csv");
+        generation_file_logger_ = spdlog::basic_logger_mt("generation_logger", "/logs/generation.csv");
         generation_file_logger_->set_pattern("%v");
         generation_file_logger_->flush_on(spdlog::level::info);
     }
@@ -64,7 +64,7 @@ void Generation::runLoop() {
         auto start = std::chrono::high_resolution_clock::now();
 
         // Retrieve fresh objects from the aggregator.
-        freshObjects = aggregator_->getFreshObjects();
+        freshObjects = aggregator_->getFreshObjects(maxObjects_);
         addSensor = false;
 
         auto now = std::chrono::system_clock::now();
