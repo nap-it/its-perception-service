@@ -434,10 +434,12 @@ void Aggregator::on_message(const std::string& topic, const std::string& message
                         }
                     }
                 }
+
                 auto t2 = std::chrono::high_resolution_clock::now();
                 auto duration = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
-                if (performanceLogs_)
+                if (performanceLogs_) {
                     aggregator_file_logger_->info("Aggregator,on_message,{},{},{}", getCurrentTimestampString(), objectsArray.Size(), duration);
+                }
             }
         } else if (topic == "cps/sensors") {
             SensorInfo sensor;
