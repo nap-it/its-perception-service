@@ -55,13 +55,13 @@ Aggregator::Aggregator(int ddsDomain, long maxObjectAge, long cleanInterval, boo
     }
 
     spdlog::info("[Aggregator] Opening Zenoh session ...");
-    zenoh::Session session = zenoh::Session::open(std::move(config));
+    session_ = new zenoh::Session(std::move(zenoh::Session::open(std::move(config))));
     spdlog::info("[Aggregator] Zenoh session opened successfully.");
     
     zenoh::KeyExpr topic_objects("cps/objects");
     zenoh::KeyExpr topic_sensors("cps/sensors");
-    zenoh::Subscriber sub_objs = session.declare_subscriber(topic_objects, &zenohObjsCallback, zenoh::closures::none);
-    zenoh::Subscriber sub_sensors = session.declare_subscriber(topic_sensors, &zenohSensorsCallback, zenoh::closures::none);
+    subscriber_objects_ = new zenoh::Subscriber(std::move(session_->declare_subscriber(topic_objects, &zenohObjsCallback, zenoh::closures::none)));
+    subscriber_sensors_ = new zenoh::Subscriber(std::move(session_->declare_subscriber(topic_sensors, &zenohSensorsCallback, zenoh::closures::none)));
 }
 
 Aggregator::~Aggregator() {
@@ -342,7 +342,7 @@ double Aggregator::calculateHaversineDistance(double lat1, double lon1, double l
 
 
 void Aggregator::on_message(const std::string& topic, const std::string& message) {
-    spdlog::debug("[Aggregator] Received DDS message on topic '{}': {}", topic, message);
+    spdlog::debug("[Aggregator] Received message on topic '{}': {}", topic, message);
     try {
         auto t1 = std::chrono::high_resolution_clock::now();
         rj::Document doc;
@@ -448,22 +448,18 @@ void Aggregator::on_message(const std::string& topic, const std::string& message
 
 void Aggregator::zenohObjsCallback(zenoh::Sample &sample) {
     // Forward the callback to the instance method.
-    if (instance_) {
-        auto topic = sample.get_keyexpr().as_string_view();
-        std::string message = sample.get_payload().as_string();
-        spdlog::debug("[Aggregator] Received Zenoh message: {}", message);
-        instance_->on_message("cps/objects", message);
-    }
+    auto topic = sample.get_keyexpr().as_string_view();
+    std::string message = sample.get_payload().as_string();
+    spdlog::debug("[Aggregator] Received Zenoh message: {}", message);
+    instance_->on_message("cps/objects", message);
 }
 
 void Aggregator::zenohSensorsCallback(zenoh::Sample &sample) {
     // Forward the callback to the instance method.
-    if (instance_) {
-        auto topic = sample.get_keyexpr().as_string_view();
-        std::string message = sample.get_payload().as_string();
-        spdlog::debug("[Aggregator] Received Zenoh message: {}", message);
-        instance_->on_message("cps/sensors", message);
-    }
+    auto topic = sample.get_keyexpr().as_string_view();
+    std::string message = sample.get_payload().as_string();
+    spdlog::debug("[Aggregator] Received Zenoh message: {}", message);
+    instance_->on_message("cps/sensors", message);
 }
 
 void Aggregator::ddsCallback(const std::string& topic, const std::string& message) {

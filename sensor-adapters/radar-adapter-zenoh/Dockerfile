@@ -68,7 +68,23 @@ RUN cmake -Bbuild -H. -DPAHO_BUILD_STATIC=ON -DPAHO_BUILD_DOCUMENTATION=OFF -DPA
 RUN cmake --build build/ --target install
 RUN ldconfig
 
+# ------------------------- Build Radar Adapter -------------------------
+WORKDIR /usr/src/radar-adapter
+# RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/spdlog.git
+# RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/mobility-networks/paho-mqtt-cpp-wrapper.git
+# RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/rapidjson.git
+COPY spdlog /usr/src/radar-adapter/spdlog
+COPY paho-mqtt-cpp-wrapper /usr/src/radar-adapter/paho-mqtt-cpp-wrapper
+COPY rapidjson /usr/src/radar-adapter/rapidjson
 
+COPY *.cpp /usr/src/radar-adapter/
+COPY *.h /usr/src/radar-adapter/
+COPY *.hpp /usr/src/radar-adapter/
+COPY CMakeLists.txt /usr/src/radar-adapter/
+
+WORKDIR /usr/src/radar-adapter
+RUN cmake . && cmake --build . --parallel $(nproc)
+RUN chmod +x main
 
 # ==============================
 # FINAL RUNTIME STAGE
@@ -103,28 +119,15 @@ COPY --from=builder /usr/local/lib/libzenoh* /usr/local/lib/
 COPY --from=builder /usr/local/lib/libpaho-mqtt3*.so* /usr/local/lib/
 COPY --from=builder /usr/local/lib/libpaho-mqttpp3.so* /usr/local/lib/
 COPY --from=builder /usr/local/lib/libspdlog.so* /usr/local/lib/
-COPY --from=builder /usr/local/ /usr/local/
-
-# ------------------------- Build Radar Adapter -------------------------
-WORKDIR /usr/src/radar-adapter
-RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/spdlog.git
-RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/mobility-networks/paho-mqtt-cpp-wrapper.git
-RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/rapidjson.git
-
-COPY *.cpp /usr/src/radar-adapter/
-COPY *.h /usr/src/radar-adapter/
-COPY *.hpp /usr/src/radar-adapter/
-COPY CMakeLists.txt /usr/src/radar-adapter/
-
-WORKDIR /usr/src/radar-adapter
-RUN cmake . && cmake --build . --parallel $(nproc)
-RUN chmod +x main
+# COPY --from=builder /usr/local/ /usr/local/
 
 # Ensure shared libraries are found
 RUN ldconfig
 
 # ------------------------- Copy Radar Adapter Binary -------------------------
-#COPY --from=builder /usr/src/radar-adapter/main /radar-adapter/main
+COPY --from=builder /usr/src/radar-adapter/main /radar-adapter/main
+# RUN mkdir -p /radar-adapter
+# RUN cp /usr/src/radar-adapter/main /radar-adapter/main
 
 WORKDIR /radar-adapter
 ENTRYPOINT ["/radar-adapter/main"]

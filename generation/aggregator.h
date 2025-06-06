@@ -158,6 +158,11 @@ public:
 
 private:
     Dds* dds_;
+
+    zenoh::Session* session_ = nullptr;
+    zenoh::Subscriber<void>* subscriber_objects_   = nullptr; 
+    zenoh::Subscriber<void>* subscriber_sensors_    = nullptr;
+    
     std::mutex objMtx_;
     std::unordered_map<int, ObjectEntity> all_objects_; // All objects received
 
