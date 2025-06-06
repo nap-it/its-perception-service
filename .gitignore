@@ -5,5 +5,5 @@
 **/spdlog
 **/.vscode
 **/paho-mqtt-cpp-wrapper
-
+**/logs
 **/build_docker_images.log
