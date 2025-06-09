@@ -39,16 +39,14 @@ cps_configs:
     max_objects: -1
     interval: 100
     performance_logs: false
-    # must choose one of the allowed DDS topics:
     generation_dds_topic: "cps-v2/in/cpm"  # or "vanetza/in/cpm"
-    # (override to second option or via host_vars)
     max_object_age: 300
     clean_interval: 5
     ignore_rules: false
     priority: "etsi"
     zenoh_endpoint: 127.0.0.1
 
-  processing:
+  processing: # Mostly used for ATCLL visualization
     debug: false
     domain_id: "{{ id }}"
     station_type: "{{ station_type }}"
@@ -74,7 +72,6 @@ cps_configs:
     remote_mqtt_output_topic: "{{ processing_remote_prefix }}"
     remote_mqtt_output_full_topic: "{{ processing_remote_prefix_full }}"
 
-  # Adapters share almost identical parameters except the [section] header.
   "radar-adapter":
     debug: false
     domain_id: "{{ id }}"
