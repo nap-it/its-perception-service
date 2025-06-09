@@ -1,0 +1,52 @@
+[general]
+debug = {{ this_cfg.debug | lower }}
+
+[locator]
+domain_id = {{ this_cfg.domain_id }}
+station_type = {{ this_cfg.station_type }}
+location_provider = {{ this_cfg.location_provider }}   ; static, mqtt or dds
+{% if this_cfg.location_provider == 'static' %}
+station_latitude = {{ this_cfg.station_latitude }}
+station_longitude = {{ this_cfg.station_longitude }}
+mqtt_host =
+mqtt_port =
+mqtt_topic =
+dds_topic =
+{% elif this_cfg.location_provider == 'mqtt' %}
+station_latitude =
+station_longitude =
+mqtt_host = {{ this_cfg.mqtt_host }}
+mqtt_port = {{ this_cfg.mqtt_port }}
+mqtt_topic = {{ this_cfg.mqtt_topic }}
+dds_topic =
+{% elif this_cfg.location_provider == 'dds' %}
+station_latitude =
+station_longitude =
+mqtt_host =
+mqtt_port =
+mqtt_topic =
+dds_topic = {{ this_cfg.dds_topic }}
+{% else %}
+station_latitude =
+station_longitude =
+mqtt_host =
+mqtt_port =
+mqtt_topic =
+dds_topic =
+{% endif %}
+
+[aggregator]
+domain_id = {{ this_cfg.domain_id }}
+max_object_age = {{ this_cfg.max_object_age }}
+clean_interval = {{ this_cfg.clean_interval }}
+ignore_rules = {{ this_cfg.ignore_rules | lower }}
+performance_logs = {{ this_cfg.performance_logs | lower }}
+priority = {{ this_cfg.priority }}
+zenoh_endpoint = {{ this_cfg.zenoh_endpoint }}
+
+[generation]
+interval = {{ this_cfg.interval }}
+domain_id = {{ this_cfg.domain_id }}
+dds_topic = {{ this_cfg.generation_dds_topic }}
+performance_logs = {{ this_cfg.performance_logs | lower }}
+max_objects = {{ this_cfg.max_objects }}

@@ -1,0 +1,12 @@
+- hosts: all
+  become: true
+  remote_user: nap
+  become_user: root
+  gather_facts: true
+  vars:
+    ansible_password: openlab
+    ansible_sudo_pass: openlab
+    ansible_python_interpreter: /usr/bin/python3
+
+  roles:
+    - role: cps

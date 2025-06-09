@@ -1,0 +1,45 @@
+---
+# vars file for cps role
+
+cps_token_v2: glpat-BZYHmcoyr2u-Bsx1sFoZ
+
+# ----------------------------------------------------------------------------
+# Build a list of all “generic” services (strings that match image names)
+# ----------------------------------------------------------------------------
+
+generic_services: >-
+  {{
+    [] 
+      + ([ 'generation' ] if generation_enable else [])
+      + ([ 'processing' ] if processing_enable else [])
+      + ([ 'autoware-adapter' ] if autoware_adapter_enable else [])
+      + ([ 'bike-adapter' ] if bike_adapter_enable else [])
+      + ([ 'camera-adapter' ] * camera_adapter_count)
+      + ([ 'radar-adapter' ] * radar_adapter_count)
+  }}
+
+# ----------------------------------------------------------------------------
+# For processing’s remote MQTT: Depending on station_type, prefix = “p” or “obu”
+#    If station_type == 15 → “p${id}/objects”
+#    If station_type ==  5 → “obu${id}/objects”
+#    (similarly for “objects_full”)
+# ----------------------------------------------------------------------------
+
+processing_remote_prefix: >-
+  {% if station_type|int == 15 %}
+    "p{{ id }}/objects"
+  {% elif station_type|int == 5 %}
+    "obu{{ id }}/objects"
+  {% else %}
+    # if neither “15” nor “5”, default to “p”
+    "p{{ id }}/objects"
+  {% endif %}
+
+processing_remote_prefix_full: >-
+  {% if station_type|int == 15 %}
+    "p{{ id }}/objects_full"
+  {% elif station_type|int == 5 %}
+    "obu{{ id }}/objects_full"
+  {% else %}
+    "p{{ id }}/objects_full"
+  {% endif %}

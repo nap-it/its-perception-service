@@ -1,0 +1,49 @@
+[processing]
+debug = {{ this_cfg.debug | lower }}
+domain_id = {{ this_cfg.domain_id }}
+station_type = {{ this_cfg.station_type }}    ; only needed if station processes its own messages
+station_id = {{ this_cfg.station_id }}        ; only needed if station processes its own messages
+repeat_id_interval = {{ this_cfg.repeat_id_interval }}
+
+dds_output_topic = {{ this_cfg.dds_output_topic }}
+dds_output_full_topic = {{ this_cfg.dds_output_full_topic }}
+
+local_mqtt_enable_publisher = {{ this_cfg.local_mqtt_enable_publisher | lower }}
+local_mqtt_host = {{ this_cfg.local_mqtt_host }}
+local_mqtt_port = {{ this_cfg.local_mqtt_port }}
+local_mqtt_output_topic = {{ this_cfg.local_mqtt_output_topic }}
+local_mqtt_output_full_topic = {{ this_cfg.local_mqtt_output_full_topic }}
+
+remote_mqtt_enable_publisher = {{ this_cfg.remote_mqtt_enable_publisher | lower }}
+remote_mqtt_host = {{ this_cfg.remote_mqtt_host }}
+remote_mqtt_port = {{ this_cfg.remote_mqtt_port }}
+remote_mqtt_username = {{ this_cfg.remote_mqtt_username }}
+remote_mqtt_password = {{ this_cfg.remote_mqtt_password }}
+remote_mqtt_output_topic = {{ this_cfg.remote_mqtt_output_topic }}
+remote_mqtt_output_full_topic = {{ this_cfg.remote_mqtt_output_full_topic }}
+
+[locator]
+domain_id = {{ this_cfg.domain_id }}
+station_id = {{ this_cfg.station_id }}
+location_provider = {{ this_cfg.location_provider }}   ; static, mqtt or dds. It is used when station is also processing own messages
+{% if this_cfg.location_provider == 'static' %}
+mqtt_host =
+mqtt_port =
+mqtt_topic =
+dds_topic =
+{% elif this_cfg.location_provider == 'mqtt' %}
+mqtt_host = {{ this_cfg.mqtt_host }}
+mqtt_port = {{ this_cfg.mqtt_port }}
+mqtt_topic = {{ this_cfg.mqtt_topic }}
+dds_topic =
+{% elif this_cfg.location_provider == 'dds' %}
+mqtt_host =
+mqtt_port =
+mqtt_topic =
+dds_topic = {{ this_cfg.dds_topic }}
+{% else %}
+mqtt_host =
+mqtt_port =
+mqtt_topic =
+dds_topic =
+{% endif %}
