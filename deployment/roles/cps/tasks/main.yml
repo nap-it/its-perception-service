@@ -40,7 +40,7 @@
         station_type: "{{ lookup('ansible.builtin.ini', 'stationType', section='mobility', file='/tmp/' ~ inventory_hostname ~ '/services/info.ini') }}"
 
 - name: "Get latitude"
-  when: locator_latitude is not defined
+  when: locator_latitude is not defined and station_type == 15
   block:
     - name: Fetch ini file
       ansible.builtin.fetch:
@@ -52,7 +52,7 @@
         locator_latitude: "{{ lookup('ansible.builtin.ini', 'latitude', section='mobility', file='/tmp/' ~ inventory_hostname ~ '/services/info.ini') }}"
 
 - name: "Get longitude"
-  when: locator_longitude is not defined
+  when: locator_longitude is not defined and station_type == 15
   block:
     - name: Fetch ini file
       ansible.builtin.fetch:
@@ -63,13 +63,23 @@
       ansible.builtin.set_fact:
         locator_longitude: "{{ lookup('ansible.builtin.ini', 'longitude', section='mobility', file='/tmp/' ~ inventory_hostname ~ '/services/info.ini') }}"
 
+- name : "Set locator_latitude because it is not defined"
+  when: locator_latitude is not defined
+  ansible.builtin.set_fact:
+    locator_latitude: "0.0"
+
+- name: "Set locator_longitude because it is not defined"
+  when: locator_longitude is not defined
+  ansible.builtin.set_fact:
+    locator_longitude: "0.0"
+
 - name: “Show CPS lookup vars”
   ansible.builtin.debug:
     msg:
       - "id               = {{ id | default('undefined') }}"
       - "station_type     = {{ station_type | default('undefined') }}"
-      - "locator_latitude = {{ locator_latitude | default('undefined') }}"
-      - "locator_longitude= {{ locator_longitude | default('undefined') }}"
+      - "locator_latitude = {{ locator_latitude | default('') }}"
+      - "locator_longitude= {{ locator_longitude | default('') }}"
 
 - name: Merge host's cps_overrides into defaults
   ansible.builtin.set_fact:

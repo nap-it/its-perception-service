@@ -7,3 +7,4 @@
 **/paho-mqtt-cpp-wrapper
 **/logs
 **/build_docker_images.log
+**/hosts_test.yml

@@ -27,19 +27,19 @@ generic_services: >-
 
 processing_remote_prefix: >-
   {% if station_type|int == 15 %}
-    "p{{ id }}/objects"
+    p{{ id }}/objects
   {% elif station_type|int == 5 %}
-    "obu{{ id }}/objects"
+    obu{{ id }}/objects
   {% else %}
     # if neither “15” nor “5”, default to “p”
-    "p{{ id }}/objects"
+    p{{ id }}/objects
   {% endif %}
 
 processing_remote_prefix_full: >-
   {% if station_type|int == 15 %}
-    "p{{ id }}/objects_full"
+    p{{ id }}/objects_full
   {% elif station_type|int == 5 %}
-    "obu{{ id }}/objects_full"
+    obu{{ id }}/objects_full
   {% else %}
-    "p{{ id }}/objects_full"
+    p{{ id }}/objects_full
   {% endif %}
