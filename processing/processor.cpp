@@ -194,7 +194,8 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
             //     cpm_reference_time = static_cast<unsigned long>(cpm_reference_time_float);
             //     spdlog::debug("[Processor] CPM referenceTime: {} ms", cpm_reference_time);
             // } else {
-            cpm_reference_time = cpm["managementContainer"]["referenceTime"].GetInt64();
+            double cpm_reference_time_double = cpm["managementContainer"]["referenceTime"].GetDouble();
+            cpm_reference_time = static_cast<unsigned long>(cpm_reference_time_double * 1000.0);
             spdlog::debug("[Processor] CPM referenceTime: {} ms", cpm_reference_time);
             // }
         } else {
