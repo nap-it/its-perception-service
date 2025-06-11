@@ -14,6 +14,9 @@ services:
     restart: always
     volumes:
       - "./{{ svc_name }}/config.ini:/config.ini"
+      {%- if svc_name == 'generation' %}
+      - "./logs:/logs"
+      {%- endif %}
     network_mode: host
     ipc: host
     

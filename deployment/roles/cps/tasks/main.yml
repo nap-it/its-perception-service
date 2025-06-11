@@ -107,6 +107,14 @@
   loop_control:
     loop_var: item
 
+- name: "Create a logs folder under /services/cps/"
+  ansible.builtin.file:
+    path: /services/cps/logs
+    state: directory
+    mode: "0775"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+
 - name: "Set per-service variables before templating configs"
   ansible.builtin.set_fact:
     real_configs: >-
