@@ -59,7 +59,7 @@ cps_configs:
     dds_topic: ""       # if location_provider=dds
     dds_output_topic: "objects"
     dds_output_full_topic: "objects_full"
-    local_mqtt_enable_publisher: true
+    local_mqtt_enable_publisher: false
     local_mqtt_host: 127.0.0.1
     local_mqtt_port: 1883
     local_mqtt_output_topic: "objects"
