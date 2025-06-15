@@ -91,8 +91,11 @@ int main() {
     spdlog::info("[CONFIG] Remote MQTT output topic: {}", config.remote_mqtt_output_topic);
     config.remote_mqtt_output_full_topic = reader.Get("processing", "remote_mqtt_output_full_topic", "objects_full");
     spdlog::info("[CONFIG] Remote MQTT output full topic: {}", config.remote_mqtt_output_full_topic);
+    bool processor_performance_logs = reader.GetBoolean("processing", "performance_logs", false);
+    spdlog::info("[CONFIG] Performance logs: {}", processor_performance_logs);
 
-    std::shared_ptr<Processor> processor = std::make_shared<Processor>(config, locator);
+    std::shared_ptr<Processor> processor = std::make_shared<Processor>(config, locator, processor_performance_logs);
+    spdlog::info("[Processor] Starting processor...");
 
     processor->run();
 

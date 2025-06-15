@@ -4,15 +4,32 @@
 #include "rapidjson/stringbuffer.h"
 #include <chrono>
 #include <spdlog/spdlog.h>
+#include <filesystem>
 
 namespace rj = rapidjson;
+namespace fs = std::filesystem;
 
-Processor::Processor(const Config& config, std::shared_ptr<Locator> locator) : config_(config), locator_(locator) {
+Processor::Processor(const Config& config, std::shared_ptr<Locator> locator, bool performanceLogs)
+    : config_(config), locator_(locator), performanceLogs_(performanceLogs), stopFlag_(false) {
     
     if (config.debug) {
         spdlog::set_level(spdlog::level::debug);
     } else {
         spdlog::set_level(spdlog::level::info);
+    }
+
+    // File logger
+    if (!fs::exists("/logs")) {
+        fs::create_directory("/logs");
+    } else if (fs::exists("/logs/processor.csv")) {
+        fs::remove("/logs/processor.csv");
+    }
+
+    // Logger initialization
+    if(performanceLogs_) {
+        processor_file_logger_ = spdlog::basic_logger_mt("processor_logger", "/logs/processor.csv");
+        processor_file_logger_->set_pattern("%v");
+        processor_file_logger_->flush_on(spdlog::level::info);
     }
 
     // Set up Local MQTT client.
@@ -561,6 +578,13 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
         auto serialization_full_time = std::chrono::duration_cast<std::chrono::microseconds>(t4 - t3).count();
         auto total_time = std::chrono::duration_cast<std::chrono::microseconds>(t4 - t1).count();
         spdlog::debug ("[Processor] Processing time: {} us\nSerialization time: {} us\nSerialization full time: {} us\nTotal time: {} us", processing_time, serialization_time, serialization_full_time, total_time);
+        std::string current_timestamp = getCurrentTimestampString();
+        if (performanceLogs_){
+            processor_file_logger_->info("Processor,processing_time,{},{},{}", current_timestamp, number_objects, processing_time);
+            processor_file_logger_->info("Processor,serialization_time,{},{},{}", current_timestamp, number_objects, serialization_time);
+            processor_file_logger_->info("Processor,serialization_full_time,{},{},{}", current_timestamp, number_objects, serialization_full_time);
+            processor_file_logger_->info("Processor,total_time,{},{},{}", current_timestamp, number_objects, total_time); 
+        }
     } catch (const rj::ParseResult& e) {
         spdlog::error("[Processor] RapidJSON parse error: {} in message: {}", static_cast<int>(e.Code()), message);
     }

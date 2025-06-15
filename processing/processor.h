@@ -7,6 +7,8 @@
 #include <vector>
 #include "mqttwrapper.h"
 #include "fastdds-cpp-wrapper/dds.hpp"
+#include "spdlog/spdlog.h"
+#include "spdlog/sinks/basic_file_sink.h"
 #include "locator.h"
 
 constexpr long TIME_2004_MS = 1072915200000;
@@ -85,8 +87,10 @@ public:
      * @brief Construct a new Processor object.
      *
      * @param config The configuration of the processor.
+     * @param locator Shared pointer to the Locator object.
+     * @param performanceLogs Enable performance logs (default: false).
      */
-    Processor(const Config& config, std::shared_ptr<Locator> locator);
+    Processor(const Config& config, std::shared_ptr<Locator> locator, bool performanceLogs = false);
     ~Processor();
 
     /**
@@ -126,6 +130,10 @@ private:
 
     // DDS client
     Dds* dds_;
+
+    // File logger
+    std::shared_ptr<spdlog::logger> processor_file_logger_;
+    bool performanceLogs_;           // Enable performance logs
     
     // Thread control for periodic cleanup
     std::atomic<bool> stopFlag_;
@@ -184,6 +192,23 @@ private:
             {0, "unknown"},
             {1, "roadSideUnit"}
     };
+
+    /**
+     * @brief get the current timestamp as a string.
+     * @return std::string The current timestamp as a string.
+     */
+    std::string getCurrentTimestampString() {
+        auto now = std::chrono::system_clock::now();
+        std::time_t tt = std::chrono::system_clock::to_time_t(now);
+        std::tm tm = *std::localtime(&tt);
+        std::ostringstream oss;
+        // Format as: YYYY-MM-DD HH:MM:SS.MSMSMS
+        oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
+        // Add milliseconds.
+        auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
+        oss << '.' << std::setfill('0') << std::setw(3) << ms.count();
+        return oss.str();
+    }
 
     /**
      * @brief Process an incoming CPM
