@@ -17,6 +17,9 @@ services:
 {% if svc_name == 'generation' %}
       - "./logs:/logs"
 {% endif %}
+{% if svc_name == 'processing' %}
+      - "./logs:/logs"
+{% endif %}
     network_mode: host
     ipc: host
     
