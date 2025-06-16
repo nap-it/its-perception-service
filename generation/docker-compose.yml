@@ -3,7 +3,7 @@ services:
   cpm-generation:
     hostname: cpm-generation
     container_name: cpm-generation
-    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/generation
+    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/generation:dev
     volumes:
       - ./config.ini:/config.ini
       - ./logs:/logs
