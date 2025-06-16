@@ -117,7 +117,11 @@ void Generation::runLoop() {
             auto t2 = std::chrono::high_resolution_clock::now();
 
             if (performanceLogs_) {
-                generation_file_logger_->info("Generation,generateCPM,{},{},{}", aggregator_->getCurrentTimestampString(), freshObjects.size(), std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count());
+                auto generate_cpm_duration_us = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
+                // Convert t1 to timestamp since epoch in seconds
+                auto t1_time_since_epoch = start.time_since_epoch();
+                double t1_timestamp = std::chrono::duration<double>(t1_time_since_epoch).count();
+                generation_file_logger_->info("Generation,generateCPM,{},{},{},{}", aggregator_->getCurrentTimestampString(), freshObjects.size(), t1_timestamp, generate_cpm_duration_us);
                 generation_file_logger_->flush();
             }
 
@@ -126,14 +130,19 @@ void Generation::runLoop() {
             // Publish CPM
             dds_->publish(ddsTopic_, cpm_str);
         }
-        // Sleep for the current request rate - time taken to process this cycle.
+        
         auto end = std::chrono::high_resolution_clock::now();
-        auto duration_us = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+
         if (performanceLogs_) {
-            generation_file_logger_->info("Generation,runLoop,{},{},{}", aggregator_->getCurrentTimestampString(), freshObjects.size(), duration_us);
+            auto duration_us = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+            // Convert start to timestamp since epoch in seconds
+            auto start_time_since_epoch = start.time_since_epoch();
+            double start_timestamp = std::chrono::duration<double>(start_time_since_epoch).count();
+            generation_file_logger_->info("Generation,runLoop,{},{},{},{}", aggregator_->getCurrentTimestampString(), freshObjects.size(), start_timestamp, duration_us);
             generation_file_logger_->flush();
         }
 
+        // Sleep for the current request rate - time taken to process this cycle.
         end = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
         spdlog::info("[Generation]: Cycle took {} ms, sleeping for {} ms", duration, requestRateMs_.load() - duration);
