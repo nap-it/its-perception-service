@@ -4,8 +4,16 @@
 
 namespace fs = std::filesystem;
 
-Generation::Generation(std::shared_ptr<Aggregator> aggregator, std::shared_ptr<Locator> locator, int requestRateMs, int ddsDomain, std::string ddsTopic, bool performanceLogs, int maxObjects)
-    : aggregator_(aggregator), locator_(locator), requestRateMs_(requestRateMs), stopFlag_(false), ddsTopic_(ddsTopic), performanceLogs_(performanceLogs), maxObjects_(maxObjects) {
+Generation::Generation(std::shared_ptr<Aggregator> aggregator, std::shared_ptr<Locator> locator, int requestRateMs, int ddsDomain, std::string ddsTopic, bool performanceLogs, int maxObjects, bool mqttDebug)
+    : aggregator_(aggregator), 
+    locator_(locator), 
+    requestRateMs_(requestRateMs), 
+    stopFlag_(false), 
+    ddsTopic_(ddsTopic), 
+    performanceLogs_(performanceLogs), 
+    maxObjects_(maxObjects), 
+    mqttClient_(nullptr), 
+    mqttDebug_(mqttDebug) {
     
     spdlog::info("[Generation] initialized with request rate {} ms", requestRateMs);
 
@@ -22,6 +30,20 @@ Generation::Generation(std::shared_ptr<Aggregator> aggregator, std::shared_ptr<L
     dds_ = new Dds("Generation", ddsDomain, nullptr);
     dds_->provision_publisher(ddsTopic);
     spdlog::info("[Generation] DDS client initialized on domain {} and topic {}", ddsDomain, ddsTopic);
+
+    if (mqttDebug_) {
+        data_mqtt_server mqttConfig;
+        std::string mqttBroker = "tcp://127.0.0.1:1883";
+        mqttConfig.address = mqttBroker;
+        mqttConfig.client_id = "Locator-" + std::to_string(std::chrono::system_clock::now().time_since_epoch().count());
+        
+        mqttClient_ = new MqttWrapper(mqttConfig);
+        
+        while(!mqttClient_->is_connected()){
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+        spdlog::info("[Locator] MQTT client connected to broker {} on topic mqtt/in/cpm", mqttBroker);
+    }
 
 }
 
@@ -129,6 +151,12 @@ void Generation::runLoop() {
 
             // Publish CPM
             dds_->publish(ddsTopic_, cpm_str);
+
+            if(mqttDebug_) {
+                // Publish to MQTT if enabled
+                mqttClient_->publish("mqtt/in/cpm", cpm_str);
+                spdlog::info("[Generation]: Published CPM to MQTT topic mqtt/in/cpm");
+            }
         }
         
         auto end = std::chrono::high_resolution_clock::now();

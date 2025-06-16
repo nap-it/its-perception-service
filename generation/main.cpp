@@ -107,6 +107,8 @@ int main() {
     spdlog::info("[CONFIG] Generation performance logs: {}", generation_performance_logs);
     int generation_max_objects = reader.GetInteger("generation", "max_objects", -1);
     spdlog::info("[CONFIG] Generation max objects: {}", generation_max_objects);
+    bool generation_mqtt_debug = reader.GetBoolean("generation", "mqtt_debug", false);
+    spdlog::info("[CONFIG] Generation performance logs: {}", generation_mqtt_debug);
 
     Generation generation(aggregator, 
                     locator, 
@@ -114,7 +116,8 @@ int main() {
                     generation_dds_domain, 
                     generation_dds_topic,
                     generation_performance_logs,
-                    generation_max_objects);
+                    generation_max_objects, 
+                    generation_mqtt_debug);
     generation.run();
 
     while (true) {

@@ -22,8 +22,9 @@ public:
      * @param ddsTopic DDS topic to subscribe for CAMs if provider is DDS.
      * @param performanceLogs Enable performance logs.
      * @param maxObjects Maximum number of objects to get from the aggregator (default: -1 for no limit).
+     * @param mqttDebug Enable MQTT debug logs (default: false).
      */
-    Generation(std::shared_ptr<Aggregator> aggregator, std::shared_ptr<Locator> locator, int requestRateMs, int ddsDomain, std::string ddsTopic, bool performanceLogs = false, int maxObjects = -1);
+    Generation(std::shared_ptr<Aggregator> aggregator, std::shared_ptr<Locator> locator, int requestRateMs, int ddsDomain, std::string ddsTopic, bool performanceLogs = false, int maxObjects = -1, bool mqttDebug);
 
     /**
      * @brief Destroy the Generation object.
@@ -68,6 +69,10 @@ private:
     // DDS client
     Dds* dds_;
     std::string ddsTopic_;
+
+    // MQTT client 
+    bool mqttDebug_;
+    MqttWrapper* mqttClient_;
 
     /**
      * @brief Main loop that periodically retrieves fresh objects, sensor data and constructs CPMs.
