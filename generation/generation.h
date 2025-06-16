@@ -24,7 +24,7 @@ public:
      * @param maxObjects Maximum number of objects to get from the aggregator (default: -1 for no limit).
      * @param mqttDebug Enable MQTT debug logs (default: false).
      */
-    Generation(std::shared_ptr<Aggregator> aggregator, std::shared_ptr<Locator> locator, int requestRateMs, int ddsDomain, std::string ddsTopic, bool performanceLogs = false, int maxObjects = -1, bool mqttDebug);
+    Generation(std::shared_ptr<Aggregator> aggregator, std::shared_ptr<Locator> locator, int requestRateMs, int ddsDomain, std::string ddsTopic, bool performanceLogs = false, int maxObjects = -1, bool mqttDebug = false);
 
     /**
      * @brief Destroy the Generation object.
