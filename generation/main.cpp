@@ -108,7 +108,7 @@ int main() {
     int generation_max_objects = reader.GetInteger("generation", "max_objects", -1);
     spdlog::info("[CONFIG] Generation max objects: {}", generation_max_objects);
     bool generation_mqtt_debug = reader.GetBoolean("generation", "mqtt_debug", false);
-    spdlog::info("[CONFIG] Generation performance logs: {}", generation_mqtt_debug);
+    spdlog::info("[CONFIG] Generation mqtt debug: {}", generation_mqtt_debug);
 
     Generation generation(aggregator, 
                     locator, 

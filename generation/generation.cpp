@@ -123,6 +123,12 @@ void Generation::runLoop() {
 
                 // Publish CPM
                 dds_->publish(ddsTopic_, cpm_str);
+
+                if(mqttDebug_) {
+                    // Publish to MQTT if enabled
+                    mqttClient_->publish("mqtt/in/cpm", cpm_str);
+                    spdlog::info("[Generation]: Published CPM to MQTT topic mqtt/in/cpm");
+                }
             }
         } else {
             spdlog::info("[Generation]: Retrieved {} fresh objects.", freshObjects.size());
