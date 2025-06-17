@@ -171,6 +171,9 @@ std::string Builder::generateCPM(const std::vector<Object>& freshObjects,
             xVelocity = obj.speed * cos(obj.heading * PI_RAD);
             yVelocity = obj.speed * sin(obj.heading * PI_RAD);
             
+            if (xVelocity == -0.0) xVelocity = 0.0;
+            if (yVelocity == -0.0) yVelocity = 0.0;
+            
             rj::Value velocity(rj::kObjectType);
             rj::Value cartesianVelocity(rj::kObjectType);
 
@@ -212,6 +215,9 @@ std::string Builder::generateCPM(const std::vector<Object>& freshObjects,
         if (obj.acceleration != NOT_PRESENT_FLOAT && obj.heading != NOT_PRESENT_FLOAT) {
             xAcc = obj.acceleration * cos(obj.heading * PI_RAD);
             yAcc = obj.acceleration * sin(obj.heading * PI_RAD);
+
+            if (xAcc == -0.0) xAcc = 0.0;
+            if (yAcc == -0.0) yAcc = 0.0;
 
             rj::Value acceleration(rj::kObjectType);
             rj::Value cartesianAcceleration(rj::kObjectType);
