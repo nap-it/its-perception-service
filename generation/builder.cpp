@@ -131,7 +131,7 @@ std::string Builder::generateCPM(const std::vector<Object>& freshObjects,
         double x, y;
         calculateRelativePositions(stationLatitude, stationLongitude, obj.latitude, obj.longitude, C, x, y);
         if (x > 1310.72 || x < -1310.72 || y > 1310.72 || y < -1310.72) {
-            spdlog::warn("[Builder] Object out of bounds: x={}, y={}", x, y);
+            spdlog::warn("[Builder] Object [{}] out of bounds: x={}, y={}",obj.cpmObjectID, x, y);
             continue;
         }
 
@@ -173,6 +173,10 @@ std::string Builder::generateCPM(const std::vector<Object>& freshObjects,
             
             if (xVelocity == -0.0) xVelocity = 0.0;
             if (yVelocity == -0.0) yVelocity = 0.0;
+            if (xVelocity < -163) xVelocity = -163.0;
+            if (xVelocity > 163) xVelocity = 163.0;
+            if (yVelocity < -163) yVelocity = -163.0;
+            if (yVelocity > 163) yVelocity = 163.0;
             
             rj::Value velocity(rj::kObjectType);
             rj::Value cartesianVelocity(rj::kObjectType);
@@ -211,13 +215,17 @@ std::string Builder::generateCPM(const std::vector<Object>& freshObjects,
         /**
          * Acceleration
          */
-        double xAcc = 161.0, yAcc = 161.0;
+        double xAcc = 16.1, yAcc = 16.1;
         if (obj.acceleration != NOT_PRESENT_FLOAT && obj.heading != NOT_PRESENT_FLOAT) {
             xAcc = obj.acceleration * cos(obj.heading * PI_RAD);
             yAcc = obj.acceleration * sin(obj.heading * PI_RAD);
 
             if (xAcc == -0.0) xAcc = 0.0;
             if (yAcc == -0.0) yAcc = 0.0;
+            if (xAcc < -16) xAcc = -16.0;
+            if (xAcc > 16) xAcc = 16.0;
+            if (yAcc < -16) yAcc = -16.0;
+            if (yAcc > 16) yAcc = 16.0;
 
             rj::Value acceleration(rj::kObjectType);
             rj::Value cartesianAcceleration(rj::kObjectType);
@@ -268,6 +276,7 @@ std::string Builder::generateCPM(const std::vector<Object>& freshObjects,
             rj::Value objectDimensionX(rj::kObjectType);
             float size_x = obj.size_x;
             if (size_x < 0.1) size_x = 0.5;
+            if (size_x > 25.0) size_x = 25.0; // Limit size to a maximum of 10m
             objectDimensionX.AddMember("value", size_x, alloc);
             objectDimensionX.AddMember("confidence", 1, alloc);
             objJson.AddMember("objectDimensionX", objectDimensionX, alloc);
@@ -276,6 +285,7 @@ std::string Builder::generateCPM(const std::vector<Object>& freshObjects,
             rj::Value objectDimensionY(rj::kObjectType);
             float size_y = obj.size_y;
             if (size_y < 0.1) size_y = 0.5;
+            if (size_y > 25.0) size_y = 25.0; // Limit size to a maximum of 10m
             objectDimensionY.AddMember("value", size_y, alloc);
             objectDimensionY.AddMember("confidence", 1, alloc);
             objJson.AddMember("objectDimensionY", objectDimensionY, alloc);
@@ -284,6 +294,7 @@ std::string Builder::generateCPM(const std::vector<Object>& freshObjects,
             rj::Value objectDimensionZ(rj::kObjectType);
             float size_z = obj.size_z;
             if (size_z < 0.1) size_z = 0.5;
+            if (size_z > 25.0) size_z = 25.0; // Limit size to a maximum of 10m
             objectDimensionZ.AddMember("value", size_z, alloc);
             objectDimensionZ.AddMember("confidence", 1, alloc);
             objJson.AddMember("objectDimensionZ", objectDimensionZ, alloc);
