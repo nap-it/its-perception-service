@@ -217,8 +217,9 @@ private:
      * @param message The raw message (JSON formatted).
      * @param output The output message.
      * @param output_full The full output message.  
+     * @param message_reception Time when the message is received via DDS.
      */
-    void processCPM(const std::string& topic, const std::string& message, std::string& output, std::string& output_full);
+    void processCPM(const std::string& topic, const std::string& message, std::string& output, std::string& output_full, std::chrono::time_point<std::chrono::high_resolution_clock> message_reception);
 
 };
 

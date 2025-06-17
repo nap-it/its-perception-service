@@ -147,8 +147,7 @@ void Generation::runLoop() {
             if (performanceLogs_) {
                 auto generate_cpm_duration_us = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
                 // Convert t1 to timestamp since epoch in seconds
-                auto t1_time_since_epoch = start.time_since_epoch();
-                double t1_timestamp = std::chrono::duration<double>(t1_time_since_epoch).count();
+                double t1_timestamp = std::chrono::duration<double>(t1.time_since_epoch()).count();
                 generation_file_logger_->info("Generation,generateCPM,{},{},{},{}", aggregator_->getCurrentTimestampString(), freshObjects.size(), t1_timestamp, generate_cpm_duration_us);
                 generation_file_logger_->flush();
             }
@@ -170,8 +169,7 @@ void Generation::runLoop() {
         if (performanceLogs_) {
             auto duration_us = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
             // Convert start to timestamp since epoch in seconds
-            auto start_time_since_epoch = start.time_since_epoch();
-            double start_timestamp = std::chrono::duration<double>(start_time_since_epoch).count();
+            double start_timestamp = std::chrono::duration<double>(start.time_since_epoch()).count();
             generation_file_logger_->info("Generation,runLoop,{},{},{},{}", aggregator_->getCurrentTimestampString(), freshObjects.size(), start_timestamp, duration_us);
             generation_file_logger_->flush();
         }

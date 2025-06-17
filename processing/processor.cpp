@@ -106,13 +106,16 @@ void Processor::run() {
 }
 
 void Processor::on_message_dds(const std::string& topic, const std::string& message) {
+    
+    std::chrono::time_point<std::chrono::high_resolution_clock> t0 = std::chrono::high_resolution_clock::now();
+
     spdlog::debug("[Processor] Received message on topic {}: {}", topic, message);
 
     if (topic == "vanetza/out/cpm" || topic == "cps-v2/in/cpm" || topic == "vanetza/in/cpm") {
         spdlog::debug("[Processor] Processing CPM...");
         std::string output = "";
         std::string full_output = "";
-        this->processCPM(topic, message, output, full_output);
+        this->processCPM(topic, message, output, full_output, t0);
 
         if (output.empty()) {
             spdlog::warn("[Processor] Empty output message");
@@ -160,7 +163,7 @@ void Processor::on_message_dds(const std::string& topic, const std::string& mess
     }
 }
 
-void Processor::processCPM(const std::string& topic, const std::string& message, std::string& output, std::string& output_full){
+void Processor::processCPM(const std::string& topic, const std::string& message, std::string& output, std::string& output_full, std::chrono::time_point<std::chrono::high_resolution_clock> message_reception){
     try {
         auto t1 = std::chrono::high_resolution_clock::now();
 
@@ -576,14 +579,19 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
         auto processing_time = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
         auto serialization_time = std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2).count();
         auto serialization_full_time = std::chrono::duration_cast<std::chrono::microseconds>(t4 - t3).count();
-        auto total_time = std::chrono::duration_cast<std::chrono::microseconds>(t4 - t1).count();
+        auto total_time = std::chrono::duration_cast<std::chrono::microseconds>(t4 - message_reception).count();
         spdlog::debug ("[Processor] Processing time: {} us\nSerialization time: {} us\nSerialization full time: {} us\nTotal time: {} us", processing_time, serialization_time, serialization_full_time, total_time);
         std::string current_timestamp = getCurrentTimestampString();
         if (performanceLogs_){
-            processor_file_logger_->info("Processor,processing_time,{},{},{}", current_timestamp, number_objects, processing_time);
-            processor_file_logger_->info("Processor,serialization_time,{},{},{}", current_timestamp, number_objects, serialization_time);
-            processor_file_logger_->info("Processor,serialization_full_time,{},{},{}", current_timestamp, number_objects, serialization_full_time);
-            processor_file_logger_->info("Processor,total_time,{},{},{}", current_timestamp, number_objects, total_time); 
+            // Convert to timestamp since epoch in seconds
+            double message_reception_timestamp = std::chrono::duration<double>(message_reception.time_since_epoch()).count();
+            double t1_timestamp = std::chrono::duration<double>(t1.time_since_epoch()).count();
+            double t2_timestamp = std::chrono::duration<double>(t2.time_since_epoch()).count();
+            double t3_timestamp = std::chrono::duration<double>(t3.time_since_epoch()).count();
+            processor_file_logger_->info("Processor,processing_time,{},{},{},{}", current_timestamp, number_objects, t1_timestamp, processing_time);
+            processor_file_logger_->info("Processor,serialization_time,{},{},{}", current_timestamp, number_objects, t2_timestamp, serialization_time);
+            processor_file_logger_->info("Processor,serialization_full_time,{},{},{}", current_timestamp, number_objects, t3_timestamp, serialization_full_time);
+            processor_file_logger_->info("Processor,total_time,{},{},{},{}", current_timestamp, number_objects, message_reception_timestamp, total_time); 
         }
     } catch (const rj::ParseResult& e) {
         spdlog::error("[Processor] RapidJSON parse error: {} in message: {}", static_cast<int>(e.Code()), message);
