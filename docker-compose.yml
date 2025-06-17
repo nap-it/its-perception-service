@@ -5,33 +5,29 @@ services:
     restart: always
     volumes:
       - ./generation/config.ini:/config.ini
-    networks:
-      deploymentslan:
+    network_mode: host
+    ipc: host
 
   processing:
     image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/processing:dcc
     restart: always
     volumes:
       - ./processing/config.ini:/config.ini
-    networks:
-      deploymentslan:
+    network_mode: host
+    ipc: host
 
   radar-adapter:
     image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/radar-adapter:dcc
     restart: always
     volumes:
       - ./radar-adapter/config.ini:/config.ini
-    networks:
-      deploymentslan:
+    network_mode: host
+    ipc: host
 
   camera-adapter:
     image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/camera-adapter:dcc
     restart: always
     volumes:
       - ./camera-adapter/config.ini:/config.ini
-    networks:
-      deploymentslan:
-
-networks:
-  deploymentslan:
-    external: true
+    network_mode: host
+    ipc: host
