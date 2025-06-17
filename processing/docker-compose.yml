@@ -6,5 +6,6 @@ services:
     image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/processing:dcc
     volumes:
       - ./config.ini:/config.ini
+      - ./logs:/logs
     network_mode: host
     ipc: host
