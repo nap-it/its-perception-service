@@ -589,8 +589,8 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
             double t2_timestamp = std::chrono::duration<double>(t2.time_since_epoch()).count();
             double t3_timestamp = std::chrono::duration<double>(t3.time_since_epoch()).count();
             processor_file_logger_->info("Processor,processing_time,{},{},{},{}", current_timestamp, number_objects, t1_timestamp, processing_time);
-            processor_file_logger_->info("Processor,serialization_time,{},{},{}", current_timestamp, number_objects, t2_timestamp, serialization_time);
-            processor_file_logger_->info("Processor,serialization_full_time,{},{},{}", current_timestamp, number_objects, t3_timestamp, serialization_full_time);
+            processor_file_logger_->info("Processor,serialization_time,{},{},{},{}", current_timestamp, number_objects, t2_timestamp, serialization_time);
+            processor_file_logger_->info("Processor,serialization_full_time,{},{},{},{}", current_timestamp, number_objects, t3_timestamp, serialization_full_time);
             processor_file_logger_->info("Processor,total_time,{},{},{},{}", current_timestamp, number_objects, message_reception_timestamp, total_time); 
         }
     } catch (const rj::ParseResult& e) {
