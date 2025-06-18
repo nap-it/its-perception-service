@@ -291,6 +291,11 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
 
         if (number_objects == 0) {
             spdlog::warn("[Processor] No objects received!");
+            auto t_empty = std::chrono::high_resolution_clock::now();
+            auto total_time = std::chrono::duration_cast<std::chrono::microseconds>(t_empty - message_reception).count();
+            double message_reception_timestamp = std::chrono::duration<double>(message_reception.time_since_epoch()).count();
+            std::string current_timestamp = getCurrentTimestampString();
+            processor_file_logger_->info("Processor,total_time,{},{},{},{}", current_timestamp, number_objects, message_reception_timestamp, total_time); 
             return;
         }
 
