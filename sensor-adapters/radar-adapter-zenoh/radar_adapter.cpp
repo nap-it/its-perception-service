@@ -42,7 +42,7 @@ RadarAdapter::RadarAdapter(const Config& config) : config(config) {
     publisher_sensors_ = new zenoh::Publisher(std::move(session_->declare_publisher(topic_sensors)));
 
     //Initialize Zenoh shared memory provider with 10 MB size and 2-byte alignment.
-    static constexpr auto SHM_SIZE  = 1024U * 1U * 1U;
+    static constexpr auto SHM_SIZE  = 1024U * 1024U * 10U;
     static constexpr auto SHM_ALIGN = 2U;
     zenoh::MemoryLayout layout(SHM_SIZE, zenoh::AllocAlignment({SHM_ALIGN}));
     shm_provider_ = new zenoh::PosixShmProvider(layout);
