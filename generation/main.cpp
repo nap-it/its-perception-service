@@ -85,6 +85,8 @@ int main() {
     spdlog::info("[CONFIG] Aggregator priority type: {}", aggregator_priority_type);
     std::string zenoh_endpoint = reader.Get("aggregator", "zenoh_endpoint", "");
     spdlog::info("[CONFIG] Aggregator Zenoh endpoint: {}", zenoh_endpoint);
+    bool aggregator_add_pending_objects = reader.GetBoolean("aggregator", "add_pending_objects", false);
+    spdlog::info("[CONFIG] Aggregator performance logs: {}", aggregator_add_pending_objects);
 
     auto aggregator = std::make_shared<Aggregator>(aggregator_dds_domain,
                                                     aggregator_max_object_age,
@@ -92,7 +94,8 @@ int main() {
                                                     aggregator_ignore_rules, 
                                                     aggregator_performance_logs,
                                                     zenoh_endpoint,
-                                                    aggregator_priority_type);
+                                                    aggregator_priority_type,
+                                                    aggregator_add_pending_objects);
 
     aggregator->run();
 
