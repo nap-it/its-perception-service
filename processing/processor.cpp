@@ -207,17 +207,11 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
 
         // Timestamps
         unsigned long cpm_reference_time = NOT_PRESENT_INT;
+        double cpm_reference_time_double = NOT_PRESENT_DOUBLE;
         if (cpm.HasMember("managementContainer") && cpm["managementContainer"].HasMember("referenceTime")) {
-            // if (topic == "vanetza/out/cpm") {
-            //     float cpm_reference_time_float = static_cast<float>((cpm["managementContainer"]["referenceTime"].GetDouble()) * 1000.0f);
-            //     spdlog::debug("[Processor] CPM referenceTime: {}f ms", cpm_reference_time_float);
-            //     cpm_reference_time = static_cast<unsigned long>(cpm_reference_time_float);
-            //     spdlog::debug("[Processor] CPM referenceTime: {} ms", cpm_reference_time);
-            // } else {
-            double cpm_reference_time_double = cpm["managementContainer"]["referenceTime"].GetDouble();
+            cpm_reference_time_double = cpm["managementContainer"]["referenceTime"].GetDouble();
             cpm_reference_time = static_cast<unsigned long>(cpm_reference_time_double * 1000.0);
             spdlog::debug("[Processor] CPM referenceTime: {} ms", cpm_reference_time);
-            // }
         } else {
             spdlog::error("[Processor] CPM does not have referenceTime");
             return;
@@ -228,6 +222,7 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
         unsigned long age_cpm = local_gen_delta_time - cpm_reference_time;
         if (local_gen_delta_time < cpm_reference_time) {
             spdlog::error("[Processor] CPM referenceTime is in the future: local {} < cpm {}", local_gen_delta_time, cpm_reference_time);
+            return;
         } else {
             spdlog::debug("[Processor] CPM age: {} ms", age_cpm);
         }
@@ -475,7 +470,7 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
             object.AddMember("age", object_age, allocator_output_full);
             object.AddMember("objectTimestamp", object_timestamp_sec, allocator_output_full);
             object.AddMember("cpmAge", age_cpm, allocator_output_full);
-            object.AddMember("cpmTimestamp", cpm_reference_time, allocator_output_full);
+            object.AddMember("cpmTimestamp", cpm_reference_time_double, allocator_output_full);
             object.AddMember("cpmTimestampUnix", cpm_reference_time_unix, allocator_output_full);
 
             objects.PushBack(object, allocator_output);
@@ -551,7 +546,7 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
             object_full.AddMember("objectAge", object_age, allocator_output_full);
             object_full.AddMember("objectTimestamp", object_timestamp_sec, allocator_output_full);
             object_full.AddMember("cpmAge", age_cpm, allocator_output_full);
-            object_full.AddMember("cpmTimestamp", cpm_reference_time, allocator_output_full);
+            object_full.AddMember("cpmTimestamp", cpm_reference_time_double, allocator_output_full);
             object_full.AddMember("cpmTimestampUnix", cpm_reference_time_unix, allocator_output_full);
 
             objects_full.PushBack(object_full, allocator_output_full);

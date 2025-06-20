@@ -20,15 +20,9 @@ RadarAdapter::RadarAdapter(const Config& config) : config(config) {
     }
 
     // Initialize Zenoh client
-    zenoh::Config zconfig = zenoh::Config::create_default();
     zenoh::ZResult *err = nullptr;
-    zconfig.insert_json5("mode", "\"peer\"", err);
-    if (!config.zenoh_endpoint.empty()) {
-        zconfig.insert_json5("connect/endpoints", fmt::format("[\"tcp/{}:7447\"]", config.zenoh_endpoint), err);
-    } 
-    zconfig.insert_json5("connect/retry", "{\"interval_ms\":1000,\"max_retries\":-1}", err);
-    zconfig.insert_json5("connect/exit_on_failure", "false", err);
-    zconfig.insert_json5("open/return_conditions/connect_scouted", "true", err);
+    spdlog::info("[Aggregator] Initializing Zenoh client ...");
+    zenoh::Config zconfig = zenoh::Config::from_file("./zenoh_config.json5", err); 
     if (err) {
         spdlog::error("[Aggregator] Error in Zenoh configuration: {}", static_cast<const void*>(err));
     } else {
@@ -47,8 +41,8 @@ RadarAdapter::RadarAdapter(const Config& config) : config(config) {
     publisher_objects_ = new zenoh::Publisher(std::move(session_->declare_publisher(topic_objs)));
     publisher_sensors_ = new zenoh::Publisher(std::move(session_->declare_publisher(topic_sensors)));
 
-    //Initialize Zenoh shared memory provider.
-    static constexpr auto SHM_SIZE  = 1024U * 1024U * 10U;
+    //Initialize Zenoh shared memory provider with 10 MB size and 2-byte alignment.
+    static constexpr auto SHM_SIZE  = 1024U * 1U * 1U;
     static constexpr auto SHM_ALIGN = 2U;
     zenoh::MemoryLayout layout(SHM_SIZE, zenoh::AllocAlignment({SHM_ALIGN}));
     shm_provider_ = new zenoh::PosixShmProvider(layout);
@@ -141,10 +135,30 @@ void RadarAdapter::on_message_mqtt(const std::string& topic, const std::string& 
     if (config.shared_memory){
         const size_t payload_len = parsed_message.size();
         auto alloc_result = shm_provider_->alloc_gc_defrag_blocking(payload_len, zenoh::AllocAlignment({0}));
-        zenoh::ZShmMut&& buf = std::get<zenoh::ZShmMut>(std::move(alloc_result));
-        memcpy(buf.data(), parsed_message.data(), payload_len);
-        publisher_objects_->put(std::move(buf));
-        spdlog::debug("Published object data to Zenoh using shared memory");
+
+        try {
+            if (std::holds_alternative<zenoh::ZShmMut>(alloc_result)) {
+                auto buf = std::get<zenoh::ZShmMut>(std::move(alloc_result));
+                memcpy(buf.data(), parsed_message.data(), payload_len);
+                publisher_objects_->put(std::move(buf));
+            } else if (std::holds_alternative<z_alloc_error_t>(alloc_result)) {
+                auto err = std::get<z_alloc_error_t>(alloc_result);
+                throw std::runtime_error("SHM alloc error: " + std::to_string(err));
+            } else if (std::holds_alternative<z_layout_error_t>(alloc_result)) {
+                auto err = std::get<z_layout_error_t>(alloc_result);
+                throw std::runtime_error("SHM layout error: " + std::to_string(err));
+            }
+        }
+            catch (const std::runtime_error &e) {
+            spdlog::error("Publish failed (SHM full), cleaning up and retrying…");
+            shm_provider_->garbage_collect();
+            spdlog::debug("Defragmenting shared memory provider...");
+            shm_provider_->defragment();
+            spdlog::debug("Reallocating shared memory for message...");
+            shm_provider_->alloc_gc_defrag_dealloc(0, {});
+            return;
+        }
+
     } else {
         publisher_objects_->put(zenoh::Bytes(parsed_message));
         spdlog::debug("Published object data to Zenoh");

@@ -45,29 +45,29 @@ Aggregator::Aggregator(int ddsDomain, long maxObjectAge, long cleanInterval, boo
     spdlog::info("[Aggregator] Initialized on DDS domain {} and subscribed to 'cps/objects'", ddsDomain);
 
     // Initialize Zenoh client
-    zenoh::Config config = zenoh::Config::create_default();
     zenoh::ZResult *err = nullptr;
-    config.insert_json5("mode", "\"peer\"", err);
-    if (!zenohEndpoint.empty()) {
-        config.insert_json5("connect/endpoints", fmt::format("[\"tcp/{}:7447\"]", zenohEndpoint), err);
-    } 
-    config.insert_json5("connect/retry", "{\"interval_ms\":1000,\"max_retries\":-1}", err);
-    config.insert_json5("connect/exit_on_failure", "false", err);
-    config.insert_json5("open/return_conditions/connect_scouted", "true", err);
+    spdlog::info("[Aggregator] Initializing Zenoh client ...");
+    zenoh::Config config = zenoh::Config::from_file("./zenoh_config.json5", err); 
     if (err) {
         spdlog::error("[Aggregator] Error in Zenoh configuration: {}", static_cast<const void*>(err));
     } else {
-        spdlog::debug("[Aggregator] Zenoh configuration: {}", config.to_string());
+        spdlog::info("[Aggregator] Zenoh configuration: {}", config.to_string());
     }
 
     spdlog::info("[Aggregator] Opening Zenoh session ...");
     session_ = new zenoh::Session(std::move(zenoh::Session::open(std::move(config))));
     spdlog::info("[Aggregator] Zenoh session opened successfully.");
+    if(session_->is_closed()) {
+        spdlog::error("[Aggregator] Zenoh session is closed after opening.");
+    } else {
+        spdlog::info("[Aggregator] Zenoh session is open.");
+    }
     
-    zenoh::KeyExpr topic_objects("cps/objects");
-    zenoh::KeyExpr topic_sensors("cps/sensors");
-    subscriber_objects_ = new zenoh::Subscriber(std::move(session_->declare_subscriber(topic_objects, &zenohObjsCallback, zenoh::closures::none)));
-    subscriber_sensors_ = new zenoh::Subscriber(std::move(session_->declare_subscriber(topic_sensors, &zenohSensorsCallback, zenoh::closures::none)));
+    zenoh::KeyExpr zenoh_sub_topics("cps/**");
+    subscriber_ = new zenoh::Subscriber(std::move(session_->declare_subscriber(zenoh_sub_topics, &zenohCallback, zenoh::closures::none)));
+    // subscriber_sensors_ = new zenoh::Subscriber(std::move(session_->declare_subscriber(topic_sensors, &zenohSensorsCallback, zenoh::closures::none)));
+    // session_->declare_subscriber(zenoh_sub_topics, &zenohCallback, zenoh::closures::none);
+    session_->declare_publisher("zenoh/debug");
 }
 
 Aggregator::~Aggregator() {
@@ -92,7 +92,10 @@ void Aggregator::stop() {
 
 void Aggregator::runLoop() {
     while (!stopFlag_) {
+        int currentSize = all_objects_.size();
         cleanLastSent();
+        int cleanedSize = all_objects_.size();
+        spdlog::debug("[Aggregator] Routing cleanning of objects. Current size: {}, cleaned size: {}", currentSize, cleanedSize);
         std::this_thread::sleep_for(std::chrono::seconds(cleanInterval_));
     }
 }
@@ -176,7 +179,7 @@ void print_all_objects(std::unordered_map<int, ObjectEntity> all_objects_) {
 
 
 std::vector<Object> Aggregator::getFreshObjects(int maxObjects) {
-
+    
     auto t1 = std::chrono::high_resolution_clock::now();
     spdlog::debug("[Aggregator] getFreshObjects()");
     std::lock_guard<std::mutex> lock(objMtx_);
@@ -381,7 +384,7 @@ void Aggregator::on_message(const std::string& topic, const std::string& message
                     obj.cpmObjectID = calculateCpmObjectID(obj.sensorID, obj.objectID);
                     
                     obj.timestamp = (objJson.HasMember("timestamp") && objJson["timestamp"].IsDouble()) ? objJson["timestamp"].GetDouble() : NOT_PRESENT_DOUBLE;
-                    if ((obj.timestamp == NOT_PRESENT_DOUBLE || obj.timestamp < 0) && (spdlog::error("[Aggregator]: Mandatory (Timestamp) not present in message: {}", message), true)) continue;
+                    if ((obj.timestamp == NOT_PRESENT_DOUBLE || obj.timestamp <= 0) && (spdlog::error("[Aggregator]: Mandatory (Timestamp) not present in message: {}", message), true)) continue;
                     
                     obj.classification = (objJson.HasMember("classification") && objJson["classification"].IsInt()) ? objJson["classification"].GetInt() : 0;
                     obj.confidence = (objJson.HasMember("confidence") && objJson["confidence"].IsInt()) ? objJson["confidence"].GetInt() : 0;
@@ -463,20 +466,19 @@ void Aggregator::on_message(const std::string& topic, const std::string& message
     }
 }
 
-void Aggregator::zenohObjsCallback(zenoh::Sample &sample) {
+void Aggregator::zenohCallback(zenoh::Sample &sample) {
     // Forward the callback to the instance method.
     auto topic = sample.get_keyexpr().as_string_view();
     std::string message = sample.get_payload().as_string();
-    spdlog::debug("[Aggregator] Received Zenoh message: {}", message);
-    instance_->on_message("cps/objects", message);
-}
-
-void Aggregator::zenohSensorsCallback(zenoh::Sample &sample) {
-    // Forward the callback to the instance method.
-    auto topic = sample.get_keyexpr().as_string_view();
-    std::string message = sample.get_payload().as_string();
-    spdlog::debug("[Aggregator] Received Zenoh message: {}", message);
-    instance_->on_message("cps/sensors", message);
+    spdlog::debug("[Aggregator] Received Zenoh message on topic '{}': {}", topic, message);
+    
+    if (topic == "cps/objects") {
+        instance_->on_message("cps/objects", message);
+    } else if (topic == "cps/sensors") {
+        instance_->on_message("cps/sensors", message);
+    } else {
+        spdlog::warn("[Aggregator] Received Zenoh message on unknown topic: {}", topic);
+    }
 }
 
 void Aggregator::ddsCallback(const std::string& topic, const std::string& message) {
@@ -484,6 +486,7 @@ void Aggregator::ddsCallback(const std::string& topic, const std::string& messag
     if (instance_) {
         instance_->on_message(topic, message);
     }
+
 }
 
 float Aggregator::getPriority(Object last_sent, Object current) {

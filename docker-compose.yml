@@ -1,33 +1,33 @@
 version: '2.4'
 services:
   generation:
-    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/generation:dcc
+    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/generation:dev
     restart: always
     volumes:
       - ./generation/config.ini:/config.ini
     network_mode: host
     ipc: host
 
-  processing:
-    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/processing:dcc
-    restart: always
-    volumes:
-      - ./processing/config.ini:/config.ini
-    network_mode: host
-    ipc: host
+  # processing:
+  #   image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/processing:dcc
+  #   restart: always
+  #   volumes:
+  #     - ./processing/config.ini:/config.ini
+  #   network_mode: host
+  #   ipc: host
 
   radar-adapter:
-    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/radar-adapter:dcc
+    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/radar-adapter
     restart: always
     volumes:
-      - ./radar-adapter/config.ini:/config.ini
+      - ./sensor-adapters/radar-adapter-zenoh/config.ini:/config.ini
     network_mode: host
     ipc: host
 
-  camera-adapter:
-    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/camera-adapter:dcc
-    restart: always
-    volumes:
-      - ./camera-adapter/config.ini:/config.ini
-    network_mode: host
-    ipc: host
+  # camera-adapter:
+  #   image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/camera-adapter:dcc
+  #   restart: always
+  #   volumes:
+  #     - ./camera-adapter/config.ini:/config.ini
+  #   network_mode: host
+  #   ipc: host

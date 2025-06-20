@@ -107,6 +107,7 @@ COPY *.cpp /usr/src/generation/
 COPY *.h /usr/src/generation/
 COPY *.hpp /usr/src/generation/
 COPY CMakeLists.txt /usr/src/generation/
+COPY zenoh_config.json5 /usr/src/generation/
 
 WORKDIR /usr/src/generation
 RUN cmake . && cmake --build . --parallel $(nproc)
@@ -147,6 +148,8 @@ RUN ldconfig
 
 # ------------------------- Copy Generation Binary -------------------------
 COPY --from=builder /usr/src/generation/main /generation/main
+COPY --from=builder /usr/src/generation/zenoh_config.json5 /generation/zenoh_config.json5
+
 # RUN mkdir /generation/logs
 WORKDIR /generation
 ENTRYPOINT ["/generation/main"]

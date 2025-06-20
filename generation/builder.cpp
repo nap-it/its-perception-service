@@ -8,9 +8,11 @@ namespace rj = rapidjson;
 
 int getMeasurementDeltaTime(unsigned long referenceTime, unsigned long obj_timestamp) {
     long deltaTimeMilliSecondSigned = referenceTime - obj_timestamp;
+    spdlog::debug("[Builder] Delta time: {} = {} - {}", deltaTimeMilliSecondSigned, referenceTime, obj_timestamp);
     if ((-2048 < deltaTimeMilliSecondSigned) && (deltaTimeMilliSecondSigned < 2047)) {
         return deltaTimeMilliSecondSigned;
     } else {
+        spdlog::warn("[Builder] Delta time out of range: {} ms, setting to -2048", deltaTimeMilliSecondSigned);
         return -2048;
     }
 }
@@ -41,7 +43,7 @@ std::string Builder::generateCPM(const std::vector<Object>& freshObjects,
     // Get current time (in milliseconds) and calculate the reference time.
     auto now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     unsigned long referenceTime = now - time2004ms;
-    double referenceTimeSec = static_cast<double>(referenceTime) / 1000.0; // Todo: use this one
+    double referenceTimeSec = static_cast<double>(referenceTime) / 1000.0;
 
     // Build the management container.
     rj::Value managementContainer(rj::kObjectType);

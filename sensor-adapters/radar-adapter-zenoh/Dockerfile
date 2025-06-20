@@ -81,6 +81,7 @@ COPY *.cpp /usr/src/radar-adapter/
 COPY *.h /usr/src/radar-adapter/
 COPY *.hpp /usr/src/radar-adapter/
 COPY CMakeLists.txt /usr/src/radar-adapter/
+COPY zenoh_config.json5 /usr/src/radar-adapter/
 
 WORKDIR /usr/src/radar-adapter
 RUN cmake . && cmake --build . --parallel $(nproc)
@@ -126,6 +127,7 @@ RUN ldconfig
 
 # ------------------------- Copy Radar Adapter Binary -------------------------
 COPY --from=builder /usr/src/radar-adapter/main /radar-adapter/main
+COPY --from=builder /usr/src/radar-adapter/zenoh_config.json5 /radar-adapter/zenoh_config.json5
 # RUN mkdir -p /radar-adapter
 # RUN cp /usr/src/radar-adapter/main /radar-adapter/main
 

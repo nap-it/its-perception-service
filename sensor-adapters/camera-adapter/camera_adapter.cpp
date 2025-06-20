@@ -122,7 +122,7 @@ std::string CameraAdapter::parseMessage(const std::string& input) {
             obj.objectID = (rj_obj.HasMember("objectID") && rj_obj["objectID"].IsInt()) ? rj_obj["objectID"].GetInt() : -1;
             if (obj.objectID == -1) { spdlog::error("Mandatory (Object ID) not present in message: {}", input); return ""; }
             obj.sensorID = 3; // Hardcoded for Monovideo
-            obj.timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() / 1000.0;
+            obj.timestamp = (doc.HasMember("timestamp") && doc["timestamp"].IsDouble()) ? doc["timestamp"].GetDouble() : 0.0;
             obj.classification = (rj_obj.HasMember("classification") && rj_obj["classification"].IsInt()) ? rj_obj["classification"].GetInt() : 0;
             obj.confidence = (rj_obj.HasMember("confidence") && rj_obj["confidence"].IsInt()) ? rj_obj["confidence"].GetInt() : 101;
             obj.confidence = (rj_obj.HasMember("confidence") && rj_obj["confidence"].IsFloat()) ? rj_obj["confidence"].GetFloat() : obj.confidence;
