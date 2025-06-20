@@ -11,7 +11,7 @@ namespace fs = std::filesystem;
 Aggregator* Aggregator::instance_ = nullptr;
 
 // Constructor: sets up DDS and subscribes to the "cps/objects" topic.
-Aggregator::Aggregator(int ddsDomain, long maxObjectAge, long cleanInterval, bool ignoreRules, bool performanceLogs, const std::string& zenohEndpoint, const std::string& proprityType) 
+Aggregator::Aggregator(int ddsDomain, long maxObjectAge, long cleanInterval, bool ignoreRules, bool performanceLogs, const std::string& zenohEndpoint, const std::string& proprityType, bool addPendingObjects) 
     :   maxObjectAge_(maxObjectAge), 
         cleanInterval_(cleanInterval), 
         stopFlag_(false), 
@@ -19,7 +19,8 @@ Aggregator::Aggregator(int ddsDomain, long maxObjectAge, long cleanInterval, boo
         currentID_(1), 
         performanceLogs_(performanceLogs), 
         zenohEndpoint_(zenohEndpoint),
-        priorityType_(proprityType)
+        priorityType_(proprityType),
+        addPendingObjects_(addPendingObjects)
 {
     // Set the static instance pointer to this object.
     instance_ = this;
@@ -212,7 +213,7 @@ std::vector<Object> Aggregator::getFreshObjects(int maxObjects) {
 
     // If maxObjects is set, limit the number of fresh objects.
     if (maxObjects != -1){
-        if (freshList.size() > maxObjects) {
+        if (freshList.size() >= maxObjects) {
             spdlog::warn("[Aggregator] Requested {} fresh objects, but {} available. Limiting to {}.", maxObjects, freshList.size(), maxObjects);
             //Sort freshList by priority (descending)
             std::sort(freshList.begin(), freshList.end(), [](const ObjectEntity& a, const ObjectEntity& b) {
@@ -228,32 +229,25 @@ std::vector<Object> Aggregator::getFreshObjects(int maxObjects) {
 
             freshList.resize(maxObjects);
 
-        } else if (freshList.size() < maxObjects) {
+        } else {
             spdlog::warn("[Aggregator] Requested {} fresh objects, but only {} available.", maxObjects, freshList.size());
-            // Sort pendingList by priority (descending)
 
-            if (pendingList.size() == 0) {
-                // Update all_objects_ with the freshList
-                for (int i = 0; i < freshList.size(); i++) {
-                    all_objects_[freshList[i].current.objectID].to_send = false;
-                    all_objects_[freshList[i].current.objectID].has_updated = false;
-                    all_objects_[freshList[i].current.objectID].last_sent = freshList[i].current;
-                    all_objects_[freshList[i].current.objectID].priority = 0.0;
+            // Update all_objects_ with the freshList
+            for (int i = 0; i < freshList.size(); i++) {
+                all_objects_[freshList[i].current.objectID].to_send = false;
+                all_objects_[freshList[i].current.objectID].has_updated = false;
+                all_objects_[freshList[i].current.objectID].last_sent = freshList[i].current;
+                all_objects_[freshList[i].current.objectID].priority = 0.0;
+            }
+
+            if (pendingList.size() != 0 && addPendingObjects_) {
+                if (pendingList.size() != 0) {
+                    std::sort(pendingList.begin(), pendingList.end(), [](const ObjectEntity& a, const ObjectEntity& b) {
+                        return a.priority > b.priority;
+                    });
                 }
-            } else {
-                std::sort(pendingList.begin(), pendingList.end(), [](const ObjectEntity& a, const ObjectEntity& b) {
-                    return a.priority > b.priority;
-                });
 
                 spdlog::debug("[Aggregator] Pending list size: {}", pendingList.size());
-
-                // Update all_objects_ firstly from the freshList
-                for (int i = 0; i < freshList.size(); i++) {
-                    all_objects_[freshList[i].current.objectID].to_send = false;
-                    all_objects_[freshList[i].current.objectID].has_updated = false;
-                    all_objects_[freshList[i].current.objectID].last_sent = freshList[i].current;
-                    all_objects_[freshList[i].current.objectID].priority = 0.0;
-                }
 
                 // Then, add the remaining objects from pendingList to freshList
                 // However, check if there are enough objects in pendingList
@@ -272,18 +266,7 @@ std::vector<Object> Aggregator::getFreshObjects(int maxObjects) {
                     all_objects_[pendingList[i].current.objectID].priority = 0.0;
                 }
             }
-                
-        } else {
-            spdlog::debug("[Aggregator] Requested {} fresh objects, and {} available.", maxObjects, freshList.size());
-            for (int i = 0; i < freshList.size(); i++) {
-                all_objects_[freshList[i].current.objectID].to_send = false;
-                all_objects_[freshList[i].current.objectID].has_updated = false;
-                all_objects_[freshList[i].current.objectID].last_sent = freshList[i].current;
-                all_objects_[freshList[i].current.objectID].priority = 0.0;
-            }
-        }
-
-
+        } 
     } else {
         // Update all_objects_ with the freshList
         for (int i = 0; i < freshList.size(); i++) {

@@ -86,8 +86,9 @@ public:
      * @param performanceLogs Enable performance logs (default: false).
      * @param zenohEndpoint Zenoh endpoint to connect to (default: none).
      * @param priorityType Type of priority calculation to use (default: "etsi"), options: "etsi", "predictor".
+     * @param addPendingObjects Adds past objects that are not meant to go in a CPM (default: false)
      */
-    Aggregator(int domainId, long maxObjectAgeS = 300, long cleanInterval = 5, bool ignoreRules = false, bool performanceLogs = false, const std::string& zenohEndpoint = "", const std::string& priorityType = "etsi");
+    Aggregator(int domainId, long maxObjectAgeS = 300, long cleanInterval = 5, bool ignoreRules = false, bool performanceLogs = false, const std::string& zenohEndpoint = "", const std::string& priorityType = "etsi", bool addPendingObjects = false);
 
     /**
      * @brief Destroy the Aggregator object.
@@ -180,6 +181,7 @@ private:
     // Cleanup configuration
     long maxObjectAge_;     // Maximum object age in seconds
     long cleanInterval_;    // Cleanup interval in seconds
+    bool addPendingObjects_; // Flag to add past objects
 
     // ID map for CPM object IDs
     int currentID_ = 1;
