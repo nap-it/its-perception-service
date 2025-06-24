@@ -40,11 +40,12 @@ cps_configs:
     interval: 100
     performance_logs: false
     generation_dds_topic: "cps-v2/in/cpm"  # or "vanetza/in/cpm"
-    max_object_age: 300
-    clean_interval: 5
+    max_object_age: 2
+    clean_interval: 1
     ignore_rules: false
     priority: "etsi"
     zenoh_endpoint: 127.0.0.1
+    add_pending_objects: false
 
   processing: # Mostly used for ATCLL visualization
     debug: false
@@ -52,6 +53,7 @@ cps_configs:
     station_type: "{{ station_type }}"
     station_id: "{{ id }}"
     repeat_id_interval: 3600
+    performance_logs: false
     location_provider: "static"  # or “dds” or “mqtt”; override in host_vars if needed
     mqtt_host: ""       # if location_provider=mqtt
     mqtt_port: ""       # if location_provider=mqtt
