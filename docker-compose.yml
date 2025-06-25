@@ -30,6 +30,6 @@ services:
     image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/camera-adapter
     restart: always
     volumes:
-      - ./camera-adapter/config.ini:/config.ini
+      - ./sensor-adapters/camera-adapter/config.ini:/config.ini
     network_mode: host
     ipc: host
