@@ -1,5 +1,5 @@
 # ==============================
-# 1️⃣  BUILDER STAGE
+# BUILDER STAGE
 # ==============================
 FROM debian:bullseye-slim AS builder
 
@@ -90,7 +90,7 @@ RUN chmod +x main
 
 
 # ==============================
-# 2️⃣  FINAL RUNTIME STAGE
+# FINAL RUNTIME STAGE
 # ==============================
 FROM debian:bullseye-slim AS runtime
 

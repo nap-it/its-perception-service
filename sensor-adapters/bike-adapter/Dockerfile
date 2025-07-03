@@ -1,7 +1,13 @@
 # ==============================
-# 1️⃣  BUILDER STAGE
+# BUILDER STAGE
 # ==============================
+FROM code.nap.av.it.pt:5050/mobility-networks/middleware-images/dds-libs:2.14.4 AS dds-libs
+FROM code.nap.av.it.pt:5050/mobility-networks/middleware-images/mqtt-libs:1.3.2 AS mqtt-libs
+
 FROM debian:bullseye-slim AS builder
+
+COPY --from=dds-libs /usr/local /usr/local
+COPY --from=mqtt-libs /usr/local /usr/local
 
 ENV TZ=Europe/Lisbon
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
@@ -26,53 +32,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
-# ------------------------- Build Fast-DDS -------------------------
-WORKDIR /usr/src
-RUN git clone https://github.com/eProsima/foonathan_memory_vendor.git && \
-    mkdir /usr/src/foonathan_memory_vendor/build
-WORKDIR /usr/src/foonathan_memory_vendor
-RUN git checkout v1.3.1
-WORKDIR /usr/src/foonathan_memory_vendor/build
-RUN cmake .. -DBUILD_SHARED_LIBS=ON && \
-    cmake --build . --target install --parallel $(nproc)
-
-WORKDIR /usr/src
-RUN git clone https://github.com/eProsima/Fast-CDR.git && \
-    mkdir /usr/src/Fast-CDR/build
-WORKDIR /usr/src/Fast-CDR/
-RUN git checkout v2.2.6
-WORKDIR /usr/src/Fast-CDR/build
-RUN cmake .. && \
-    cmake --build . --target install --parallel $(nproc)
-
-WORKDIR /usr/src
-RUN git clone https://github.com/eProsima/Fast-DDS.git
-WORKDIR /usr/src/Fast-DDS/
-RUN git checkout v2.14.4
-RUN mkdir /usr/src/Fast-DDS/build
-WORKDIR /usr/src/Fast-DDS/build
-RUN cmake .. && \
-    cmake --build . --target install --parallel $(nproc)
-
-# ------------------------- Build MQTT C -------------------------
-WORKDIR /usr/src
-RUN git clone https://github.com/eclipse/paho.mqtt.c.git
-WORKDIR /usr/src/paho.mqtt.c
-RUN git checkout v1.3.13
-RUN cmake -Bbuild -H. -DPAHO_ENABLE_TESTING=OFF -DPAHO_BUILD_STATIC=ON -DPAHO_WITH_SSL=ON -DPAHO_HIGH_PERFORMANCE=ON
-RUN cmake --build build/ --target install
-RUN ldconfig
-
-# ------------------------- Build MQTT C++ -------------------------
-WORKDIR /usr/src
-RUN git clone https://github.com/eclipse/paho.mqtt.cpp
-WORKDIR /usr/src/paho.mqtt.cpp
-RUN git checkout v1.3.2
-RUN cmake -Bbuild -H. -DPAHO_BUILD_STATIC=ON -DPAHO_BUILD_DOCUMENTATION=OFF -DPAHO_BUILD_SAMPLES=ON
-RUN cmake --build build/ --target install
-RUN ldconfig
-
-# ------------------------- Build Radar Adapter -------------------------
+# ------------------------- Build Bike Adapter -------------------------
 WORKDIR /usr/src/bike-adapter
 RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/spdlog.git
 RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/mobility-networks/fastdds-cpp-wrapper.git
@@ -90,7 +50,7 @@ RUN chmod +x main
 
 
 # ==============================
-# 2️⃣  FINAL RUNTIME STAGE
+# FINAL RUNTIME STAGE
 # ==============================
 FROM debian:bullseye-slim AS runtime
 
@@ -121,7 +81,7 @@ COPY --from=builder /usr/local/lib/libspdlog.so* /usr/local/lib/
 # Ensure shared libraries are found
 RUN ldconfig
 
-# ------------------------- Copy Radar Adapter Binary -------------------------
+# ------------------------- Copy Bike Adapter Binary -------------------------
 COPY --from=builder /usr/src/bike-adapter/main /bike-adapter/main
 
 WORKDIR /bike-adapter

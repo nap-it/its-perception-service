@@ -43,6 +43,7 @@ build_image() {
   if [ "$BUILD_FLAG" == "--load" ]; then
     # Only build amd64 slice when loading into local Docker
     docker buildx build \
+      --provenance=false \
       --platform=linux/amd64 \
       $BUILD_FLAG \
       --tag "$tag" \
@@ -50,6 +51,7 @@ build_image() {
   else
     # Build and push both arm64 and amd64
     docker buildx build \
+      --provenance=false \
       --platform=linux/arm64,linux/amd64 \
       $BUILD_FLAG \
       --tag "$tag" \
