@@ -13,6 +13,8 @@ include_directories(${CMAKE_SOURCE_DIR})
 find_package(Threads REQUIRED)
 find_package(Fastcdr REQUIRED)
 find_package(Fastrtps REQUIRED)
+find_package(zenohc REQUIRED)
+find_package(zenohcxx REQUIRED)
 
 add_subdirectory(paho-mqtt-cpp-wrapper)
 
@@ -38,4 +40,5 @@ target_link_libraries(main
         paho-mqtt-cpp-wrapper
         paho-mqttpp3 
         paho-mqtt3as
+        zenohcxx::zenohc
 )

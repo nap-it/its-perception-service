@@ -49,10 +49,16 @@ Aggregator::Aggregator(int ddsDomain, long maxObjectAge, long cleanInterval, boo
     zenoh::ZResult *err = nullptr;
     spdlog::info("[Aggregator] Initializing Zenoh client ...");
     zenoh::Config config = zenoh::Config::from_file("./zenoh_config.json5", err); 
-    if (err) {
-        spdlog::error("[Aggregator] Error in Zenoh configuration: {}", static_cast<const void*>(err));
+    if(!zenohEndpoint.empty()) {
+        config.insert_json5("connect/endpoints", "[\"tcp/" + zenohEndpoint + ":7447\"]", err);
     } else {
-        spdlog::info("[Aggregator] Zenoh configuration: {}", config.to_string());
+        spdlog::debug("[Processor] No Zenoh endpoint configured, using default configuration.");
+    }
+
+    if (err) {
+        spdlog::error("[Processor] Error in Zenoh configuration: {}", static_cast<const void*>(err));
+    } else {
+        spdlog::debug("[Processor] Zenoh configuration: {}", config.to_string());
     }
 
     spdlog::info("[Aggregator] Opening Zenoh session ...");
@@ -65,10 +71,8 @@ Aggregator::Aggregator(int ddsDomain, long maxObjectAge, long cleanInterval, boo
     }
     
     zenoh::KeyExpr zenoh_sub_topics("cps/**");
-    subscriber_ = new zenoh::Subscriber(std::move(session_->declare_subscriber(zenoh_sub_topics, &zenohCallback, zenoh::closures::none)));
-    // subscriber_sensors_ = new zenoh::Subscriber(std::move(session_->declare_subscriber(topic_sensors, &zenohSensorsCallback, zenoh::closures::none)));
-    // session_->declare_subscriber(zenoh_sub_topics, &zenohCallback, zenoh::closures::none);
-    session_->declare_publisher("zenoh/debug");
+    // subscriber_ = new zenoh::Subscriber(std::move(session_->declare_subscriber(zenoh_sub_topics, &zenohCallback, zenoh::closures::none)));
+    session_->declare_background_subscriber(zenoh_sub_topics, &zenohCallback, zenoh::closures::none);
 }
 
 Aggregator::~Aggregator() {

@@ -93,6 +93,12 @@ int main() {
     spdlog::info("[CONFIG] Remote MQTT output full topic: {}", config.remote_mqtt_output_full_topic);
     bool processor_performance_logs = reader.GetBoolean("processing", "performance_logs", false);
     spdlog::info("[CONFIG] Performance logs: {}", processor_performance_logs);
+    config.zenoh_endpoint = reader.Get("processing", "zenoh_endpoint", "");
+    spdlog::info("[CONFIG] Zenoh endpoint: {}", config.zenoh_endpoint);
+    config.zenoh_output_topic = reader.Get("processing", "zenoh_output_topic", "objects");
+    spdlog::info("[CONFIG] Zenoh output topic: {}", config.zenoh_output_topic);
+    config.zenoh_output_full_topic = reader.Get("processing", "zenoh_output_full_topic", "objects_full");
+    spdlog::info("[CONFIG] Zenoh output full topic: {}", config.zenoh_output_full_topic);
 
     std::shared_ptr<Processor> processor = std::make_shared<Processor>(config, locator, processor_performance_logs);
     spdlog::info("[Processor] Starting processor...");

@@ -45,6 +45,7 @@ COPY *.cpp /usr/src/processing/
 COPY *.h /usr/src/processing/
 COPY *.hpp /usr/src/processing/
 COPY CMakeLists.txt /usr/src/processing/
+COPY zenoh_config.json5 /usr/src/processing/
 
 WORKDIR /usr/src/processing
 RUN cmake . && cmake --build . --parallel $(nproc)
@@ -85,6 +86,7 @@ RUN ldconfig
 
 # ------------------------- Copy Processing Binary -------------------------
 COPY --from=builder /usr/src/processing/main /processing/main
+COPY --from=builder /usr/src/processing/zenoh_config.json5 /processing/zenoh_config.json5
 
 WORKDIR /processing
 ENTRYPOINT ["/processing/main"]

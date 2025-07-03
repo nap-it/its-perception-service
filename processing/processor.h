@@ -10,6 +10,7 @@
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/basic_file_sink.h"
 #include "locator.h"
+#include "zenoh.hxx"
 
 constexpr long TIME_2004_MS = 1072915200000;
 constexpr double M_180_PI = 180.0 / M_PI;
@@ -79,6 +80,9 @@ struct Config {
     std::string remote_mqtt_output_full_topic;
     std::string remote_mqtt_username;
     std::string remote_mqtt_password;
+    std::string zenoh_endpoint;
+    std::string zenoh_output_topic;
+    std::string zenoh_output_full_topic;
 };
 
 class Processor {
@@ -130,6 +134,10 @@ private:
 
     // DDS client
     Dds* dds_;
+
+    // Zenoh session and shared memory provider
+    zenoh::Session* session_ = nullptr;
+    zenoh::PosixShmProvider* shm_provider_ = nullptr;
 
     // File logger
     std::shared_ptr<spdlog::logger> processor_file_logger_;

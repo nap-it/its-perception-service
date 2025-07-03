@@ -85,8 +85,36 @@ Processor::Processor(const Config& config, std::shared_ptr<Locator> locator, boo
             }
         }
     }
-    //if (config.cam_topic != "") dds_->subscribe(config.cam_topic);
     spdlog::info("[Processor] DDS client subscribed to topics {} and {}", config.cpm_topics, config.cam_topic);
+
+    // Initialize Zenoh client
+    zenoh::ZResult *err = nullptr;
+    spdlog::info("[Processor] Initializing Zenoh client ...");
+    zenoh::Config zconfig = zenoh::Config::from_file("./zenoh_config.json5", err); 
+    if(!config.zenoh_endpoint.empty()) {
+        zconfig.insert_json5("connect/endpoints", "[\"tcp/" + config.zenoh_endpoint + ":7447\"]", err);
+    } else {
+        spdlog::debug("[Processor] No Zenoh endpoint configured, using default configuration.");
+    }
+
+    if (err) {
+        spdlog::error("[Processor] Error in Zenoh configuration: {}", static_cast<const void*>(err));
+    } else {
+        spdlog::debug("[Processor] Zenoh configuration: {}", zconfig.to_string());
+    }
+    
+    spdlog::info("[Processor] Opening Zenoh session ...");
+    session_ = new zenoh::Session(std::move(zenoh::Session::open(std::move(zconfig))));
+    spdlog::info("[Processor] Zenoh session opened successfully.");
+
+    session_->declare_publisher(config.zenoh_output_topic);
+    session_->declare_publisher(config.zenoh_output_full_topic);
+
+    //Initialize Zenoh shared memory provider with 10 MB size and 2-byte alignment.
+    static constexpr auto SHM_SIZE  = 1024U * 1024U * 10U;
+    static constexpr auto SHM_ALIGN = 2U;
+    zenoh::MemoryLayout layout(SHM_SIZE, zenoh::AllocAlignment({SHM_ALIGN}));
+    shm_provider_ = new zenoh::PosixShmProvider(layout);
 
 }
 
@@ -158,7 +186,28 @@ void Processor::on_message_dds(const std::string& topic, const std::string& mess
             spdlog::error("[Processor] Exception while publishing Remote MQTT message: {}", e.what());
         }
 
-        } else {
+        try {
+            if (session_) {
+                const size_t output_len = output.size();
+                auto output_alloc_result = shm_provider_->alloc_gc_defrag_blocking(output_len, zenoh::AllocAlignment({0}));
+                zenoh::ZShmMut&& output_buf = std::get<zenoh::ZShmMut>(std::move(output_alloc_result));
+                memcpy(output_buf.data(), output.data(), output_len);
+                session_->put(config_.zenoh_output_topic, std::move(output_buf));
+
+                const size_t full_output_len = full_output.size();
+                auto full_output_alloc_result = shm_provider_->alloc_gc_defrag_blocking(full_output_len, zenoh::AllocAlignment({0}));
+                zenoh::ZShmMut&& full_output_buf = std::get<zenoh::ZShmMut>(std::move(full_output_alloc_result));
+                memcpy(full_output_buf.data(), full_output.data(), full_output_len);   
+                session_->put(config_.zenoh_output_full_topic, std::move(full_output_buf));
+                spdlog::info("[Processor] Published Zenoh message on topic {} and {}", config_.zenoh_output_topic, config_.zenoh_output_full_topic);
+            } else {
+                spdlog::error("[Processor] Zenoh session is not available");
+            }
+        } catch (const std::exception& e) {
+            spdlog::error("[Processor] Exception while publishing Zenoh message: {}", e.what());
+        }
+
+    } else {
         spdlog::warn("[Processor] Received message on unknown topic: {}", topic);
     }
 }
@@ -583,7 +632,7 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
         auto serialization_time = std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2).count();
         auto serialization_full_time = std::chrono::duration_cast<std::chrono::microseconds>(t4 - t3).count();
         auto total_time = std::chrono::duration_cast<std::chrono::microseconds>(t4 - message_reception).count();
-        spdlog::debug ("[Processor] Processing time: {} us\nSerialization time: {} us\nSerialization full time: {} us\nTotal time: {} us", processing_time, serialization_time, serialization_full_time, total_time);
+        spdlog::debug ("[Processor] Processing time: {} us\n[Processor] Serialization time: {} us\n[Processor] Serialization full time: {} us\n[Processor] Total time: {} us", processing_time, serialization_time, serialization_full_time, total_time);
         std::string current_timestamp = getCurrentTimestampString();
         if (performanceLogs_){
             // Convert to timestamp since epoch in seconds
