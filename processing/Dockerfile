@@ -79,6 +79,7 @@ COPY --from=builder /usr/local/lib/libfastcdr.so* /usr/local/lib/
 COPY --from=builder /usr/local/lib/libfastrtps.so* /usr/local/lib/
 COPY --from=builder /usr/local/lib/libfoonathan_memory* /usr/local/lib/
 COPY --from=builder /usr/local/lib/libspdlog.so* /usr/local/lib/
+COPY --from=builder /usr/local/lib/libzenoh* /usr/local/lib/
 
 RUN ldconfig
 
