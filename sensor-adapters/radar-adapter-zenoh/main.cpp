@@ -17,7 +17,7 @@ void readConfigFile(const std::string& path, Config& config) {
     // Read configuration
     config.debug = reader.GetBoolean("radar-adapter", "debug", false);
     spdlog::info("[RADAR-CONFIG] Debug: {}", config.debug);
-    config.shared_memory = reader.GetBoolean("radar-adapter", "shared_memory", false);
+    config.shared_memory = reader.GetBoolean("radar-adapter", "shared_memory", true);
     spdlog::info("[RADAR-CONFIG] Shared Memory: {}", config.shared_memory);
     config.zenoh_endpoint = reader.Get("radar-adapter", "zenoh_endpoint", "");
     spdlog::info("[RADAR-CONFIG] Zenoh Endpoint: {}", config.zenoh_endpoint);

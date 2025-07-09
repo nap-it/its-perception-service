@@ -19,13 +19,13 @@ void readConfigFile(const std::string& path, Config& config) {
     spdlog::info("[BIKE-CONFIG] Domain ID: {}", config.domain_id);
     config.debug = reader.GetBoolean("bike-adapter", "debug", false);
     spdlog::info("[BIKE-CONFIG] Debug: {}", config.debug);
-    config.mqtt_host = reader.Get("bike-adapter", "mqtt_host", "");
+    config.mqtt_host = reader.Get("bike-adapter", "mqtt_host", "127.0.0.1");
     spdlog::info("[BIKE-CONFIG] MQTT Host: {}", config.mqtt_host);
-    config.mqtt_port = reader.GetInteger("bike-adapter", "mqtt_port", 0);
+    config.mqtt_port = reader.GetInteger("bike-adapter", "mqtt_port", 1883);
     spdlog::info("[BIKE-CONFIG] MQTT Port: {}", config.mqtt_port);
-    config.mqtt_topic = reader.Get("bike-adapter", "mqtt_topic", "");
+    config.mqtt_topic = reader.Get("bike-adapter", "mqtt_topic", "rpi/cam_detections");
     spdlog::info("[BIKE-CONFIG] MQTT Topic: {}", config.mqtt_topic);
-    config.mqtt_client_id = reader.Get("bike-adapter", "mqtt_client_id", "");
+    config.mqtt_client_id = reader.Get("bike-adapter", "mqtt_client_id", "bike-adapter");
     spdlog::info("[BIKE-CONFIG] MQTT Client ID: {}", config.mqtt_client_id);
 }
 

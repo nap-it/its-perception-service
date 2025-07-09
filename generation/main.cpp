@@ -29,15 +29,15 @@ int main() {
     // Locator configuration
     int locator_dds_domain = reader.GetInteger("locator", "domain_id", 0);
     spdlog::info("[CONFIG] Locator DDS domain: {}", locator_dds_domain);
-    int locator_station_type = reader.GetInteger("locator", "station_type", 0);
+    int locator_station_type = reader.GetInteger("locator", "station_type", 15);
     spdlog::info("[CONFIG] Locator station type: {}", locator_station_type);
     float locator_station_latitude = reader.GetReal("locator", "station_latitude", 0.0);
     spdlog::info("[CONFIG] Locator station latitude: {}", locator_station_latitude);
     float locator_station_longitude = reader.GetReal("locator", "station_longitude", 0.0);
     spdlog::info("[CONFIG] Locator station longitude: {}", locator_station_longitude);
-    std::string locator_mqtt_host = reader.Get("locator", "mqtt_host", "");
+    std::string locator_mqtt_host = reader.Get("locator", "mqtt_host", "127.0.0.1");
     spdlog::info("[CONFIG] Locator MQTT host: {}", locator_mqtt_host);
-    int locator_mqtt_port = reader.GetInteger("locator", "mqtt_port", 0);
+    int locator_mqtt_port = reader.GetInteger("locator", "mqtt_port", 1883);
     spdlog::info("[CONFIG] Locator MQTT port: {}", locator_mqtt_port);
     std::string locator_mqtt_broker = "tcp://" + locator_mqtt_host + ":" + std::to_string(locator_mqtt_port);
     std::string locator_mqtt_topic = reader.Get("locator", "mqtt_topic", "");
@@ -73,9 +73,9 @@ int main() {
     // Aggregator configuration
     int aggregator_dds_domain = reader.GetInteger("aggregator", "domain_id", 0);
     spdlog::info("[CONFIG] Aggregator DDS domain: {}", aggregator_dds_domain);
-    int aggregator_max_object_age = reader.GetInteger("aggregator", "max_object_age", 300);
+    int aggregator_max_object_age = reader.GetInteger("aggregator", "max_object_age", 2);
     spdlog::info("[CONFIG] Aggregator max object age: {}", aggregator_max_object_age);
-    int aggregator_clean_interval = reader.GetInteger("aggregator", "clean_interval", 5);
+    int aggregator_clean_interval = reader.GetInteger("aggregator", "clean_interval", 1);
     spdlog::info("[CONFIG] Aggregator clean interval: {}", aggregator_clean_interval);
     bool aggregator_ignore_rules = reader.GetBoolean("aggregator", "ignore_rules", false);
     spdlog::info("[CONFIG] Aggregator ignore rules: {}", aggregator_ignore_rules);

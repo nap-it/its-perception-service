@@ -19,13 +19,13 @@ void readConfigFile(const std::string& path, Config& config) {
     spdlog::info("[CAMERA-CONFIG] Domain ID: {}", config.domain_id);
     config.debug = reader.GetBoolean("camera-adapter", "debug", false);
     spdlog::info("[CAMERA-CONFIG] Debug: {}", config.debug);
-    config.mqtt_host = reader.Get("camera-adapter", "mqtt_host", "");
+    config.mqtt_host = reader.Get("camera-adapter", "mqtt_host", "127.0.0.1");
     spdlog::info("[CAMERA-CONFIG] MQTT Host: {}", config.mqtt_host);
-    config.mqtt_port = reader.GetInteger("camera-adapter", "mqtt_port", 0);
+    config.mqtt_port = reader.GetInteger("camera-adapter", "mqtt_port", 1883);
     spdlog::info("[CAMERA-CONFIG] MQTT Port: {}", config.mqtt_port);
-    config.mqtt_topic = reader.Get("camera-adapter", "mqtt_topic", "");
+    config.mqtt_topic = reader.Get("camera-adapter", "mqtt_topic", "jetson/camera/1/tracking/objects");
     spdlog::info("[CAMERA-CONFIG] MQTT Topic: {}", config.mqtt_topic);
-    config.mqtt_client_id = reader.Get("camera-adapter", "mqtt_client_id", "");
+    config.mqtt_client_id = reader.Get("camera-adapter", "mqtt_client_id", "camera-adapter");
     spdlog::info("[CAMERA-CONFIG] MQTT Client ID: {}", config.mqtt_client_id);
 }
 
