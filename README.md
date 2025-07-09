@@ -1,8 +1,8 @@
 # Collective Perception Service
 
-## Architecture
+## Architecture [(diagram)]
 
-![Collective Perception Service](CPS.png)
+![Collective Perception Service](CPS.png)[drawio](https://drive.google.com/file/d/1vUR5Nu4ZPlkBnMAqkcHEop4V3RriTGb3/view?usp=sharing)
 
 The CPS consists of several components deployed as Docker containers:
 - **[Generation](https://code.nap.av.it.pt/mobility-networks/cps-v2/-/tree/main/generation)**: The main service that handles the logic of gathering object and sensor data from **Sensor Adapters** using **MQTT** or **Zenoh** and generating **Collective Perception Messages (CPMs)** according to the *ETSI* CPM specification.
