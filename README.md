@@ -1,6 +1,6 @@
 # Collective Perception Service
 
-## Architecture [(diagram)]
+## Architecture
 
 ![Collective Perception Service](CPS.png)[drawio](https://drive.google.com/file/d/1vUR5Nu4ZPlkBnMAqkcHEop4V3RriTGb3/view?usp=sharing)
 
