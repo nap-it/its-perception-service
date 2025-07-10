@@ -383,6 +383,7 @@ void Aggregator::on_message(const std::string& topic, const std::string& message
                     if ((obj.heading != NOT_PRESENT_FLOAT) && (obj.heading < 0 || obj.heading >= 360)) obj.heading = 0;
                     
                     obj.acceleration = (objJson.HasMember("acceleration") && objJson["acceleration"].IsFloat()) ? objJson["acceleration"].GetFloat() : NOT_PRESENT_FLOAT;
+                    
                     obj.latitude = (objJson.HasMember("latitude") && objJson["latitude"].IsFloat()) ? objJson["latitude"].GetFloat() : NOT_PRESENT_FLOAT;
                     if ((obj.latitude == NOT_PRESENT_FLOAT || obj.latitude < -90 || obj.latitude > 90) && (spdlog::error("[Aggregator]: Mandatory (Latitude) not present in message: {}", message), true)) continue;
                     
