@@ -49,8 +49,8 @@ void AutowareAdapter::run() {
     rj::Document sensorDoc;
     sensorDoc.SetObject();
     rj::Document::AllocatorType& alloc = sensorDoc.GetAllocator();
-    sensorDoc.AddMember("sensorID", 12, alloc);
-    sensorDoc.AddMember("sensorType", 12, alloc);
+    sensorDoc.AddMember("sensorID", 3, alloc);
+    sensorDoc.AddMember("sensorType", 3, alloc);
     sensorDoc.AddMember("shadowingApplies", false, alloc);
     rj::StringBuffer sensorBuffer;
     rj::Writer<rj::StringBuffer> sensorWriter(sensorBuffer);
@@ -98,7 +98,7 @@ std::string AutowareAdapter::parseMessage(const std::string& input) {
             Object obj;
             obj.objectID = (rj_obj.HasMember("objID") && rj_obj["objID"].IsInt()) ? rj_obj["objID"].GetInt() : -1;
             if (obj.objectID == -1) { spdlog::error("Mandatory (Object ID) not present in message: {}", input); return ""; }
-            obj.sensorID = 12; // Hardcoded for Autoware Sensor Fusion
+            obj.sensorID = 3; // Hardcoded for Autoware Sensor Fusion
             obj.timestamp = (rj_obj.HasMember("timestamp") && rj_obj["timestamp"].IsInt64()) ? rj_obj["timestamp"].GetInt64()/1000000.0 : 0.0;
             spdlog::debug("Input timestamp: {}, Output timestamp: {}", rj_obj["timestamp"].GetInt64(), obj.timestamp);
             if (obj.timestamp == 0.0) { spdlog::error("Mandatory (Timestamp) not present in message: {}", input); return ""; }
