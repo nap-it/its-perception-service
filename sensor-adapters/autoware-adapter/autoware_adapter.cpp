@@ -31,8 +31,8 @@ AutowareAdapter::AutowareAdapter(const Config& config) : config(config) {
     rj::Document sensorDoc;
     sensorDoc.SetObject();
     rj::Document::AllocatorType& alloc = sensorDoc.GetAllocator();
-    sensorDoc.AddMember("sensorID", 12, alloc);
-    sensorDoc.AddMember("sensorType", 12, alloc);
+    sensorDoc.AddMember("sensorID", 3, alloc);
+    sensorDoc.AddMember("sensorType", 3, alloc);
     sensorDoc.AddMember("shadowingApplies", false, alloc);
     rj::StringBuffer sensorBuffer;
     rj::Writer<rj::StringBuffer> sensorWriter(sensorBuffer);
