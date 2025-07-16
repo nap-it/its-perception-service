@@ -37,7 +37,7 @@ The [`sensorType`](https://forge.etsi.org/rep/ITS/asn1/cpm_ts103324/-/blob/maste
 - 1: Radar
 - 2: Lidar
 - 3: Monovideo (camera)
-- 12: Local Aggregation (e.g., PIXKIT)
+- 12: Local Aggregation
 - 13: ITS Aggregation 
 
 #### Object Data Format for the topic `cps/objects`
