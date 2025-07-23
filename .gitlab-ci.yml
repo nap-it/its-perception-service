@@ -155,6 +155,10 @@ build_radar_adapter_arm64:
 
 create_manifest_generation:
   <<: *create_manifest
+  rules:
+    - if : '$CI_COMMIT_TAG && $CI_COMMIT_TAG != "latest"'
+      changes:
+        - generation/**
   variables:
     IMAGE_NAME: generation
   dependencies: [build_generation_amd64, build_generation_arm64]
@@ -162,6 +166,10 @@ create_manifest_generation:
 
 create_manifest_processing:
   <<: *create_manifest
+  rules:
+    - if : '$CI_COMMIT_TAG && $CI_COMMIT_TAG != "latest"'
+      changes:
+        - processing/**
   variables:
     IMAGE_NAME: processing
   dependencies: [build_processing_amd64, build_processing_arm64]
@@ -169,6 +177,10 @@ create_manifest_processing:
 
 create_manifest_autoware_adapter:
   <<: *create_manifest
+  rules:
+    - if : '$CI_COMMIT_TAG && $CI_COMMIT_TAG != "latest"'
+      changes:
+        - sensor-adapters/autoware-adapter/**
   variables:
     IMAGE_NAME: autoware-adapter
   dependencies: [build_autoware_adapter_amd64, build_autoware_adapter_arm64]
@@ -176,6 +188,10 @@ create_manifest_autoware_adapter:
 
 create_manifest_bike_adapter:
   <<: *create_manifest
+  rules:
+    - if : '$CI_COMMIT_TAG && $CI_COMMIT_TAG != "latest"'
+      changes:
+        - sensor-adapters/bike-adapter/**
   variables:
     IMAGE_NAME: bike-adapter
   dependencies: [build_bike_adapter_amd64, build_bike_adapter_arm64]
@@ -183,6 +199,10 @@ create_manifest_bike_adapter:
 
 create_manifest_camera_adapter:
   <<: *create_manifest
+  rules:
+    - if : '$CI_COMMIT_TAG && $CI_COMMIT_TAG != "latest"'
+      changes:
+        - sensor-adapters/camera-adapter/**
   variables:
     IMAGE_NAME: camera-adapter
   dependencies: [build_camera_adapter_amd64, build_camera_adapter_arm64]
@@ -190,6 +210,10 @@ create_manifest_camera_adapter:
 
 create_manifest_radar_adapter:
   <<: *create_manifest
+  rules:
+    - if : '$CI_COMMIT_TAG && $CI_COMMIT_TAG != "latest"'
+      changes:
+        - sensor-adapters/radar-adapter/**
   variables:
     IMAGE_NAME: radar-adapter
   dependencies: [build_radar_adapter_amd64, build_radar_adapter_arm64]
