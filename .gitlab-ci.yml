@@ -13,25 +13,25 @@ stages:
 .default_build_template: &default_build
   stage: build
   image: code.nap.av.it.pt:5050/external-tools/misc-docker-images/docker
+  before_script:
+    - DOCKER_TAG=$([[ "$CI_COMMIT_BRANCH" == "" || "$CI_COMMIT_BRANCH" == "$CI_DEFAULT_BRANCH" ]] && echo "$CI_COMMIT_TAG" || echo "$CI_COMMIT_BRANCH")
   script:
     - |
-      TAG_VERSION=$([[ "$CI_COMMIT_BRANCH" == "" || "$CI_COMMIT_BRANCH" == "$CI_DEFAULT_BRANCH" ]] && echo "$CI_COMMIT_TAG" || echo "$CI_COMMIT_BRANCH")
+      TAG_VERSION="$DOCKER_TAG"
       echo "Injecting version info: $TAG_VERSION"
       sed -i '/^ENTRYPOINT/i ENV VERSION='$TAG_VERSION $DOCKERFILE_PATH/Dockerfile
       sed -i '/^ENTRYPOINT/i ENV COMMIT='$CI_COMMIT_SHORT_SHA $DOCKERFILE_PATH/Dockerfile
     - echo "$CI_TOKEN" | docker login -u "$CI_USER" --password-stdin code.nap.av.it.pt:5050
-    - docker build -t code.nap.av.it.pt:5050/mobility-networks/cps-v2/$IMAGE_NAME:$DOCKER_TAG-$ARCH -f $DOCKERFILE_PATH/Dockerfile $DOCKERFILE_PATH
-    - docker push code.nap.av.it.pt:5050/mobility-networks/cps-v2/$IMAGE_NAME:$DOCKER_TAG-$ARCH
+    - docker build -t code.nap.av.it.pt:5050/mobility-networks/cps-v2//$IMAGE_NAME:$DOCKER_TAG-$ARCH -f $DOCKERFILE_PATH/Dockerfile $DOCKERFILE_PATH
+    - docker push code.nap.av.it.pt:5050/mobility-networks/cps-v2//$IMAGE_NAME:$DOCKER_TAG-$ARCH
   rules:
-    - if: '$CI_COMMIT_TAG != "latest"'
+    - if: '$CI_COMMIT_TAG && $CI_COMMIT_TAG != "latest"'
       changes:
         - $DOCKERFILE_PATH/**
 
 # ----------------------
-# Build Jobs per Service (AMD64 and ARM64)
+# Build Jobs Sections
 # ----------------------
-
-# Generation
 build_generation_amd64:
   <<: *default_build
   variables:
@@ -48,7 +48,6 @@ build_generation_arm64:
     ARCH: arm64
   tags: [arm64]
 
-# Processing
 build_processing_amd64:
   <<: *default_build
   variables:
@@ -65,7 +64,6 @@ build_processing_arm64:
     ARCH: arm64
   tags: [arm64]
 
-# Autoware Adapter
 build_autoware_adapter_amd64:
   <<: *default_build
   variables:
@@ -82,7 +80,6 @@ build_autoware_adapter_arm64:
     ARCH: arm64
   tags: [arm64]
 
-# Bike Adapter
 build_bike_adapter_amd64:
   <<: *default_build
   variables:
@@ -99,7 +96,6 @@ build_bike_adapter_arm64:
     ARCH: arm64
   tags: [arm64]
 
-# Camera Adapter
 build_camera_adapter_amd64:
   <<: *default_build
   variables:
@@ -116,7 +112,6 @@ build_camera_adapter_arm64:
     ARCH: arm64
   tags: [arm64]
 
-# Radar Adapter
 build_radar_adapter_amd64:
   <<: *default_build
   variables:
@@ -134,20 +129,27 @@ build_radar_adapter_arm64:
   tags: [arm64]
 
 # ----------------------
-# Manifest Creation (multi-arch)
+# Manifest Creation (auto multi-arch for version & latest)
 # ----------------------
-
 .create_manifest_template: &create_manifest
   stage: manifest
   image: code.nap.av.it.pt:5050/external-tools/misc-docker-images/docker
   script:
     - echo "$CI_TOKEN" | docker login -u "$CI_USER" --password-stdin code.nap.av.it.pt:5050
-    - docker manifest create code.nap.av.it.pt:5050/mobility-networks/cps-v2/$IMAGE_NAME:$DOCKER_TAG \
-        code.nap.av.it.pt:5050/mobility-networks/cps-v2/$IMAGE_NAME:$DOCKER_TAG-amd64 \
-        code.nap.av.it.pt:5050/mobility-networks/cps-v2/$IMAGE_NAME:$DOCKER_TAG-arm64
-    - docker manifest annotate code.nap.av.it.pt:5050/mobility-networks/cps-v2/$IMAGE_NAME:$DOCKER_TAG code.nap.av.it.pt:5050/mobility-networks/cps-v2/$IMAGE_NAME:$DOCKER_TAG-amd64 --arch amd64
-    - docker manifest annotate code.nap.av.it.pt:5050/mobility-networks/cps-v2/$IMAGE_NAME:$DOCKER_TAG code.nap.av.it.pt:5050/mobility-networks/cps-v2/$IMAGE_NAME:$DOCKER_TAG-arm64 --arch arm64
-    - docker manifest push code.nap.av.it.pt:5050/mobility-networks/cps-v2/$IMAGE_NAME:$DOCKER_TAG
+    # Version manifest
+    - docker manifest create code.nap.av.it.pt:5050/mobility-networks/cps-v2//$IMAGE_NAME:$CI_COMMIT_TAG \
+        code.nap.av.it.pt:5050/mobility-networks/cps-v2//$IMAGE_NAME:$CI_COMMIT_TAG-amd64 \
+        code.nap.av.it.pt:5050/mobility-networks/cps-v2//$IMAGE_NAME:$CI_COMMIT_TAG-arm64
+    - docker manifest annotate code.nap.av.it.pt:5050/mobility-networks/cps-v2//$IMAGE_NAME:$CI_COMMIT_TAG code.nap.av.it.pt:5050/mobility-networks/cps-v2//$IMAGE_NAME:$CI_COMMIT_TAG-amd64 --arch amd64
+    - docker manifest annotate code.nap.av.it.pt:5050/mobility-networks/cps-v2//$IMAGE_NAME:$CI_COMMIT_TAG code.nap.av.it.pt:5050/mobility-networks/cps-v2//$IMAGE_NAME:$CI_COMMIT_TAG-arm64 --arch arm64
+    - docker manifest push code.nap.av.it.pt:5050/mobility-networks/cps-v2//$IMAGE_NAME:$CI_COMMIT_TAG
+    # Latest manifest
+    - docker manifest create code.nap.av.it.pt:5050/mobility-networks/cps-v2//$IMAGE_NAME:latest \
+        code.nap.av.it.pt:5050/mobility-networks/cps-v2//$IMAGE_NAME:$CI_COMMIT_TAG-amd64 \
+        code.nap.av.it.pt:5050/mobility-networks/cps-v2//$IMAGE_NAME:$CI_COMMIT_TAG-arm64
+    - docker manifest annotate code.nap.av.it.pt:5050/mobility-networks/cps-v2//$IMAGE_NAME:latest code.nap.av.it.pt:5050/mobility-networks/cps-v2//$IMAGE_NAME:$CI_COMMIT_TAG-amd64 --arch amd64
+    - docker manifest annotate code.nap.av.it.pt:5050/mobility-networks/cps-v2//$IMAGE_NAME:latest code.nap.av.it.pt:5050/mobility-networks/cps-v2//$IMAGE_NAME:$CI_COMMIT_TAG-arm64 --arch arm64
+    - docker manifest push code.nap.av.it.pt:5050/mobility-networks/cps-v2//$IMAGE_NAME:latest
   rules:
     - if: '$CI_COMMIT_TAG && $CI_COMMIT_TAG != "latest"'
 
@@ -184,7 +186,7 @@ create_manifest_camera_adapter:
   variables:
     IMAGE_NAME: camera-adapter
   dependencies: [build_camera_adapter_amd64, build_camera_adapter_arm64]
-  tags: [amd64] 
+  tags: [amd64]
 
 create_manifest_radar_adapter:
   <<: *create_manifest
@@ -194,9 +196,8 @@ create_manifest_radar_adapter:
   tags: [amd64]
 
 # ----------------------
-# Release Management
+# Release Management (GitLab Release entry)
 # ----------------------
-
 release:
   stage: release
   tags: [amd64]
@@ -214,29 +215,22 @@ release:
     - if: '$CI_COMMIT_TAG && $CI_COMMIT_TAG != "latest"'
 
 # ----------------------
-# Cleanup
+# Cleanup Stage
 # ----------------------
-
 cleanup:
   stage: clean
   image: alpine:latest
   tags: [amd64]
   script:
-    - apk add curl
+    - apk add --no-cache curl
     - curl -LO https://github.com/regclient/regclient/releases/download/v0.6.1/regctl-linux-amd64
     - chmod +x regctl-linux-amd64 && mv regctl-linux-amd64 /usr/local/bin/regctl
     - regctl registry login code.nap.av.it.pt:5050 -u ${CI_USER} -p ${CI_TOKEN}
-    - regctl tag rm code.nap.av.it.pt:5050/mobility-networks/cps-v2/generation:$DOCKER_TAG-amd64 || true
-    - regctl tag rm code.nap.av.it.pt:5050/mobility-networks/cps-v2/generation:$DOCKER_TAG-arm64 || true
-    - regctl tag rm code.nap.av.it.pt:5050/mobility-networks/cps-v2/processing:$DOCKER_TAG-amd64 || true
-    - regctl tag rm code.nap.av.it.pt:5050/mobility-networks/cps-v2/processing:$DOCKER_TAG-arm64 || true
-    - regctl tag rm code.nap.av.it.pt:5050/mobility-networks/cps-v2/autoware-adapter:$DOCKER_TAG-amd64 || true
-    - regctl tag rm code.nap.av.it.pt:5050/mobility-networks/cps-v2/autoware-adapter:$DOCKER_TAG-arm64 || true
-    - regctl tag rm code.nap.av.it.pt:5050/mobility-networks/cps-v2/bike-adapter:$DOCKER_TAG-amd64 || true
-    - regctl tag rm code.nap.av.it.pt:5050/mobility-networks/cps-v2/bike-adapter:$DOCKER_TAG-arm64 || true
-    - regctl tag rm code.nap.av.it.pt:5050/mobility-networks/cps-v2/camera-adapter:$DOCKER_TAG-amd64 || true
-    - regctl tag rm code.nap.av.it.pt:5050/mobility-networks/cps-v2/camera-adapter:$DOCKER_TAG-arm64 || true
-    - regctl tag rm code.nap.av.it.pt:5050/mobility-networks/cps-v2/radar-adapter:$DOCKER_TAG-amd64 || true
-    - regctl tag rm code.nap.av.it.pt:5050/mobility-networks/cps-v2/radar-adapter:$DOCKER_TAG-arm64 || true
+    # remove versioned arch tags
+    - regctl tag rm code.nap.av.it.pt:5050/mobility-networks/cps-v2//$IMAGE_NAME:$CI_COMMIT_TAG-amd64 || true
+    - regctl tag rm code.nap.av.it.pt:5050/mobility-networks/cps-v2//$IMAGE_NAME:$CI_COMMIT_TAG-arm64 || true
+    # remove latest arch tags
+    - regctl tag rm code.nap.av.it.pt:5050/mobility-networks/cps-v2//$IMAGE_NAME:latest-amd64 || true
+    - regctl tag rm code.nap.av.it.pt:5050/mobility-networks/cps-v2//$IMAGE_NAME:latest-arm64 || true
   rules:
     - if: '$CI_COMMIT_TAG && $CI_COMMIT_TAG != "latest"'
