@@ -155,6 +155,7 @@ void Processor::on_message_dds(const std::string& topic, const std::string& mess
                 dds_->publish(config_.dds_output_topic, output);
                 dds_->publish(config_.dds_output_full_topic, full_output);
                 spdlog::info("[Processor] Published DDS message on topic {} and {}", config_.dds_output_topic, config_.dds_output_full_topic);
+                spdlog::debug("[Processor] Objects message: {}", output);
             } else {
                 spdlog::error("[Processor] DDS client is not available");
             }
