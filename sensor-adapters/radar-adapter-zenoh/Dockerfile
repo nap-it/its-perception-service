@@ -4,7 +4,7 @@
 FROM code.nap.av.it.pt:5050/mobility-networks/middleware-images/zenoh-libs:1.4.0 AS zenoh-libs
 FROM code.nap.av.it.pt:5050/mobility-networks/middleware-images/mqtt-libs:1.3.2 AS mqtt-libs
 
-FROM debian:bullseye-slim AS builder
+FROM code.nap.av.it.pt:5050/external-tools/misc-docker-images/debian:bullseye-slim AS builder
 
 COPY --from=zenoh-libs /usr/local /usr/local
 COPY --from=mqtt-libs /usr/local /usr/local
@@ -12,7 +12,7 @@ COPY --from=mqtt-libs /usr/local /usr/local
 ENV TZ=Europe/Lisbon
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-RUN printf "deb http://httpredir.debian.org/debian bullseye-backports main non-free\ndeb-src http://httpredir.debian.org/debian bullseye-backports main non-free\n" > /etc/apt/sources.list.d/backports.list
+RUN printf "deb http://archive.debian.org/debian-archive/debian/ bullseye-backports main non-free\ndeb-src http://archive.debian.org/debian-archive/debian/ bullseye-backports main non-free\n" > /etc/apt/sources.list.d/backports.list
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
@@ -52,12 +52,12 @@ RUN chmod +x main
 # ==============================
 # FINAL RUNTIME STAGE
 # ==============================
-FROM debian:bullseye-slim AS runtime
+FROM code.nap.av.it.pt:5050/external-tools/misc-docker-images/debian:bullseye-slim AS runtime
 
 ENV TZ=Europe/Lisbon
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-RUN printf "deb http://httpredir.debian.org/debian bullseye-backports main non-free\ndeb-src http://httpredir.debian.org/debian bullseye-backports main non-free\n" > /etc/apt/sources.list.d/backports.list
+RUN printf "deb http://archive.debian.org/debian-archive/debian/ bullseye-backports main non-free\ndeb-src http://archive.debian.org/debian-archive/debian/ bullseye-backports main non-free\n" > /etc/apt/sources.list.d/backports.list
 
 # Install only necessary runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
