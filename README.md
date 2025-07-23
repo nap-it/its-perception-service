@@ -46,7 +46,7 @@ The [`sensorType`](https://forge.etsi.org/rep/ITS/asn1/cpm_ts103324/-/blob/maste
 {
     "objects": [
         {
-            "objID": integer, // Unique identifier for the object
+            "objectID": integer, // Unique identifier for the object
             "sensorID": integer, // ID of the sensor that detected this object
             "timestamp": double, //UNIX timestamp of the detection in seconds
             "latitude": float, // Latitude of the object in degrees
