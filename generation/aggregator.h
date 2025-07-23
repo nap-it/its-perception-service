@@ -119,7 +119,7 @@ public:
 
     /**
      * @brief Non-static message handler.
-     * Called when a new DDS/Zenoh message arrives on "cps/objects".
+     * Called when a new DDS/Zenoh message arrives on "generation/objects".
      * @param topic The DDS/Zenoh topic.
      * @param message The received message (JSON formatted).
      */

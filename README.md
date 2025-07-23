@@ -22,7 +22,7 @@ The CPS consists of several components deployed as Docker containers:
 
 ## Message Formats
 The Sensor Adapters publish both sensor and object data in a specific format that is understood by the **Generation** service. The following formats are used:
-#### Sensor Data Format for the topic `cps/sensors`
+#### Sensor Data Format for the topic `generation/sensors`
 
 ```json
 {
@@ -40,7 +40,7 @@ The [`sensorType`](https://forge.etsi.org/rep/ITS/asn1/cpm_ts103324/-/blob/maste
 - 12: Local Aggregation
 - 13: ITS Aggregation 
 
-#### Object Data Format for the topic `cps/objects`
+#### Object Data Format for the topic `generation/objects`
 
 ```json
 {

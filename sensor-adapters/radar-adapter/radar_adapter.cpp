@@ -21,8 +21,8 @@ RadarAdapter::RadarAdapter(const Config& config) : config(config) {
 
     // Initialize DDS client.
     dds_ = new Dds("RadarAdapter", config.domain_id, on_message_dds);
-    dds_->provision_publisher("cps/objects");
-    dds_->provision_publisher("cps/sensors");
+    dds_->provision_publisher("generation/objects");
+    dds_->provision_publisher("generation/sensors");
     std::this_thread::sleep_for(std::chrono::seconds(2));
 
     // Build sensor information using RapidJSON.
@@ -36,7 +36,7 @@ RadarAdapter::RadarAdapter(const Config& config) : config(config) {
     rj::Writer<rj::StringBuffer> sensorWriter(sensorBuffer);
     sensorDoc.Accept(sensorWriter);
     std::string sensorInfoStr = sensorBuffer.GetString();
-    dds_->publish("cps/sensors", sensorInfoStr);
+    dds_->publish("generation/sensors", sensorInfoStr);
     spdlog::info("Sensor information published: {}", sensorInfoStr);
 
     // MQTT configuration.
@@ -73,7 +73,7 @@ void RadarAdapter::run() {
 
     while (true) {
         std::this_thread::sleep_for(std::chrono::seconds(5));
-        dds_->publish("cps/sensors", sensorInfoStr);
+        dds_->publish("generation/sensors", sensorInfoStr);
         spdlog::debug("Sensor information published: {}", sensorInfoStr);
         {
             std::lock_guard<std::mutex> lock(counter_mutex_);
@@ -91,7 +91,7 @@ void RadarAdapter::on_message_mqtt(const std::string& topic, const std::string& 
     spdlog::debug("Received MQTT message on topic: {}", topic);
     std::string parsed_message = parseMessage(message);
     spdlog::debug("Parsed message: {}", parsed_message);
-    dds_->publish("cps/objects", parsed_message);
+    dds_->publish("generation/objects", parsed_message);
 }
 
 std::string RadarAdapter::parseMessage(const std::string& input) {

@@ -33,10 +33,10 @@ RadarAdapter::RadarAdapter(const Config& config) : config(config) {
     session_ = new zenoh::Session(std::move(zenoh::Session::open(std::move(zconfig))));
     spdlog::info("[Aggregator] Zenoh session opened successfully.");
     
-    zenoh::KeyExpr topic_objs("cps/objects");
-    zenoh::KeyExpr topic_sensors("cps/sensors");
+    zenoh::KeyExpr topic_objs("generation/objects");
+    zenoh::KeyExpr topic_sensors("generation/sensors");
     std::this_thread::sleep_for(std::chrono::seconds(2));
-    spdlog::info("[Locator] Declaring Zenoh publishers for topics: cps/objects and cps/sensors");
+    spdlog::info("[Locator] Declaring Zenoh publishers for topics: generation/objects and generation/sensors");
 
     publisher_objects_ = new zenoh::Publisher(std::move(session_->declare_publisher(topic_objs)));
     publisher_sensors_ = new zenoh::Publisher(std::move(session_->declare_publisher(topic_sensors)));

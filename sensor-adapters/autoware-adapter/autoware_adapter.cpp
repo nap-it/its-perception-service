@@ -22,8 +22,8 @@ AutowareAdapter::AutowareAdapter(const Config& config) : config(config) {
     dds_ = new Dds("AutowareCpmAdapter", config.domain_id, [this](std::string topic, std::string message) {
             this->on_message_dds(topic, message);
         });
-    dds_->provision_publisher("cps/objects");
-    dds_->provision_publisher("cps/sensors");
+    dds_->provision_publisher("generation/objects");
+    dds_->provision_publisher("generation/sensors");
     dds_->subscribe("aw/out/perceived_objects");
     std::this_thread::sleep_for(std::chrono::seconds(2));
 
@@ -38,7 +38,7 @@ AutowareAdapter::AutowareAdapter(const Config& config) : config(config) {
     rj::Writer<rj::StringBuffer> sensorWriter(sensorBuffer);
     sensorDoc.Accept(sensorWriter);
     std::string sensorInfoStr = sensorBuffer.GetString();
-    dds_->publish("cps/sensors", sensorInfoStr);
+    dds_->publish("generation/sensors", sensorInfoStr);
     spdlog::info("Sensor information published: {}", sensorInfoStr);
 }
 
@@ -59,7 +59,7 @@ void AutowareAdapter::run() {
 
     while (true) {
         std::this_thread::sleep_for(std::chrono::seconds(5));
-        dds_->publish("cps/sensors", sensorInfoStr);
+        dds_->publish("generation/sensors", sensorInfoStr);
         spdlog::info("Sensor information published: {}", sensorInfoStr);
     }
 }
@@ -68,7 +68,7 @@ void AutowareAdapter::on_message_dds(std::string topic, std::string message) {
     spdlog::debug("Received DDS message on topic: {}", topic);
     std::string parsed_message = parseMessage(message);
     spdlog::debug("Parsed message: {}", parsed_message);
-    if(!parsed_message.empty()) dds_->publish("cps/objects", parsed_message);
+    if(!parsed_message.empty()) dds_->publish("generation/objects", parsed_message);
 }
 
 std::string AutowareAdapter::parseMessage(const std::string& input) {

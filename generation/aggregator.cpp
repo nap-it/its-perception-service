@@ -10,7 +10,7 @@ namespace fs = std::filesystem;
 // Define the static instance pointer.
 Aggregator* Aggregator::instance_ = nullptr;
 
-// Constructor: sets up DDS and subscribes to the "cps/objects" topic.
+// Constructor: sets up DDS and subscribes to the "generation/objects" topic.
 Aggregator::Aggregator(int ddsDomain, long maxObjectAge, long cleanInterval, bool ignoreRules, bool performanceLogs, const std::string& zenohEndpoint, const std::string& proprityType, bool addPendingObjects) 
     :   maxObjectAge_(maxObjectAge), 
         cleanInterval_(cleanInterval), 
@@ -41,9 +41,9 @@ Aggregator::Aggregator(int ddsDomain, long maxObjectAge, long cleanInterval, boo
 
     // Initialize the DDS client.
     dds_ = new Dds("CPS-aggregator", ddsDomain, ddsCallback);
-    dds_->subscribe("cps/objects");
-    dds_->subscribe("cps/sensors");
-    spdlog::info("[Aggregator] Initialized on DDS domain {} and subscribed to 'cps/objects'", ddsDomain);
+    dds_->subscribe("generation/objects");
+    dds_->subscribe("generation/sensors");
+    spdlog::info("[Aggregator] Initialized on DDS domain {} and subscribed to 'generation/objects'", ddsDomain);
 
     // Initialize Zenoh client
     zenoh::ZResult *err = nullptr;
@@ -357,7 +357,7 @@ void Aggregator::on_message(const std::string& topic, const std::string& message
             return;
         }
         
-        if (topic == "cps/objects") {
+        if (topic == "generation/objects") {
             if (doc.HasMember("objects") && doc["objects"].IsArray()) {
                 const rj::Value& objectsArray = doc["objects"];
                 for (auto& objJson : objectsArray.GetArray()) {
@@ -432,7 +432,7 @@ void Aggregator::on_message(const std::string& topic, const std::string& message
                     aggregator_file_logger_->info("Aggregator,on_message,{},{},{}", getCurrentTimestampString(), objectsArray.Size(), duration);
                 }
             }
-        } else if (topic == "cps/sensors") {
+        } else if (topic == "generation/sensors") {
             SensorInfo sensor;
             sensor.sensorID = (doc.HasMember("sensorID") && doc["sensorID"].IsInt()) ? doc["sensorID"].GetInt() : NOT_PRESENT_INT;
             if ((sensor.sensorID == NOT_PRESENT_INT || sensor.sensorID < 0) && (spdlog::error("[Aggregator]: Mandatory (Sensor ID) not present in message: {}", message), true)) return;
@@ -460,10 +460,10 @@ void Aggregator::zenohCallback(zenoh::Sample &sample) {
     std::string message = sample.get_payload().as_string();
     spdlog::debug("[Aggregator] Received Zenoh message on topic '{}': {}", topic, message);
     
-    if (topic == "cps/objects") {
-        instance_->on_message("cps/objects", message);
-    } else if (topic == "cps/sensors") {
-        instance_->on_message("cps/sensors", message);
+    if (topic == "generation/objects") {
+        instance_->on_message("generation/objects", message);
+    } else if (topic == "generation/sensors") {
+        instance_->on_message("generation/sensors", message);
     } else {
         spdlog::warn("[Aggregator] Received Zenoh message on unknown topic: {}", topic);
     }
