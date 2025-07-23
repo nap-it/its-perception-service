@@ -136,20 +136,30 @@ build_radar_adapter_arm64:
   image: code.nap.av.it.pt:5050/external-tools/misc-docker-images/docker
   script:
     - echo "$CI_TOKEN" | docker login -u "$CI_USER" --password-stdin code.nap.av.it.pt:5050
-    # Version manifest
-    - docker manifest create code.nap.av.it.pt:5050/mobility-networks/cps-v2/$IMAGE_NAME:$CI_COMMIT_TAG \
-        code.nap.av.it.pt:5050/mobility-networks/cps-v2/$IMAGE_NAME:$CI_COMMIT_TAG-amd64 \
-        code.nap.av.it.pt:5050/mobility-networks/cps-v2/$IMAGE_NAME:$CI_COMMIT_TAG-arm64
-    - docker manifest annotate code.nap.av.it.pt:5050/mobility-networks/cps-v2/$IMAGE_NAME:$CI_COMMIT_TAG code.nap.av.it.pt:5050/mobility-networks/cps-v2/$IMAGE_NAME:$CI_COMMIT_TAG-amd64 --arch amd64
-    - docker manifest annotate code.nap.av.it.pt:5050/mobility-networks/cps-v2/$IMAGE_NAME:$CI_COMMIT_TAG code.nap.av.it.pt:5050/mobility-networks/cps-v2/$IMAGE_NAME:$CI_COMMIT_TAG-arm64 --arch arm64
-    - docker manifest push code.nap.av.it.pt:5050/mobility-networks/cps-v2/$IMAGE_NAME:$CI_COMMIT_TAG
-    # Latest manifest
-    - docker manifest create code.nap.av.it.pt:5050/mobility-networks/cps-v2/$IMAGE_NAME:latest \
-        code.nap.av.it.pt:5050/mobility-networks/cps-v2/$IMAGE_NAME:$CI_COMMIT_TAG-amd64 \
-        code.nap.av.it.pt:5050/mobility-networks/cps-v2/$IMAGE_NAME:$CI_COMMIT_TAG-arm64
-    - docker manifest annotate code.nap.av.it.pt:5050/mobility-networks/cps-v2/$IMAGE_NAME:latest code.nap.av.it.pt:5050/mobility-networks/cps-v2/$IMAGE_NAME:$CI_COMMIT_TAG-amd64 --arch amd64
-    - docker manifest annotate code.nap.av.it.pt:5050/mobility-networks/cps-v2/$IMAGE_NAME:latest code.nap.av.it.pt:5050/mobility-networks/cps-v2/$IMAGE_NAME:$CI_COMMIT_TAG-arm64 --arch arm64
-    - docker manifest push code.nap.av.it.pt:5050/mobility-networks/cps-v2/$IMAGE_NAME:latest
+    - |
+      # Version manifest
+      docker manifest create code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${CI_COMMIT_TAG} \
+        code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${CI_COMMIT_TAG}-amd64 \
+        code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${CI_COMMIT_TAG}-arm64
+
+      docker manifest annotate code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${CI_COMMIT_TAG} \
+        code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${CI_COMMIT_TAG}-amd64 --arch amd64
+      docker manifest annotate code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${CI_COMMIT_TAG} \
+        code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${CI_COMMIT_TAG}-arm64 --arch arm64
+
+      docker manifest push code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${CI_COMMIT_TAG}
+
+      # Latest manifest
+      docker manifest create code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:latest \
+        code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${CI_COMMIT_TAG}-amd64 \
+        code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${CI_COMMIT_TAG}-arm64
+
+      docker manifest annotate code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:latest \
+        code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${CI_COMMIT_TAG}-amd64 --arch amd64
+      docker manifest annotate code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:latest \
+        code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${CI_COMMIT_TAG}-arm64 --arch arm64
+
+      docker manifest push code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:latest
   rules:
     - if: '$CI_COMMIT_TAG && $CI_COMMIT_TAG != "latest"'
 
