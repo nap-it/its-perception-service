@@ -129,7 +129,7 @@ build_radar_adapter_arm64:
   tags: [arm64]
 
 # ----------------------
-# Manifest Creation (auto multi-arch for version & latest)
+# Shared Manifest Creation Template (auto multi-arch for version & latest)
 # ----------------------
 .create_manifest_template: &create_manifest
   stage: manifest
