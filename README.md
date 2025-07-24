@@ -125,6 +125,3 @@ The CPS was designed to be easily configurable and adaptable to different scenar
 - [Bike Adapter `config.ini` variables](https://code.nap.av.it.pt/mobility-networks/cps-v2/-/blob/main/sensor-adapters/bike-adapter)
 - [Autoware Adapter `config.ini` variables](https://code.nap.av.it.pt/mobility-networks/cps-v2/-/blob/main/sensor-adapters/autoware-adapter)
 
-## Token
-
-Private token: `glpat-BZYHmcoyr2u-Bsx1sFoZ`
