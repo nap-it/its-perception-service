@@ -10,15 +10,15 @@ services:
   {% endif %}
 
   {{ svc_name }}:
-    image: "{{ docker_registry }}/{{ svc }}:{{ image_tag }}"
+    image: {{ docker_registry }}/{{ svc }}:{{ image_tag }}
     restart: always
     volumes:
-      - "./{{ svc_name }}/config.ini:/config.ini"
+      - ./{{ svc_name }}/config.ini:/config.ini
 {% if svc_name == 'generation' %}
-      - "./logs:/logs"
+      - ./logs:/logs
 {% endif %}
 {% if svc_name == 'processing' %}
-      - "./logs:/logs"
+      - ./logs:/logs
 {% endif %}
     network_mode: host
     ipc: host
