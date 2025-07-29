@@ -1,4 +1,3 @@
-version: '2.4'
 services:
   generation:
     image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/generation
