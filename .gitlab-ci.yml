@@ -1,3 +1,6 @@
+# ------------------------------------------------------------------------------
+# Global variables & stages
+# ------------------------------------------------------------------------------
 variables:
   DOCKER_HOST: "unix:///var/run/docker.sock"
 
@@ -7,250 +10,221 @@ stages:
   - release
   - clean
 
-# ----------------------
-# Shared Build Template
-# ----------------------
-.default_build_template: &default_build
+# ------------------------------------------------------------------------------
+# Compute DOCKER_TAG: use the tag if set (and not "latest"), else branch name
+# ------------------------------------------------------------------------------
+before_script:
+  - |
+      if [[ -n "$CI_COMMIT_TAG" && "$CI_COMMIT_TAG" != "latest" ]]; then
+        DOCKER_TAG="$CI_COMMIT_TAG"
+      else
+        DOCKER_TAG="$CI_COMMIT_BRANCH"
+      fi
+      echo "→ DOCKER_TAG=$DOCKER_TAG"
+
+# ------------------------------------------------------------------------------
+# 1) BUILD TEMPLATE
+# ------------------------------------------------------------------------------
+.default_build: &default_build
   stage: build
   image: code.nap.av.it.pt:5050/external-tools/misc-docker-images/docker
-  before_script:
-    - DOCKER_TAG=$([[ "$CI_COMMIT_BRANCH" == "" || "$CI_COMMIT_BRANCH" == "$CI_DEFAULT_BRANCH" ]] && echo "$CI_COMMIT_TAG" || echo "$CI_COMMIT_BRANCH")
   script:
-    - |
-      TAG_VERSION="$DOCKER_TAG"
-      echo "Injecting version info: $TAG_VERSION"
-      sed -i '/^ENTRYPOINT/i ENV VERSION='$TAG_VERSION $DOCKERFILE_PATH/Dockerfile
-      sed -i '/^ENTRYPOINT/i ENV COMMIT='$CI_COMMIT_SHORT_SHA $DOCKERFILE_PATH/Dockerfile
+    - echo "→ Logging in to Docker registry"
     - echo "$CI_TOKEN" | docker login -u "$CI_USER" --password-stdin code.nap.av.it.pt:5050
-    - docker build -t code.nap.av.it.pt:5050/mobility-networks/cps-v2/$IMAGE_NAME:$DOCKER_TAG-$ARCH -f $DOCKERFILE_PATH/Dockerfile $DOCKERFILE_PATH
-    - docker push code.nap.av.it.pt:5050/mobility-networks/cps-v2/$IMAGE_NAME:$DOCKER_TAG-$ARCH
+
+    - |
+      echo "→ Building ${IMAGE_NAME}:${DOCKER_TAG}-${ARCH}"
+      docker build \
+        --build-arg VERSION="$DOCKER_TAG" \
+        --build-arg COMMIT="$CI_COMMIT_SHORT_SHA" \
+        -t code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${DOCKER_TAG}-${ARCH} \
+        -f ${DOCKERFILE_PATH}/Dockerfile \
+        ${DOCKERFILE_PATH}
+
+    - |
+      echo "→ Pushing ${IMAGE_NAME}:${DOCKER_TAG}-${ARCH}"
+      docker push code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${DOCKER_TAG}-${ARCH}
+
   rules:
+    # 1) Tag pipelines (except tag "latest")
     - if: '$CI_COMMIT_TAG && $CI_COMMIT_TAG != "latest"'
       changes:
         - $DOCKERFILE_PATH/**
 
-# ----------------------
-# Build Jobs Sections
-# ----------------------
+    # 2) Non-main branch pipelines
+    - if: '$CI_COMMIT_BRANCH && $CI_COMMIT_BRANCH != "$CI_DEFAULT_BRANCH"'
+      changes:
+        - $DOCKERFILE_PATH/**
+
+# ------------------------------------------------------------------------------
+# 2) BUILD JOBS (one per component × arch)
+# ------------------------------------------------------------------------------
 build_generation_amd64:
   <<: *default_build
-  variables:
-    IMAGE_NAME: generation
-    DOCKERFILE_PATH: generation
-    ARCH: amd64
+  variables: { IMAGE_NAME: generation, DOCKERFILE_PATH: generation, ARCH: amd64 }
   tags: [amd64]
 
 build_generation_arm64:
   <<: *default_build
-  variables:
-    IMAGE_NAME: generation
-    DOCKERFILE_PATH: generation
-    ARCH: arm64
+  variables: { IMAGE_NAME: generation, DOCKERFILE_PATH: generation, ARCH: arm64 }
   tags: [arm64]
 
 build_processing_amd64:
   <<: *default_build
-  variables:
-    IMAGE_NAME: processing
-    DOCKERFILE_PATH: processing
-    ARCH: amd64
+  variables: { IMAGE_NAME: processing, DOCKERFILE_PATH: processing, ARCH: amd64 }
   tags: [amd64]
 
 build_processing_arm64:
   <<: *default_build
-  variables:
-    IMAGE_NAME: processing
-    DOCKERFILE_PATH: processing
-    ARCH: arm64
+  variables: { IMAGE_NAME: processing, DOCKERFILE_PATH: processing, ARCH: arm64 }
   tags: [arm64]
 
 build_autoware_adapter_amd64:
   <<: *default_build
-  variables:
-    IMAGE_NAME: autoware-adapter
-    DOCKERFILE_PATH: sensor-adapters/autoware-adapter
-    ARCH: amd64
+  variables: { IMAGE_NAME: autoware-adapter, DOCKERFILE_PATH: sensor-adapters/autoware-adapter, ARCH: amd64 }
   tags: [amd64]
 
 build_autoware_adapter_arm64:
   <<: *default_build
-  variables:
-    IMAGE_NAME: autoware-adapter
-    DOCKERFILE_PATH: sensor-adapters/autoware-adapter
-    ARCH: arm64
+  variables: { IMAGE_NAME: autoware-adapter, DOCKERFILE_PATH: sensor-adapters/autoware-adapter, ARCH: arm64 }
   tags: [arm64]
 
 build_bike_adapter_amd64:
   <<: *default_build
-  variables:
-    IMAGE_NAME: bike-adapter
-    DOCKERFILE_PATH: sensor-adapters/bike-adapter
-    ARCH: amd64
+  variables: { IMAGE_NAME: bike-adapter, DOCKERFILE_PATH: sensor-adapters/bike-adapter, ARCH: amd64 }
   tags: [amd64]
 
 build_bike_adapter_arm64:
   <<: *default_build
-  variables:
-    IMAGE_NAME: bike-adapter
-    DOCKERFILE_PATH: sensor-adapters/bike-adapter
-    ARCH: arm64
+  variables: { IMAGE_NAME: bike-adapter, DOCKERFILE_PATH: sensor-adapters/bike-adapter, ARCH: arm64 }
   tags: [arm64]
 
 build_camera_adapter_amd64:
   <<: *default_build
-  variables:
-    IMAGE_NAME: camera-adapter
-    DOCKERFILE_PATH: sensor-adapters/camera-adapter
-    ARCH: amd64
+  variables: { IMAGE_NAME: camera-adapter, DOCKERFILE_PATH: sensor-adapters/camera-adapter, ARCH: amd64 }
   tags: [amd64]
 
 build_camera_adapter_arm64:
   <<: *default_build
-  variables:
-    IMAGE_NAME: camera-adapter
-    DOCKERFILE_PATH: sensor-adapters/camera-adapter
-    ARCH: arm64
+  variables: { IMAGE_NAME: camera-adapter, DOCKERFILE_PATH: sensor-adapters/camera-adapter, ARCH: arm64 }
   tags: [arm64]
 
 build_radar_adapter_amd64:
   <<: *default_build
-  variables:
-    IMAGE_NAME: radar-adapter
-    DOCKERFILE_PATH: sensor-adapters/radar-adapter
-    ARCH: amd64
+  variables: { IMAGE_NAME: radar-adapter, DOCKERFILE_PATH: sensor-adapters/radar-adapter, ARCH: amd64 }
   tags: [amd64]
 
 build_radar_adapter_arm64:
   <<: *default_build
-  variables:
-    IMAGE_NAME: radar-adapter
-    DOCKERFILE_PATH: sensor-adapters/radar-adapter
-    ARCH: arm64
+  variables: { IMAGE_NAME: radar-adapter, DOCKERFILE_PATH: sensor-adapters/radar-adapter, ARCH: arm64 }
   tags: [arm64]
 
-# ----------------------
-# Shared Manifest Creation Template (auto multi-arch for version & latest)
-# ----------------------
-.create_manifest_template: &create_manifest
+# ------------------------------------------------------------------------------
+# 3) MANIFEST TEMPLATE
+# ------------------------------------------------------------------------------
+.create_manifest: &create_manifest
   stage: manifest
   image: code.nap.av.it.pt:5050/external-tools/misc-docker-images/docker
   script:
+    - echo "→ Logging in for manifest"
     - echo "$CI_TOKEN" | docker login -u "$CI_USER" --password-stdin code.nap.av.it.pt:5050
     - |
-      # Version manifest
-      docker manifest create code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${CI_COMMIT_TAG} \
-        code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${CI_COMMIT_TAG}-amd64 \
-        code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${CI_COMMIT_TAG}-arm64
+      echo "→ Manifest ${IMAGE_NAME}:${DOCKER_TAG}"
+      docker manifest create code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${DOCKER_TAG} \
+        code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${DOCKER_TAG}-amd64 \
+        code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${DOCKER_TAG}-arm64
+      docker manifest annotate code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${DOCKER_TAG} \
+        code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${DOCKER_TAG}-amd64 --arch amd64
+      docker manifest annotate code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${DOCKER_TAG} \
+        code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${DOCKER_TAG}-arm64 --arch arm64
+      docker manifest push code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${DOCKER_TAG}
 
-      docker manifest annotate code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${CI_COMMIT_TAG} \
-        code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${CI_COMMIT_TAG}-amd64 --arch amd64
-      docker manifest annotate code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${CI_COMMIT_TAG} \
-        code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${CI_COMMIT_TAG}-arm64 --arch arm64
+      # Only on tag pipelines, also bump :latest
+      if [[ -n "$CI_COMMIT_TAG" && "$CI_COMMIT_TAG" != "latest" ]]; then
+        echo "→ Manifest ${IMAGE_NAME}:latest"
+        docker manifest create code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:latest \
+          code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${DOCKER_TAG}-amd64 \
+          code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${DOCKER_TAG}-arm64
+        docker manifest annotate code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:latest \
+          code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${DOCKER_TAG}-amd64 --arch amd64
+        docker manifest annotate code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:latest \
+          code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${DOCKER_TAG}-arm64 --arch arm64
+        docker manifest push code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:latest
+      fi
 
-      docker manifest push code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${CI_COMMIT_TAG}
-
-      # Latest manifest
-      docker manifest create code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:latest \
-        code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${CI_COMMIT_TAG}-amd64 \
-        code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${CI_COMMIT_TAG}-arm64
-
-      docker manifest annotate code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:latest \
-        code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${CI_COMMIT_TAG}-amd64 --arch amd64
-      docker manifest annotate code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:latest \
-        code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${CI_COMMIT_TAG}-arm64 --arch arm64
-
-      docker manifest push code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:latest
   rules:
+    # Tag pipelines only
     - if: '$CI_COMMIT_TAG && $CI_COMMIT_TAG != "latest"'
+      changes:
+        - $DOCKERFILE_PATH/**
 
+    # Non-main branch pipelines
+    - if: '$CI_COMMIT_BRANCH && $CI_COMMIT_BRANCH != "$CI_DEFAULT_BRANCH"'
+      changes:
+        - $DOCKERFILE_PATH/**
+
+# ------------------------------------------------------------------------------
+# 4) MANIFEST JOBS (one per component)
+# ------------------------------------------------------------------------------
 create_manifest_generation:
   <<: *create_manifest
-  rules:
-    - if : '$CI_COMMIT_TAG && $CI_COMMIT_TAG != "latest"'
-      changes:
-        - generation/**
-  variables:
-    IMAGE_NAME: generation
+  variables: { IMAGE_NAME: generation, DOCKERFILE_PATH: generation }
   dependencies: [build_generation_amd64, build_generation_arm64]
   tags: [amd64]
 
 create_manifest_processing:
   <<: *create_manifest
-  rules:
-    - if : '$CI_COMMIT_TAG && $CI_COMMIT_TAG != "latest"'
-      changes:
-        - processing/**
-  variables:
-    IMAGE_NAME: processing
+  variables: { IMAGE_NAME: processing, DOCKERFILE_PATH: processing }
   dependencies: [build_processing_amd64, build_processing_arm64]
   tags: [amd64]
 
 create_manifest_autoware_adapter:
   <<: *create_manifest
-  rules:
-    - if : '$CI_COMMIT_TAG && $CI_COMMIT_TAG != "latest"'
-      changes:
-        - sensor-adapters/autoware-adapter/**
-  variables:
-    IMAGE_NAME: autoware-adapter
+  variables: { IMAGE_NAME: autoware-adapter, DOCKERFILE_PATH: sensor-adapters/autoware-adapter }
   dependencies: [build_autoware_adapter_amd64, build_autoware_adapter_arm64]
   tags: [amd64]
 
 create_manifest_bike_adapter:
   <<: *create_manifest
-  rules:
-    - if : '$CI_COMMIT_TAG && $CI_COMMIT_TAG != "latest"'
-      changes:
-        - sensor-adapters/bike-adapter/**
-  variables:
-    IMAGE_NAME: bike-adapter
+  variables: { IMAGE_NAME: bike-adapter, DOCKERFILE_PATH: sensor-adapters/bike-adapter }
   dependencies: [build_bike_adapter_amd64, build_bike_adapter_arm64]
   tags: [amd64]
 
 create_manifest_camera_adapter:
   <<: *create_manifest
-  rules:
-    - if : '$CI_COMMIT_TAG && $CI_COMMIT_TAG != "latest"'
-      changes:
-        - sensor-adapters/camera-adapter/**
-  variables:
-    IMAGE_NAME: camera-adapter
+  variables: { IMAGE_NAME: camera-adapter, DOCKERFILE_PATH: sensor-adapters/camera-adapter }
   dependencies: [build_camera_adapter_amd64, build_camera_adapter_arm64]
   tags: [amd64]
 
 create_manifest_radar_adapter:
   <<: *create_manifest
-  rules:
-    - if : '$CI_COMMIT_TAG && $CI_COMMIT_TAG != "latest"'
-      changes:
-        - sensor-adapters/radar-adapter/**
-  variables:
-    IMAGE_NAME: radar-adapter
+  variables: { IMAGE_NAME: radar-adapter, DOCKERFILE_PATH: sensor-adapters/radar-adapter }
   dependencies: [build_radar_adapter_amd64, build_radar_adapter_arm64]
   tags: [amd64]
 
-# ----------------------
-# Release Management (GitLab Release entry)
-# ----------------------
+# ------------------------------------------------------------------------------
+# 5) RELEASE (GitLab Releases) on Tag pipelines only
+# ------------------------------------------------------------------------------
 release:
   stage: release
-  tags: [amd64]
   image: curlimages/curl:latest
+  tags: [amd64]
   before_script:
     - curl --location --output ~/release-cli "https://gitlab.com/api/v4/projects/gitlab-org%2Frelease-cli/packages/generic/release-cli/latest/release-cli-linux-amd64"
     - chmod +x ~/release-cli
   script:
-    - echo "Creating GitLab release for $CI_COMMIT_TAG"
+    - echo "→ Creating GitLab Release for $CI_COMMIT_TAG"
     - ~/release-cli create \
         --name "Release $CI_COMMIT_TAG" \
-        --description "Multi-image release for version $CI_COMMIT_TAG" \
-        --tag-name "$CI_COMMIT_TAG" --ref "$CI_COMMIT_TAG"
+        --description "Multi-image release $CI_COMMIT_TAG" \
+        --tag-name "$CI_COMMIT_TAG" \
+        --ref "$CI_COMMIT_TAG"
   rules:
     - if: '$CI_COMMIT_TAG && $CI_COMMIT_TAG != "latest"'
 
-# ----------------------
-# Cleanup Images (remove old tags)
-# ----------------------
+# ------------------------------------------------------------------------------
+# 6) CLEANUP (remove all -amd64 / -arm64 tags) on tags & non-main branches
+# ------------------------------------------------------------------------------
 cleanup:
   stage: clean
   image: alpine:latest
@@ -259,14 +233,20 @@ cleanup:
     - apk add --no-cache curl bash
     - curl -LO https://github.com/regclient/regclient/releases/download/v0.6.1/regctl-linux-amd64
     - chmod +x regctl-linux-amd64 && mv regctl-linux-amd64 /usr/local/bin/regctl
-    - regctl registry login code.nap.av.it.pt:5050 -u ${CI_USER} -p ${CI_TOKEN}
+    - regctl registry login code.nap.av.it.pt:5050 -u "${CI_USER}" -p "${CI_TOKEN}"
+
     - |
       for IMAGE in generation processing autoware-adapter bike-adapter camera-adapter radar-adapter; do
-        echo "Cleaning up $IMAGE"
-        regctl tag rm code.nap.av.it.pt:5050/mobility-networks/cps-v2/$IMAGE:$CI_COMMIT_TAG-amd64 || true
-        regctl tag rm code.nap.av.it.pt:5050/mobility-networks/cps-v2/$IMAGE:$CI_COMMIT_TAG-arm64 || true
+        echo "→ Cleaning up $IMAGE"
+        regctl tag rm code.nap.av.it.pt:5050/mobility-networks/cps-v2/$IMAGE:${DOCKER_TAG}-amd64 || true
+        regctl tag rm code.nap.av.it.pt:5050/mobility-networks/cps-v2/$IMAGE:${DOCKER_TAG}-arm64 || true
         regctl tag rm code.nap.av.it.pt:5050/mobility-networks/cps-v2/$IMAGE:latest-amd64 || true
         regctl tag rm code.nap.av.it.pt:5050/mobility-networks/cps-v2/$IMAGE:latest-arm64 || true
       done
+
   rules:
+    # Tag pipelines only
     - if: '$CI_COMMIT_TAG && $CI_COMMIT_TAG != "latest"'
+
+    # Non-main branch pipelines
+    - if: '$CI_COMMIT_BRANCH && $CI_COMMIT_BRANCH != "$CI_DEFAULT_BRANCH"'
