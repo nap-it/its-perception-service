@@ -29,6 +29,18 @@ before_script:
   stage: build
   image: code.nap.av.it.pt:5050/external-tools/misc-docker-images/docker
   script:
+    - |
+      echo "→ Finding diff changes in ${DOCKERFILE_PATH} since last tag"
+      if [[ -n "$CI_COMMIT_TAG" && "$CI_COMMIT_TAG" != "latest" ]]; then
+        PREV_TAG=$(git describe --tags --abbrev=0 "${CI_COMMIT_TAG}^")
+        echo "→ Comparing ${DOCKERFILE_PATH}/ changes since $PREV_TAG…"
+        git fetch --tags --depth=1    # make sure that tag exists locally
+        CHANGED=$(git diff --name-only "$PREV_TAG" "$CI_COMMIT_TAG" -- $DOCKERFILE_PATH)
+        if [[ -z "$CHANGED" ]]; then
+          echo "→ No changes in ${DOCKERFILE_PATH} since $PREV_TAG; skipping build."
+          exit 0
+        fi
+      fi
     - echo "→ Logging in to Docker registry"
     - echo "$CI_TOKEN" | docker login -u "$CI_USER" --password-stdin code.nap.av.it.pt:5050
 
