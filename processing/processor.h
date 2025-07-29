@@ -65,24 +65,19 @@ struct Config {
     int repeat_id_interval;
     int cam_freshness_threshold;
     std::string cpm_topics;
-    std::string cam_topic;
     std::string dds_output_topic;
-    std::string dds_output_full_topic;
     bool local_mqtt_enabled;
     std::string local_mqtt_host;
     int local_mqtt_port;
     std::string local_mqtt_output_topic;
-    std::string local_mqtt_output_full_topic;
     bool remote_mqtt_enabled;
     std::string remote_mqtt_host;
     int remote_mqtt_port;
     std::string remote_mqtt_output_topic;
-    std::string remote_mqtt_output_full_topic;
     std::string remote_mqtt_username;
     std::string remote_mqtt_password;
     std::string zenoh_endpoint;
     std::string zenoh_output_topic;
-    std::string zenoh_output_full_topic;
 };
 
 class Processor {
@@ -224,10 +219,9 @@ private:
      * @param topic The topic of the message.
      * @param message The raw message (JSON formatted).
      * @param output The output message.
-     * @param output_full The full output message.  
      * @param message_reception Time when the message is received via DDS.
      */
-    void processCPM(const std::string& topic, const std::string& message, std::string& output, std::string& output_full, std::chrono::time_point<std::chrono::high_resolution_clock> message_reception);
+    void processCPM(const std::string& topic, const std::string& message, std::string& output, std::chrono::time_point<std::chrono::high_resolution_clock> message_reception);
 
 };
 

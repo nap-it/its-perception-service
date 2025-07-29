@@ -63,8 +63,6 @@ int main() {
     spdlog::info("[CONFIG] CPM topics: {}", config.cpm_topics);
     config.dds_output_topic = reader.Get("processing", "dds_output_topic", "objects");
     spdlog::info("[CONFIG] DDS output topic: {}", config.dds_output_topic);
-    config.dds_output_full_topic = reader.Get("processing", "dds_output_full_topic", "objects_full");
-    spdlog::info("[CONFIG] DDS output full topic: {}", config.dds_output_full_topic);
     config.repeat_id_interval = reader.GetInteger("processing", "repeat_id_interval", 3600);
     spdlog::info("[CONFIG] Repeat ID interval: {}", config.repeat_id_interval);
     config.local_mqtt_enabled = reader.GetBoolean("processing", "local_mqtt_enable_publisher", true);
@@ -75,8 +73,6 @@ int main() {
     spdlog::info("[CONFIG] Local MQTT port: {}", config.local_mqtt_port);
     config.local_mqtt_output_topic = reader.Get("processing", "local_mqtt_output_topic", "objects");
     spdlog::info("[CONFIG] Local MQTT output topic: {}", config.local_mqtt_output_topic);
-    config.local_mqtt_output_full_topic = reader.Get("processing", "local_mqtt_output_full_topic", "objects_full");
-    spdlog::info("[CONFIG] Local MQTT output full topic: {}", config.local_mqtt_output_full_topic);
     config.remote_mqtt_enabled = reader.GetBoolean("processing", "remote_mqtt_enable_publisher", false);
     spdlog::info("[CONFIG] Remote MQTT enabled: {}", config.remote_mqtt_enabled);
     config.remote_mqtt_host = reader.Get("processing", "remote_mqtt_host", "127.0.0.1");
@@ -89,16 +85,12 @@ int main() {
     spdlog::info("[CONFIG] Remote MQTT password: {}", config.remote_mqtt_password);
     config.remote_mqtt_output_topic = reader.Get("processing", "remote_mqtt_output_topic", "objects");
     spdlog::info("[CONFIG] Remote MQTT output topic: {}", config.remote_mqtt_output_topic);
-    config.remote_mqtt_output_full_topic = reader.Get("processing", "remote_mqtt_output_full_topic", "objects_full");
-    spdlog::info("[CONFIG] Remote MQTT output full topic: {}", config.remote_mqtt_output_full_topic);
     bool processor_performance_logs = reader.GetBoolean("processing", "performance_logs", false);
     spdlog::info("[CONFIG] Performance logs: {}", processor_performance_logs);
     config.zenoh_endpoint = reader.Get("processing", "zenoh_endpoint", "");
     spdlog::info("[CONFIG] Zenoh endpoint: {}", config.zenoh_endpoint);
     config.zenoh_output_topic = reader.Get("processing", "zenoh_output_topic", "objects");
     spdlog::info("[CONFIG] Zenoh output topic: {}", config.zenoh_output_topic);
-    config.zenoh_output_full_topic = reader.Get("processing", "zenoh_output_full_topic", "objects_full");
-    spdlog::info("[CONFIG] Zenoh output full topic: {}", config.zenoh_output_full_topic);
 
     std::shared_ptr<Processor> processor = std::make_shared<Processor>(config, locator, processor_performance_logs);
     spdlog::info("[Processor] Starting processor...");

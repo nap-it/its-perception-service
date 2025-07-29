@@ -67,7 +67,6 @@ Processor::Processor(const Config& config, std::shared_ptr<Locator> locator, boo
         this->on_message_dds(topic, message);
     });
     dds_->provision_publisher(config.dds_output_topic);
-    dds_->provision_publisher(config.dds_output_full_topic);
     std::vector<std::string> topics;
     std::istringstream ss(config.cpm_topics); // assume config.cpm_topic contains comma-separated topics
     std::string token;
@@ -85,7 +84,7 @@ Processor::Processor(const Config& config, std::shared_ptr<Locator> locator, boo
             }
         }
     }
-    spdlog::info("[Processor] DDS client subscribed to topics {} and {}", config.cpm_topics, config.cam_topic);
+    spdlog::info("[Processor] DDS client subscribed to topics {}", config.cpm_topics);
 
     // Initialize Zenoh client
     zenoh::ZResult *err = nullptr;
@@ -108,7 +107,6 @@ Processor::Processor(const Config& config, std::shared_ptr<Locator> locator, boo
     spdlog::info("[Processor] Zenoh session opened successfully.");
 
     session_->declare_publisher(config.zenoh_output_topic);
-    session_->declare_publisher(config.zenoh_output_full_topic);
 
     //Initialize Zenoh shared memory provider with 10 MB size and 2-byte alignment.
     static constexpr auto SHM_SIZE  = 1024U * 1024U * 10U;
@@ -142,21 +140,19 @@ void Processor::on_message_dds(const std::string& topic, const std::string& mess
     if (topic == "vanetza/out/cpm" || topic == "cps-v2/in/cpm" || topic == "vanetza/in/cpm") {
         spdlog::debug("[Processor] Processing CPM...");
         std::string output = "";
-        std::string full_output = "";
-        this->processCPM(topic, message, output, full_output, t0);
+        this->processCPM(topic, message, output, t0);
 
         if (output.empty()) {
             spdlog::warn("[Processor] Empty output message");
             return;
         } else {
-            spdlog::debug("[Processor] Objects message: {}", output);
+            spdlog::debug("[Processor] /objects message: {}", output);
         }
         
         try {
             if (dds_) {
                 dds_->publish(config_.dds_output_topic, output);
-                dds_->publish(config_.dds_output_full_topic, full_output);
-                spdlog::info("[Processor] Published DDS message on topic {} and {}", config_.dds_output_topic, config_.dds_output_full_topic);
+                spdlog::info("[Processor] Published DDS message on topic {}", config_.dds_output_topic);
             } else {
                 spdlog::error("[Processor] DDS client is not available");
             }
@@ -167,8 +163,7 @@ void Processor::on_message_dds(const std::string& topic, const std::string& mess
         try {
             if (config_.local_mqtt_enabled && local_mqtt_client_) {
                 local_mqtt_client_->publish(config_.local_mqtt_output_topic, output);
-                local_mqtt_client_->publish(config_.local_mqtt_output_full_topic, full_output);
-                spdlog::info("[Processor] Published Local MQTT message on topic {} and {}", config_.local_mqtt_output_topic, config_.local_mqtt_output_full_topic);
+                spdlog::info("[Processor] Published Local MQTT message on topic {}", config_.local_mqtt_output_topic);
             } else if (config_.local_mqtt_enabled) {
                 spdlog::error("[Processor] Local MQTT client is not available");
             }
@@ -179,8 +174,7 @@ void Processor::on_message_dds(const std::string& topic, const std::string& mess
         try {
             if (config_.remote_mqtt_enabled && remote_mqtt_client_) {
                 remote_mqtt_client_->publish(config_.remote_mqtt_output_topic, output);
-                remote_mqtt_client_->publish(config_.remote_mqtt_output_full_topic, full_output);
-                spdlog::info("[Processor] Published Remote MQTT message on topic {} and {}", config_.remote_mqtt_output_topic, config_.remote_mqtt_output_full_topic);
+                spdlog::info("[Processor] Published Remote MQTT message on topic {}", config_.remote_mqtt_output_topic);
             } else if (config_.remote_mqtt_enabled) {
                 spdlog::error("[Processor] Remote MQTT client is not available");
             }
@@ -195,13 +189,7 @@ void Processor::on_message_dds(const std::string& topic, const std::string& mess
                 zenoh::ZShmMut&& output_buf = std::get<zenoh::ZShmMut>(std::move(output_alloc_result));
                 memcpy(output_buf.data(), output.data(), output_len);
                 session_->put(config_.zenoh_output_topic, std::move(output_buf));
-
-                const size_t full_output_len = full_output.size();
-                auto full_output_alloc_result = shm_provider_->alloc_gc_defrag_blocking(full_output_len, zenoh::AllocAlignment({0}));
-                zenoh::ZShmMut&& full_output_buf = std::get<zenoh::ZShmMut>(std::move(full_output_alloc_result));
-                memcpy(full_output_buf.data(), full_output.data(), full_output_len);   
-                session_->put(config_.zenoh_output_full_topic, std::move(full_output_buf));
-                spdlog::info("[Processor] Published Zenoh message on topic {} and {}", config_.zenoh_output_topic, config_.zenoh_output_full_topic);
+                spdlog::info("[Processor] Published Zenoh message on topic {}", config_.zenoh_output_topic);
             } else {
                 spdlog::error("[Processor] Zenoh session is not available");
             }
@@ -214,14 +202,14 @@ void Processor::on_message_dds(const std::string& topic, const std::string& mess
     }
 }
 
-void Processor::processCPM(const std::string& topic, const std::string& message, std::string& output, std::string& output_full, std::chrono::time_point<std::chrono::high_resolution_clock> message_reception){
+void Processor::processCPM(const std::string& topic, const std::string& message, std::string& output_full, std::chrono::time_point<std::chrono::high_resolution_clock> message_reception){
     try {
         auto t1 = std::chrono::high_resolution_clock::now();
 
         rj::Document doc;
         doc.Parse(message.c_str());
         if (doc.HasParseError()) {
-            spdlog::error("[Processor] Parse error in CAM message: {}", message);
+            spdlog::error("[Processor] Parse error in CPM: {}", message);
             return;
         }
 
@@ -308,27 +296,24 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
 
         spdlog::debug("[Processor] Sender Type: {}", sender_type);
 
-        rj::Document objects_output;
-        objects_output.SetArray();
         rj::Document objects_output_full;
         objects_output_full.SetObject();
-        rj::Document::AllocatorType& allocator_output = objects_output.GetAllocator();
         rj::Document::AllocatorType& allocator_output_full = objects_output_full.GetAllocator();
 
         rj::Value station_data(rj::kObjectType);
-        station_data.AddMember("id", sender_info.station_id, allocator_output);
-        station_data.AddMember("type", sender_type, allocator_output);
-        station_data.AddMember("latitude", sender_latitude, allocator_output);
-        station_data.AddMember("longitude", sender_longitude, allocator_output);
-        if (sender_info.speed == NOT_PRESENT_FLOAT) station_data.AddMember("speed", 0, allocator_output);
-        else station_data.AddMember("speed", sender_info.speed, allocator_output);
-        if (sender_info.heading == NOT_PRESENT_FLOAT) station_data.AddMember("heading", rj::Value(rj::kNullType), allocator_output);
-        else station_data.AddMember("heading", sender_info.heading, allocator_output);
-        if (sender_info.altitude == NOT_PRESENT_FLOAT) station_data.AddMember("altitude", rj::Value(rj::kNullType), allocator_output);
-        else station_data.AddMember("altitude", sender_info.altitude, allocator_output);
-        if (sender_info.acceleration == NOT_PRESENT_FLOAT) station_data.AddMember("acceleration", rj::Value(rj::kNullType), allocator_output);
-        else station_data.AddMember("acceleration", sender_info.acceleration, allocator_output);
-        objects_output_full.AddMember("sender", station_data, allocator_output);
+        station_data.AddMember("id", sender_info.station_id, allocator_output_full);
+        station_data.AddMember("type", sender_type, allocator_output_full);
+        station_data.AddMember("latitude", sender_latitude, allocator_output_full);
+        station_data.AddMember("longitude", sender_longitude, allocator_output_full);
+        if (sender_info.speed == NOT_PRESENT_FLOAT) station_data.AddMember("speed", 0, allocator_output_full);
+        else station_data.AddMember("speed", sender_info.speed, allocator_output_full);
+        if (sender_info.heading == NOT_PRESENT_FLOAT) station_data.AddMember("heading", rj::Value(rj::kNullType), allocator_output_full);
+        else station_data.AddMember("heading", sender_info.heading, allocator_output_full);
+        if (sender_info.altitude == NOT_PRESENT_FLOAT) station_data.AddMember("altitude", rj::Value(rj::kNullType), allocator_output_full);
+        else station_data.AddMember("altitude", sender_info.altitude, allocator_output_full);
+        if (sender_info.acceleration == NOT_PRESENT_FLOAT) station_data.AddMember("acceleration", rj::Value(rj::kNullType), allocator_output_full);
+        else station_data.AddMember("acceleration", sender_info.acceleration, allocator_output_full);
+        objects_output_full.AddMember("sender", station_data, allocator_output_full);
 
         rj::Value objects(rj::kArrayType);
         rj::Value objects_full(rj::kArrayType);
@@ -349,7 +334,6 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
         }
 
         for(int i=0; i<number_objects; i++) {
-            rj::Value object(rj::kObjectType);
             rj::Value object_full(rj::kObjectType);
 
             const rj::Value& json_object = perceivedObjectContainer["containerData"]["perceivedObjects"][i];
@@ -492,42 +476,6 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
             float object_size_z = (json_object.HasMember("objectDimensionZ") && json_object["objectDimensionZ"].HasMember("value"))
                 ? json_object["objectDimensionZ"]["value"].GetFloat() : NOT_PRESENT_FLOAT;
 
-            // ------------- Object simple output -------------
-            // Misc
-            object.AddMember("id", object_id, allocator_output);
-            object.AddMember("uniqueID", static_cast<int64_t>(object_unique_id), allocator_output);
-            object.AddMember("sensor", rj::Value(object_sensor_str.c_str(), allocator_output).Move(), allocator_output);
-            object.AddMember("sensorID", object_sensor_id, allocator_output);
-            if (object_confidence == -1) object.AddMember("confidence", rj::Value(rj::kNullType), allocator_output);
-            else object.AddMember("confidence", object_confidence, allocator_output);
-
-            // Attributes
-            object.AddMember("latitude", object_latitude, allocator_output);
-            object.AddMember("longitude", object_longitude, allocator_output);
-            if(object_speed == NOT_PRESENT_FLOAT) object.AddMember("speed", rj::Value(rj::kNullType), allocator_output);
-            else object.AddMember("speed", object_speed, allocator_output);
-            if(object_x_acceleration == NOT_PRESENT_FLOAT) object.AddMember("acceleration", rj::Value(rj::kNullType), allocator_output);
-            else object.AddMember("acceleration", object_acceleration, allocator_output);
-            if(object_heading == NOT_PRESENT_FLOAT) object.AddMember("heading", rj::Value(rj::kNullType), allocator_output);
-            else object.AddMember("heading", object_heading, allocator_output);
-            object.AddMember("classification", rj::Value(object_classification_str.c_str(), allocator_output).Move(), allocator_output);
-            object.AddMember("classificationID", object_classification, allocator_output);
-
-            // Station
-            object.AddMember("detectionStationType", sender_type, allocator_output);
-            object.AddMember("stationSenderID", sender_id, allocator_output);
-            object.AddMember("stationSenderType", sender_type, allocator_output);
-            object.AddMember("stationReceiverID", receiver_id, allocator_output);
-            object.AddMember("stationReceiverType", receiver_type, allocator_output);
-
-            // Timestamps
-            object.AddMember("age", object_age, allocator_output_full);
-            object.AddMember("objectTimestamp", object_timestamp_sec, allocator_output_full);
-            object.AddMember("cpmAge", age_cpm, allocator_output_full);
-            object.AddMember("cpmTimestamp", cpm_reference_time_double, allocator_output_full);
-            object.AddMember("cpmTimestampUnix", cpm_reference_time_unix, allocator_output_full);
-
-            objects.PushBack(object, allocator_output);
 
             // ------------- Object full output -------------
             // Misc
@@ -608,33 +556,22 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
         }
 
         // ------------- Serialize outputs -------------
-        objects_output.Swap(objects);
-        spdlog::debug("[Processor] Parsing {} objects ...", objects_output.Size());
-    
-        auto t2 = std::chrono::high_resolution_clock::now();
-
-        rj::StringBuffer buffer;
-        rj::Writer<rj::StringBuffer> writer(buffer);
-        objects_output.Accept(writer);
-        output = buffer.GetString();
-
         objects_output_full.AddMember("objects", objects_full, allocator_output_full);
         spdlog::debug("[Processor] Parsing {} full objects ...", objects_output_full["objects"].Size());
 
-        auto t3 = std::chrono::high_resolution_clock::now();
+        auto t2 = std::chrono::high_resolution_clock::now();
 
         rj::StringBuffer buffer_full;
         rj::Writer<rj::StringBuffer> writer_full(buffer_full);
         objects_output_full.Accept(writer_full);
         output_full = buffer_full.GetString();
 
-        auto t4 = std::chrono::high_resolution_clock::now();
+        auto t3 = std::chrono::high_resolution_clock::now();
 
         auto processing_time = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
-        auto serialization_time = std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2).count();
-        auto serialization_full_time = std::chrono::duration_cast<std::chrono::microseconds>(t4 - t3).count();
-        auto total_time = std::chrono::duration_cast<std::chrono::microseconds>(t4 - message_reception).count();
-        spdlog::debug ("[Processor] Processing time: {} us\n[Processor] Serialization time: {} us\n[Processor] Serialization full time: {} us\n[Processor] Total time: {} us", processing_time, serialization_time, serialization_full_time, total_time);
+        auto serialization_full_time = std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2).count();
+        auto total_time = std::chrono::duration_cast<std::chrono::microseconds>(t3 - message_reception).count();
+        spdlog::debug ("[Processor] Processing time: {} us\n[Processor] Serialization full time: {} us\n[Processor] Total time: {} us", processing_time, serialization_full_time, total_time);
         std::string current_timestamp = getCurrentTimestampString();
         if (performanceLogs_){
             // Convert to timestamp since epoch in seconds
@@ -643,7 +580,6 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
             double t2_timestamp = std::chrono::duration<double>(t2.time_since_epoch()).count();
             double t3_timestamp = std::chrono::duration<double>(t3.time_since_epoch()).count();
             processor_file_logger_->info("Processor,processing_time,{},{},{},{}", current_timestamp, number_objects, t1_timestamp, processing_time);
-            processor_file_logger_->info("Processor,serialization_time,{},{},{},{}", current_timestamp, number_objects, t2_timestamp, serialization_time);
             processor_file_logger_->info("Processor,serialization_full_time,{},{},{},{}", current_timestamp, number_objects, t3_timestamp, serialization_full_time);
             processor_file_logger_->info("Processor,total_time,{},{},{},{}", current_timestamp, number_objects, message_reception_timestamp, total_time); 
         }
