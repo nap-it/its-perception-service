@@ -32,7 +32,7 @@ before_script:
     - |
       if [[ -n "$CI_COMMIT_TAG" && "$CI_COMMIT_TAG" != "latest" ]]; then
         # Fetch tags so we can describe
-        git fetch --no-tags --depth=1 origin "refs/tags/${CI_COMMIT_TAG}^:refs/tags/${CI_COMMIT_TAG}^"
+        git fetch --no-tags --depth=2 origin ${CI_COMMIT_TAG}"
         PREV_TAG=$(git describe --tags --abbrev=0 "${CI_COMMIT_TAG}^")
         echo "→ Comparing ${DOCKERFILE_PATH} changes since $PREV_TAG…"
 
