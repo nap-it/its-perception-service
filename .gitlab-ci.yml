@@ -246,7 +246,7 @@ cleanup:
     - curl -LO https://github.com/regclient/regclient/releases/download/v0.6.1/regctl-linux-amd64
     - chmod +x regctl-linux-amd64 && mv regctl-linux-amd64 /usr/local/bin/regctl
     - regctl registry login code.nap.av.it.pt:5050 -u "${CI_USER}" -p "${CI_TOKEN}"
-
+    - echo "→ Cleaning up tags for $DOCKER_TAG or non-main branch $CI_COMMIT_BRANCH"
     - |
       for IMAGE in generation processing autoware-adapter bike-adapter camera-adapter radar-adapter; do
         echo "→ Cleaning up $IMAGE"
