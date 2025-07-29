@@ -238,7 +238,7 @@ create_manifest_radar_adapter:
 # ------------------------------------------------------------------------------
 release:
   stage: release
-  image: curlimages/curl:latest
+  image: code.nap.av.it.pt:5050/external-tools/misc-docker-images/curlimages/curl:latest
   tags: [amd64]
   before_script:
     - curl --location --output ~/release-cli "https://gitlab.com/api/v4/projects/gitlab-org%2Frelease-cli/packages/generic/release-cli/latest/release-cli-linux-amd64"
@@ -258,7 +258,7 @@ release:
 # ------------------------------------------------------------------------------
 cleanup:
   stage: clean
-  image: alpine:latest
+  image: code.nap.av.it.pt:5050/external-tools/misc-docker-images/alpine:latest
   tags: [amd64]
   script:
     - apk add --no-cache curl bash
