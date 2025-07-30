@@ -22,7 +22,7 @@ The CPS consists of several components deployed as Docker containers:
 
 ## Message Formats
 The Sensor Adapters publish both sensor and object data in a specific format that is understood by the **Generation** service. The following formats are used:
-#### Sensor Data Format for the topic `generation/sensors`
+#### Sensor Data Format for the input topic `generation/sensors`
 
 ```json
 {
@@ -40,7 +40,7 @@ The [`sensorType`](https://forge.etsi.org/rep/ITS/asn1/cpm_ts103324/-/blob/maste
 - 12: Local Aggregation
 - 13: ITS Aggregation 
 
-#### Object Data Format for the topic `generation/objects`
+#### Object Data Format for the input topic `generation/objects`
 
 ```json
 {
@@ -91,7 +91,70 @@ The `classification` ([TrafficParticipantType](https://forge.etsi.org/rep/ITS/as
 - 14: Agricultural Vehicle
 - 15: Roadside Unit (RSU)
 
+#### Object Data Format for the output topic `objects` by the Processing service
 
+```json
+{
+    "sender": {
+        "id": int, // Unique identifier of the CPM sending station
+        "type": int, // Type of the CPM sending station
+        "latitude": float, // Latitude of the CPM sending station
+        "longitude": float, // Longitude of the CPM sending station
+        "speed": float, // Speed of the CPM sending station
+        "heading": float, // Heading of the CPM sending station
+        "altitude": float, // Altitude of the CPM sending station
+        "acceleration": float // Acceleration of the CPM sending station
+    },
+    "objects": [
+        {
+            "id": int, // Identifier for the object
+            "uniqueID": long, // Unique identifier for the object
+            "sensorType": string, // Sensor type that detected the object 
+            "sensorID": int, // Sensor id that detected that object
+            "confidence": int, // Confidence level of the detection (0-100)
+            "latitude": float, // Latitude of the object in degrees
+            "longitude": float, // Longitude of the object in degrees
+            "altitude": float, // Altitude of the object in meters
+            "referenceLatitude": float, // Latitude of the CPM sending station
+            "referenceLongitude": float, // Longitude of the CPM sending station
+            "xDistance": float, // Distance in the x-axis (north) from the CPM sending station to the object in meters
+            "yDistance": float, // Distance in the y-axis (east) from the CPM sending station to the object in meters
+            "xDistanceCov": float, // Covariance of the x-axis distance
+            "yDistanceCov": float, // Covariance of the y-axis distance
+            "altitudeCov": float, // Covariance of the altitude
+            "speed": float, // Speed of the object in m/s
+            "xVelocity": float, // Velocity of the object in the x-axis (north) in m/s
+            "yVelocity": float, // Velocity of the object in the y-axis (east) in m/s
+            "xVelocityCov": float, // Covariance of the x-axis velocity
+            "yVelocityCov": float, // Covariance of the y-axis velocity
+            "acceleration": float, // Acceleration of the object in m/s²
+            "xAcceleration": float, // Acceleration of the object in the x-axis (north) in m/s²
+            "yAcceleration": float, // Acceleration of the object in the y-axis (east) in m/s²
+            "xAccelerationCov": float, // Covariance of the x-axis acceleration
+            "yAccelerationCov": float, // Covariance of the y-axis acceleration
+            "heading": float, // Heading of the object in degrees (0-360)
+            "headingCov": float, // Covariance of the heading
+            "xSize": float, // Size of the object in the x-axis (width) in meters
+            "ySize": float, // Size of the object in the y-axis (length) in meters
+            "zSize": float, // Size of the object in the z-axis (height) in meters
+            "angularVelocity": float, // Angular velocity of the object in rad/s
+            "angularVelocityCov": float, // Covariance of the angular velocity
+            "classification": string, // Classification of the object as a string
+            "classificationID": int, // Classification ID of the object
+            "stationSenderID": int, // ID of the station that sent the CPM
+            "stationSenderType": int, // Type of the station that sent the CPM
+            "stationReceiverID": int, // ID of the station that received the CPM
+            "stationReceiverType": int, // Type of the station that received the CPM
+            "objectAge": int, // Age of the object in milliseconds
+            "objectTimestamp": double, // Timestamp of the object detection in UNIX seconds
+            "cpmAge": int, // Age of the CPM in milliseconds
+            "cpmTimestamp": double, // Timestamp of the CPM in ETSI standard
+            "cpmTimestampUnix": double // Timestamp of the CPM in UNIX seconds
+        }
+        {...}
+    ]
+}
+```
 
 ## Deployment
 
