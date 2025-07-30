@@ -8,4 +8,5 @@
 **/logs
 **/build_docker_images.log
 **/hosts_test.yml
+**/hosts_rpis.yml
 **/deploy_test.yml

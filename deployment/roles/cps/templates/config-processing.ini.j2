@@ -7,13 +7,11 @@ repeat_id_interval = {{ this_cfg.repeat_id_interval }}
 performance_logs = {{ this_cfg.performance_logs | lower }}
 
 dds_output_topic = {{ this_cfg.dds_output_topic }}
-dds_output_full_topic = {{ this_cfg.dds_output_full_topic }}
 
 local_mqtt_enable_publisher = {{ this_cfg.local_mqtt_enable_publisher | lower }}
 local_mqtt_host = {{ this_cfg.local_mqtt_host }}
 local_mqtt_port = {{ this_cfg.local_mqtt_port }}
 local_mqtt_output_topic = {{ this_cfg.local_mqtt_output_topic }}
-local_mqtt_output_full_topic = {{ this_cfg.local_mqtt_output_full_topic }}
 
 remote_mqtt_enable_publisher = {{ this_cfg.remote_mqtt_enable_publisher | lower }}
 remote_mqtt_host = {{ this_cfg.remote_mqtt_host }}
@@ -21,7 +19,9 @@ remote_mqtt_port = {{ this_cfg.remote_mqtt_port }}
 remote_mqtt_username = {{ this_cfg.remote_mqtt_username }}
 remote_mqtt_password = {{ this_cfg.remote_mqtt_password }}
 remote_mqtt_output_topic = {{ this_cfg.remote_mqtt_output_topic }}
-remote_mqtt_output_full_topic = {{ this_cfg.remote_mqtt_output_full_topic }}
+
+zenoh_endpoint = {{ this_cfg.zenoh_endpoint }}
+zenoh_output_topic = {{ this_cfg.zenoh_output_topic }}
 
 [locator]
 domain_id = {{ this_cfg.domain_id }}
