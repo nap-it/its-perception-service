@@ -395,6 +395,7 @@ void Aggregator::on_message(const std::string& topic, const std::string& message
                     obj.size_y = (objJson.HasMember("size_y") && objJson["size_y"].IsFloat()) ? objJson["size_y"].GetFloat() : NOT_PRESENT_FLOAT;
                     obj.size_z = (objJson.HasMember("size_z") && objJson["size_z"].IsFloat()) ? objJson["size_z"].GetFloat() : NOT_PRESENT_FLOAT;
                     obj.angular_velocity = (objJson.HasMember("angular_velocity") && objJson["angular_velocity"].IsFloat()) ? objJson["angular_velocity"].GetFloat() : NOT_PRESENT_FLOAT;
+                    if (obj.angular_velocity != NOT_PRESENT_FLOAT && (obj.angular_velocity < -255 || obj.angular_velocity > 256)) obj.angular_velocity = 0.0f;
                     obj.cov_latitude = (objJson.HasMember("cov_latitude") && objJson["cov_latitude"].IsFloat()) ? objJson["cov_latitude"].GetFloat() : NOT_PRESENT_FLOAT;
                     obj.cov_longitude = (objJson.HasMember("cov_longitude") && objJson["cov_longitude"].IsFloat()) ? objJson["cov_longitude"].GetFloat() : NOT_PRESENT_FLOAT;
                     obj.cov_altitude = (objJson.HasMember("cov_altitude") && objJson["cov_altitude"].IsFloat()) ? objJson["cov_altitude"].GetFloat() : NOT_PRESENT_FLOAT;

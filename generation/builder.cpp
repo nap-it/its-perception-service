@@ -208,6 +208,8 @@ std::string Builder::generateCPM(const std::vector<Object>& freshObjects,
         if (obj.angular_velocity != NOT_PRESENT_FLOAT) {
             rj::Value zAngularVelocity(rj::kObjectType);
             int ang = static_cast<int>(obj.angular_velocity * inv_PI_RAD);
+            if (ang < -255) ang = -255;
+            if (ang > 256) ang = 256;
             zAngularVelocity.AddMember("value", ang, alloc);
             //double angConf = (obj.cov_angular_velocity != NOT_PRESENT_FLOAT) ? sqrt(obj.cov_angular_velocity) : 1;
             zAngularVelocity.AddMember("confidence", 1, alloc);
