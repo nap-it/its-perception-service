@@ -375,8 +375,8 @@ void Aggregator::on_message(const std::string& topic, const std::string& message
                     
                     obj.classification = (objJson.HasMember("classification") && objJson["classification"].IsInt()) ? objJson["classification"].GetInt() : 0;
                     obj.confidence = (objJson.HasMember("confidence") && objJson["confidence"].IsInt()) ? objJson["confidence"].GetInt() : 0;
-                    if (obj.confidence < 0) obj.confidence = 0;
-                    if (obj.confidence > 100) obj.confidence = 100;
+                    if (obj.confidence <= 0) obj.confidence = 101;
+                    else if ((obj.confidence > 100) && (obj.confidence != 101)) obj.confidence = 100;
                     
                     obj.speed = (objJson.HasMember("speed") && objJson["speed"].IsFloat()) ? objJson["speed"].GetFloat() : NOT_PRESENT_FLOAT;
                     obj.heading = (objJson.HasMember("heading") && objJson["heading"].IsFloat()) ? objJson["heading"].GetFloat() : NOT_PRESENT_FLOAT;
