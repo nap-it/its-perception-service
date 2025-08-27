@@ -55,7 +55,7 @@ The [`sensorType`](https://forge.etsi.org/rep/ITS/asn1/cpm_ts103324/-/blob/maste
             "heading": float, // Heading of the object in degrees (0-360)
             "speed": float, // Speed of the object in m/s
             "acceleration": float, // [OPTIONAL] Acceleration of the object in m/s²
-            "confidence": integer, // Confidence level of the detection (0-100)
+            "confidence": integer, // Confidence level of the detection (1-100) or 101 if unavailable
             "classification": integer, // Classification of the object 
             "size_x": float, // [OPTIONAL] Size of the object in the x-axis (width) in meters
             "size_y": float, // [OPTIONAL] Size of the object in the y-axis (length) in meters
