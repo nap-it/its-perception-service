@@ -31,8 +31,8 @@ AutowareAdapter::AutowareAdapter(const Config& config) : config(config) {
     rj::Document sensorDoc;
     sensorDoc.SetObject();
     rj::Document::AllocatorType& alloc = sensorDoc.GetAllocator();
-    sensorDoc.AddMember("sensorID", 3, alloc); // Hardcoded for Lidar
-    sensorDoc.AddMember("sensorType", 3, alloc); // Hardcoded for Lidar
+    sensorDoc.AddMember("sensorID", 2, alloc); // Hardcoded for Lidar
+    sensorDoc.AddMember("sensorType", 2, alloc); // Hardcoded for Lidar
     sensorDoc.AddMember("shadowingApplies", false, alloc);
     rj::StringBuffer sensorBuffer;
     rj::Writer<rj::StringBuffer> sensorWriter(sensorBuffer);
@@ -49,8 +49,8 @@ void AutowareAdapter::run() {
     rj::Document sensorDoc;
     sensorDoc.SetObject();
     rj::Document::AllocatorType& alloc = sensorDoc.GetAllocator();
-    sensorDoc.AddMember("sensorID", 3, alloc);
-    sensorDoc.AddMember("sensorType", 3, alloc);
+    sensorDoc.AddMember("sensorID", 2, alloc);
+    sensorDoc.AddMember("sensorType", 2, alloc);
     sensorDoc.AddMember("shadowingApplies", false, alloc);
     rj::StringBuffer sensorBuffer;
     rj::Writer<rj::StringBuffer> sensorWriter(sensorBuffer);
@@ -98,7 +98,7 @@ std::string AutowareAdapter::parseMessage(const std::string& input) {
             Object obj;
             obj.objectID = (rj_obj.HasMember("objID") && rj_obj["objID"].IsInt()) ? rj_obj["objID"].GetInt() : -1;
             if (obj.objectID == -1) { spdlog::error("Mandatory (Object ID) not present in message: {}", input); return ""; }
-            obj.sensorID = 3; // Hardcoded for Lidar
+            obj.sensorID = 2; // Hardcoded for Lidar
             obj.timestamp = (rj_obj.HasMember("timestamp") && rj_obj["timestamp"].IsInt64()) ? rj_obj["timestamp"].GetInt64()/1000000.0 : 0.0;
             spdlog::debug("Input timestamp: {}, Output timestamp: {}", rj_obj["timestamp"].GetInt64(), obj.timestamp);
             if (obj.timestamp == 0.0) { spdlog::error("Mandatory (Timestamp) not present in message: {}", input); return ""; }
