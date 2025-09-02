@@ -35,7 +35,7 @@ Generation::Generation(std::shared_ptr<Aggregator> aggregator, std::shared_ptr<L
         data_mqtt_server mqttConfig;
         std::string mqttBroker = "tcp://127.0.0.1:1883";
         mqttConfig.address = mqttBroker;
-        mqttConfig.client_id = "Locator-" + std::to_string(std::chrono::system_clock::now().time_since_epoch().count());
+        mqttConfig.client_id = "Generation-" + std::to_string(std::chrono::system_clock::now().time_since_epoch().count());
         
         mqttClient_ = new MqttWrapper(mqttConfig);
         
