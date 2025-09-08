@@ -294,7 +294,8 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
         
         SenderInfo sender_info = locator_->getStationData(sender_id);
 
-        spdlog::debug("[Processor] Sender Type: {}", sender_type);
+        spdlog::debug("[Processor] Getting station data for sender ID {}: type {}, lat {}, lon {}, speed {}, heading {}, altitude {}, acceleration {}",
+                      sender_info.station_id, sender_type, sender_latitude, sender_longitude, sender_info.speed, sender_info.heading, sender_info.altitude, sender_info.acceleration);
 
         rj::Document objects_output_full;
         objects_output_full.SetObject();

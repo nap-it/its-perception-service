@@ -181,6 +181,10 @@ void Locator::parseAndUpdateData(const std::string& topic, const std::string& me
                             const rj::Value& accelerationObj = basicVehicle["longitudinalAcceleration"];
                             acceleration = (accelerationObj.HasMember("longitudinalAccelerationValue") && accelerationObj["longitudinalAccelerationValue"].IsFloat())
                                       ? accelerationObj["longitudinalAccelerationValue"].GetFloat() : NOT_PRESENT_FLOAT;
+                            if (acceleration == NOT_PRESENT_FLOAT) {
+                                acceleration = (accelerationObj.HasMember("value") && accelerationObj["value"].IsFloat())
+                                               ? accelerationObj["value"].GetFloat() : NOT_PRESENT_FLOAT;
+                            }
                         }
                     }
                 }
