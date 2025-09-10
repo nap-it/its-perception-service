@@ -34,12 +34,23 @@ before_script:
         echo "→ Preparing diff against previous tag…"
         git fetch --unshallow || true            # ensure HEAD^ exists
         git fetch --tags                         # pull down all tags
-        PREV_TAG=$(git describe --tags --abbrev=0 HEAD^) 
-        echo "→ Previous tag is $PREV_TAG"
-        CHANGED=$(git diff --name-only "$PREV_TAG" "$CI_COMMIT_TAG" -- "$DOCKERFILE_PATH")
-        if [[ -z "$CHANGED" ]]; then
-          echo "→ No changes in $DOCKERFILE_PATH since $PREV_TAG; skipping build."
-          exit 0
+
+        # Check if there are any tags at all
+        if git tag -l | grep -q .; then
+          # Tags exist, try to find previous tag
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [[ -n "$PREV_TAG" ]]; then
+            echo "→ Previous tag is $PREV_TAG"
+            CHANGED=$(git diff --name-only "$PREV_TAG" "$CI_COMMIT_TAG" -- "$DOCKERFILE_PATH")
+            if [[ -z "$CHANGED" ]]; then
+              echo "→ No changes in $DOCKERFILE_PATH since $PREV_TAG; skipping build."
+              exit 0
+            fi
+          else
+            echo "→ No previous tag found (this might be the first tag), building anyway."
+          fi
+        else
+          echo "→ No tags exist in repository, building anyway."
         fi
       fi
 
@@ -149,13 +160,22 @@ build_radar_adapter_arm64:
         git fetch --unshallow || true
         git fetch --tags
 
-        PREV_TAG=$(git describe --tags --abbrev=0 HEAD^)
-        echo "→ Previous tag is $PREV_TAG"
-
-        CHANGED=$(git diff --name-only "$PREV_TAG" "$CI_COMMIT_TAG" -- "$DOCKERFILE_PATH")
-        if [[ -z "$CHANGED" ]]; then
-          echo "→ No changes in $DOCKERFILE_PATH since $PREV_TAG; skipping manifest."
-          exit 0
+        # Check if there are any tags at all
+        if git tag -l | grep -q .; then
+          # Tags exist, try to find previous tag
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [[ -n "$PREV_TAG" ]]; then
+            echo "→ Previous tag is $PREV_TAG"
+            CHANGED=$(git diff --name-only "$PREV_TAG" "$CI_COMMIT_TAG" -- "$DOCKERFILE_PATH")
+            if [[ -z "$CHANGED" ]]; then
+              echo "→ No changes in $DOCKERFILE_PATH since $PREV_TAG; skipping manifest."
+              exit 0
+            fi
+          else
+            echo "→ No previous tag found (this might be the first tag), creating manifest anyway."
+          fi
+        else
+          echo "→ No tags exist in repository, creating manifest anyway."
         fi
       fi
 
