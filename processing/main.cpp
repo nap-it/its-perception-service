@@ -51,7 +51,7 @@ int main() {
     locator->run();
 
     Config config;
-    config.debug = reader.GetBoolean("processing", "debug", false);
+    config.debug = reader.GetBoolean("general", "debug", false);
     spdlog::info("[CONFIG] Processing debug mode: {}", config.debug);
     config.dds_domain = reader.GetInteger("processing", "domain_id", 0);
     spdlog::info("[CONFIG] DDS domain: {}", config.dds_domain);
