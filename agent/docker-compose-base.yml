@@ -1,7 +1,7 @@
 services:
             
   generation:
-    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/generation:latest
+    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/generation:v1.0.3
     restart: always
     volumes:
       - /services/cps/generation/config.ini:/config.ini
@@ -10,7 +10,7 @@ services:
     ipc: host
     
   processing:
-    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/processing:latest
+    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/processing:v1.0.5
     restart: always
     volumes:
       - /services/cps/processing/config.ini:/config.ini

@@ -1,6 +1,6 @@
 services:
   camera-adapter:
-    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/camera-adapter:latest
+    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/camera-adapter:v1.0.1
     restart: always
     volumes:
       - /services/cps/camera-adapter/config.ini:/config.ini
@@ -9,7 +9,7 @@ services:
     
             
   camera-adapter2:
-    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/camera-adapter:latest
+    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/camera-adapter:v1.0.1
     restart: always
     volumes:
       - /services/cps/camera-adapter2/config.ini:/config.ini
@@ -18,7 +18,7 @@ services:
     
             
   camera-adapter3:
-    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/camera-adapter:latest
+    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/camera-adapter:v1.0.1
     restart: always
     volumes:
       - /services/cps/camera-adapter3/config.ini:/config.ini
@@ -27,7 +27,7 @@ services:
     
             
   camera-adapter4:
-    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/camera-adapter:latest
+    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/camera-adapter:v1.0.1
     restart: always
     volumes:
       - /services/cps/camera-adapter4/config.ini:/config.ini

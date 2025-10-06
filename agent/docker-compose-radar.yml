@@ -1,9 +1,9 @@
 services:
 
   radar-adapter:
-    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/radar-adapter:latest
+    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/radar-adapter:v1.0.0
     restart: always
     volumes:
-      - ./radar-adapter/config.ini:/config.ini
+      - /services/cps/radar-adapter/config.ini:/config.ini
     network_mode: host
     ipc: host
