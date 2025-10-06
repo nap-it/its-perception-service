@@ -1,7 +1,7 @@
 services:
             
   generation:
-    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/generation:v1.0.3
+    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/generation:v1.0.4
     restart: always
     volumes:
       - /services/cps/generation/config.ini:/config.ini
