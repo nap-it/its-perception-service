@@ -24,7 +24,7 @@ AutowareAdapter::AutowareAdapter(const Config& config) : config(config) {
         });
     dds_->provision_publisher("generation/objects");
     dds_->provision_publisher("generation/sensors");
-    dds_->subscribe("aw/out/perceived_objects");
+    dds_->subscribe("aw/out/objects");
     std::this_thread::sleep_for(std::chrono::seconds(2));
 
     // Build sensor information using RapidJSON.
