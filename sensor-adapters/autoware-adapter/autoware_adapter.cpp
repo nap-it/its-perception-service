@@ -102,8 +102,8 @@ std::string AutowareAdapter::parseMessage(const std::string& input) {
             obj.timestamp = (rj_obj.HasMember("timestamp") && rj_obj["timestamp"].IsInt64()) ? rj_obj["timestamp"].GetInt64()/1000000.0 : 0.0;
             spdlog::debug("Input timestamp: {}, Output timestamp: {}", rj_obj["timestamp"].GetInt64(), obj.timestamp);
             if (obj.timestamp == 0.0) { spdlog::error("Mandatory (Timestamp) not present in message: {}", input); return ""; }
-            obj.classification = (rj_obj.HasMember("classification") && rj_obj["classification"].IsArray() && rj_obj["classification"].Size() > 0) ? rj_obj["classification"][0]["objectClass"]["vehicleSubClass"].GetInt() : 0;
-            obj.confidence = (rj_obj.HasMember("classification") && rj_obj["classification"].IsArray() && rj_obj["classification"].Size() > 0) ? rj_obj["classification"][0]["confidence"].GetInt() : 0;
+            obj.classification = (rj_obj.HasMember("classification") && rj_obj["classification"].IsInt()) ? rj_obj["classification"].GetInt() : 0;
+            obj.confidence = (rj_obj.HasMember("confidence") && rj_obj["confidence"].IsInt()) ? rj_obj["confidence"].GetInt() : 0;
             obj.speed = (rj_obj.HasMember("speed") && rj_obj["speed"].IsFloat()) ? rj_obj["speed"].GetFloat() : 0.0f;
             obj.cov_speed = (rj_obj.HasMember("cov_speed") && rj_obj["cov_speed"].IsFloat()) ? rj_obj["cov_speed"].GetFloat() : 0.0f;
             obj.heading = (rj_obj.HasMember("heading") && rj_obj["heading"].IsFloat()) ? rj_obj["heading"].GetFloat() : 0.0f;
