@@ -492,8 +492,8 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
             object_full.AddMember("longitude", object_longitude, allocator_output_full);
             if (object_z_distance == NOT_PRESENT_FLOAT) object_full.AddMember("altitude", rj::Value(rj::kNullType), allocator_output_full);
             else object_full.AddMember("altitude", object_z_distance, allocator_output_full);
-            object_full.AddMember("referenceLatitude", sender_latitude, allocator_output_full);
-            object_full.AddMember("referenceLongitude", sender_longitude, allocator_output_full);
+            // object_full.AddMember("referenceLatitude", sender_latitude, allocator_output_full);
+            // object_full.AddMember("referenceLongitude", sender_longitude, allocator_output_full);
             object_full.AddMember("xDistance", object_x_distance, allocator_output_full);
             object_full.AddMember("yDistance", object_y_distance, allocator_output_full);
             if (object_x_cov == NOT_PRESENT_FLOAT) object_full.AddMember("xDistanceCov", rj::Value(rj::kNullType), allocator_output_full);
@@ -540,8 +540,8 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
             object_full.AddMember("classificationID", object_classification, allocator_output_full);
             
             // Station
-            object_full.AddMember("stationSenderID", sender_id, allocator_output_full);
-            object_full.AddMember("stationSenderType", sender_type, allocator_output_full);
+            // object_full.AddMember("stationSenderID", sender_id, allocator_output_full);
+            // object_full.AddMember("stationSenderType", sender_type, allocator_output_full);
             object_full.AddMember("stationReceiverID", receiver_id, allocator_output_full);
             object_full.AddMember("stationReceiverType", receiver_type, allocator_output_full);
 
