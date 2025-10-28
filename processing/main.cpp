@@ -1,9 +1,10 @@
 #include "locator.h"
 #include "processor.h"
+#include "metrics.h"
+#include "config_reader.hpp"
+#include <spdlog/spdlog.h>
 #include <thread>
 #include <chrono>
-#include <spdlog/spdlog.h>
-#include "config_reader.hpp"
 #include <memory>
 
 int main() {
@@ -13,6 +14,21 @@ int main() {
     if (reader.ParseError() < 0) {
         spdlog::error("Can't load 'config.ini'");
         return 1;
+    }
+
+    // Start Prometheus exposer
+    bool prometheus = reader.GetBoolean("general", "prometheus", false);
+    spdlog::info("[CONFIG] General prometheus: {}", prometheus);
+    int prometheus_port = reader.GetInteger("general", "prometheus_port", 9103);
+    spdlog::info("[CONFIG] General prometheus port: {}", prometheus_port);
+
+    ProcMetricHandles* metrics;
+
+    if (prometheus) {
+        std::string listen_addr = "0.0.0.0:" + std::to_string(prometheus_port);
+        MetricsManager::instance().init(listen_addr);
+        metrics = new ProcMetricHandles(MetricsManager::instance().createGenerationMetrics("v1.0.5"));
+        spdlog::info("Prometheus metrics enabled on port {}", prometheus_port);
     }
 
     int locator_domain = reader.GetInteger("locator", "domain_id", 0);
@@ -92,7 +108,7 @@ int main() {
     config.zenoh_output_topic = reader.Get("processing", "zenoh_output_topic", "objects");
     spdlog::info("[CONFIG] Zenoh output topic: {}", config.zenoh_output_topic);
 
-    std::shared_ptr<Processor> processor = std::make_shared<Processor>(config, locator, processor_performance_logs);
+    std::shared_ptr<Processor> processor = std::make_shared<Processor>(config, locator, processor_performance_logs, prometheus, metrics);
     spdlog::info("[Processor] Starting processor...");
 
     processor->run();

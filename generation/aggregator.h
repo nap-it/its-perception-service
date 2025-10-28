@@ -15,6 +15,7 @@
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/basic_file_sink.h"
 #include <zenoh.hxx>
+#include "metrics.h"
 
 namespace rj = rapidjson;
 
@@ -35,6 +36,11 @@ constexpr double O_MIN = 0;       // minGroundVelocityOrientationChangePriorityT
 constexpr double O_MAX = 8.0;    // maxGroundVelocityOrientationChangePriorityThreshold (degress)
 constexpr double T_MIN = 100.0;    // minLastInclusionTimePriorityThreshold (ms)
 constexpr double T_MAX = 1000.0;    // minLastInclusionTimePriorityThreshold (ms)
+
+// Sensor types
+constexpr int SENSOR_TYPE_RADAR = 1;
+constexpr int SENSOR_TYPE_LIDAR = 2;
+constexpr int SENSOR_TYPE_CAMERA = 3;
 
 struct Object {
     int objectID;
@@ -87,8 +93,10 @@ public:
      * @param zenohEndpoint Zenoh endpoint to connect to (default: none).
      * @param priorityType Type of priority calculation to use (default: "etsi"), options: "etsi", "predictor".
      * @param addPendingObjects Adds past objects that are not meant to go in a CPM (default: false)
+     * @param prometheus Enable Prometheus metrics (default: false).
+     * @param metrics Pointer to metric handles structure (default: nullptr).
      */
-    Aggregator(int domainId, long maxObjectAgeS = 300, long cleanInterval = 5, bool ignoreRules = false, bool performanceLogs = false, const std::string& zenohEndpoint = "", const std::string& priorityType = "etsi", bool addPendingObjects = false);
+    Aggregator(int domainId, long maxObjectAgeS = 300, long cleanInterval = 5, bool ignoreRules = false, bool performanceLogs = false, const std::string& zenohEndpoint = "", const std::string& priorityType = "etsi", bool addPendingObjects = false, bool prometheus = false, GenMetricHandles* metrics = nullptr);
 
     /**
      * @brief Destroy the Aggregator object.
@@ -159,8 +167,6 @@ private:
     Dds* dds_;
 
     zenoh::Session* session_ = nullptr;
-    zenoh::Subscriber<void>* subscriber_ = nullptr; 
-    // zenoh::Subscriber<void>* subscriber_sensors_ = nullptr;
     
     std::mutex objMtx_;
     std::unordered_map<int, ObjectEntity> all_objects_; // All objects received
@@ -193,6 +199,10 @@ private:
 
     // File logger
     std::shared_ptr<spdlog::logger> aggregator_file_logger_;
+
+    // Metrics
+    bool prometheus_;
+    GenMetricHandles* metrics_;
 
     /**
      * @brief The main loop that periodically cleans the lastSent list.

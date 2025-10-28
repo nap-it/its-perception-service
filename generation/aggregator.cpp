@@ -11,7 +11,7 @@ namespace fs = std::filesystem;
 Aggregator* Aggregator::instance_ = nullptr;
 
 // Constructor: sets up DDS and subscribes to the "generation/objects" topic.
-Aggregator::Aggregator(int ddsDomain, long maxObjectAge, long cleanInterval, bool ignoreRules, bool performanceLogs, const std::string& zenohEndpoint, const std::string& proprityType, bool addPendingObjects) 
+Aggregator::Aggregator(int ddsDomain, long maxObjectAge, long cleanInterval, bool ignoreRules, bool performanceLogs, const std::string& zenohEndpoint, const std::string& proprityType, bool addPendingObjects, bool prometheus, GenMetricHandles* metrics)
     :   maxObjectAge_(maxObjectAge), 
         cleanInterval_(cleanInterval), 
         stopFlag_(false), 
@@ -20,7 +20,10 @@ Aggregator::Aggregator(int ddsDomain, long maxObjectAge, long cleanInterval, boo
         performanceLogs_(performanceLogs), 
         zenohEndpoint_(zenohEndpoint),
         priorityType_(proprityType),
-        addPendingObjects_(addPendingObjects)
+        addPendingObjects_(addPendingObjects),
+        prometheus_(prometheus),
+        metrics_(metrics)
+
 {
     // Set the static instance pointer to this object.
     instance_ = this;
@@ -159,12 +162,13 @@ void Aggregator::cleanLastSent() {
         double raw_obj_ts = it->second.current.timestamp;
         unsigned long obj_ts = static_cast<unsigned long>(raw_obj_ts);
 
+
         if(now < obj_ts) {
             ++it;
             continue;
         }
 
-        if (now - obj_ts > maxObjectAge_) {
+        if (now - obj_ts >= maxObjectAge_) {
             int combinedId = (it->second.current.sensorID << 16) | (it->second.current.objectID & 0xFFFF);
             idMap_.erase(combinedId);
             it = all_objects_.erase(it);
@@ -348,6 +352,7 @@ double Aggregator::calculateHaversineDistance(double lat1, double lon1, double l
 
 void Aggregator::on_message(const std::string& topic, const std::string& message) {
     spdlog::debug("[Aggregator] Received message on topic '{}': {}", topic, message);
+    bool updated_metrics = false;
     try {
         auto t1 = std::chrono::high_resolution_clock::now();
         rj::Document doc;
@@ -368,6 +373,15 @@ void Aggregator::on_message(const std::string& topic, const std::string& message
                     
                     obj.sensorID = (objJson.HasMember("sensorID") && objJson["sensorID"].IsInt()) ? objJson["sensorID"].GetInt() : NOT_PRESENT_INT;
                     if ((obj.sensorID == NOT_PRESENT_INT || obj.sensorID < 0) && (spdlog::error("[Aggregator]: Mandatory (Sensor ID) not present in message: {}", message), true)) continue;
+
+                    if (obj.sensorID == SENSOR_TYPE_RADAR && prometheus_ && metrics_ && !updated_metrics) {
+                        metrics_->radar_messages->Increment();
+                        updated_metrics = true;
+                    } else if (obj.sensorID == SENSOR_TYPE_CAMERA && prometheus_ && metrics_ && !updated_metrics) {
+                        metrics_->camera_messages->Increment();
+                        updated_metrics = true;
+                    }
+
                     obj.cpmObjectID = calculateCpmObjectID(obj.sensorID, obj.objectID);
                     
                     obj.timestamp = (objJson.HasMember("timestamp") && objJson["timestamp"].IsDouble()) ? objJson["timestamp"].GetDouble() : NOT_PRESENT_DOUBLE;
