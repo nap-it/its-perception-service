@@ -4,12 +4,14 @@
 #include "aggregator.h"
 #include "builder.h"
 #include "locator.h"
+#include "metrics.h"
 #include <memory>
 #include <atomic>
 #include <thread>
 #include "fastdds-cpp-wrapper/dds.hpp"
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/basic_file_sink.h"
+
 
 class Generation {
 public:
@@ -23,8 +25,10 @@ public:
      * @param performanceLogs Enable performance logs.
      * @param maxObjects Maximum number of objects to get from the aggregator (default: -1 for no limit).
      * @param mqttDebug Enable MQTT debug logs (default: false).
+     * @param prometheus Enable Prometheus metrics (default: false).
+     * @param metrics Pointer to metric handles structure (default: nullptr).
      */
-    Generation(std::shared_ptr<Aggregator> aggregator, std::shared_ptr<Locator> locator, int requestRateMs, int ddsDomain, std::string ddsTopic, bool performanceLogs = false, int maxObjects = -1, bool mqttDebug = false);
+    Generation(std::shared_ptr<Aggregator> aggregator, std::shared_ptr<Locator> locator, int requestRateMs, int ddsDomain, std::string ddsTopic, bool performanceLogs = false, int maxObjects = -1, bool mqttDebug = false, bool prometheus = false, GenMetricHandles* metrics = nullptr);
 
     /**
      * @brief Destroy the Generation object.
@@ -73,6 +77,10 @@ private:
     // MQTT client 
     bool mqttDebug_;
     MqttWrapper* mqttClient_;
+
+    // Metrics
+    bool prometheus_;
+    GenMetricHandles* metrics_;
 
     /**
      * @brief Main loop that periodically retrieves fresh objects, sensor data and constructs CPMs.

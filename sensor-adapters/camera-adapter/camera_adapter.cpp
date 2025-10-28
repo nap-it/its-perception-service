@@ -53,7 +53,7 @@ CameraAdapter::CameraAdapter(const Config& config) : config(config) {
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
         spdlog::info("Waiting for MQTT connection, retrying...");
     }
-    spdlog::info("[Locator] MQTT client connected to broker {} on topic {}", mqttInfo.address, config.mqtt_topic);
+    spdlog::info("MQTT client connected to broker {} on topic {}", mqttInfo.address, config.mqtt_topic);
 }
 
 void CameraAdapter::run() {

@@ -27,6 +27,8 @@ bike_adapter_mqtt_topic: "rpi/cam_detections"
 cps_configs:
   generation:
     debug: false
+    prometheus: true
+    prometheus_port: 9102
     domain_id: "{{ id }}"
     station_type: "{{ station_type }}"
     station_latitude: "{{ locator_latitude }}"
@@ -50,6 +52,8 @@ cps_configs:
 
   processing: # Mostly used for ATCLL visualization
     debug: false
+    prometheus: true
+    prometheus_port: 9103
     domain_id: "{{ id }}"
     station_type: "{{ station_type }}"
     station_id: "{{ id }}"

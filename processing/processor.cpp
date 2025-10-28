@@ -9,8 +9,10 @@
 namespace rj = rapidjson;
 namespace fs = std::filesystem;
 
-Processor::Processor(const Config& config, std::shared_ptr<Locator> locator, bool performanceLogs)
-    : config_(config), locator_(locator), performanceLogs_(performanceLogs), stopFlag_(false) {
+Processor::Processor(const Config& config, std::shared_ptr<Locator> locator, bool performanceLogs, bool prometheus, ProcMetricHandles* metrics)
+    : config_(config), locator_(locator), performanceLogs_(performanceLogs), 
+        prometheus_(prometheus), metrics_(metrics),
+        stopFlag_(false) {
     
     if (config.debug) {
         spdlog::set_level(spdlog::level::debug);
@@ -164,6 +166,9 @@ void Processor::on_message_dds(const std::string& topic, const std::string& mess
             if (config_.local_mqtt_enabled && local_mqtt_client_) {
                 local_mqtt_client_->publish(config_.local_mqtt_output_topic, output);
                 spdlog::info("[Processor] Published Local MQTT message on topic {}", config_.local_mqtt_output_topic);
+                if (metrics_ && prometheus_) {
+                    metrics_->pub_messages->Increment();
+                }
             } else if (config_.local_mqtt_enabled) {
                 spdlog::error("[Processor] Local MQTT client is not available");
             }
@@ -346,7 +351,12 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
                 continue;
             }
             long object_age = age_cpm + json_object["measurementDeltaTime"].GetInt();
-            spdlog::debug("[Processor] Object ID: {}, object_age {} = age_cpm {} + measurementDeltaTime {}", object_id, object_age, age_cpm, json_object["measurementDeltaTime"].GetInt());
+            spdlog::debug("[Processor] Object ID: {}, object_age ({}) = age_cpm ({}) + measurementDeltaTime ({})", object_id, object_age, age_cpm, json_object["measurementDeltaTime"].GetInt());
+
+            if (prometheus_ && metrics_) {
+                metrics_->obj_age_ms->Observe(static_cast<double>(object_age));
+            }
+
             long object_timestamp = now - object_age;
             spdlog::debug("[Processor] Object timestamp: {}", object_timestamp);
             double object_timestamp_sec = static_cast<double>(object_timestamp) / 1000.0;
@@ -573,6 +583,11 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
         auto serialization_full_time = std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2).count();
         auto total_time = std::chrono::duration_cast<std::chrono::microseconds>(t3 - message_reception).count();
         spdlog::debug ("[Processor] Processing time: {} us\n[Processor] Serialization full time: {} us\n[Processor] Total time: {} us", processing_time, serialization_full_time, total_time);
+
+        if (prometheus_ && metrics_) {
+            metrics_->cycle_ms->Observe(static_cast<double>(total_time) / 1000.0);
+        }
+        
         std::string current_timestamp = getCurrentTimestampString();
         if (performanceLogs_){
             // Convert to timestamp since epoch in seconds

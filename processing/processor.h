@@ -10,6 +10,7 @@
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/basic_file_sink.h"
 #include "locator.h"
+#include "metrics.h"
 #include "zenoh.hxx"
 
 constexpr long TIME_2004_MS = 1072915200000;
@@ -88,8 +89,10 @@ public:
      * @param config The configuration of the processor.
      * @param locator Shared pointer to the Locator object.
      * @param performanceLogs Enable performance logs (default: false).
+     * @param prometheus Enable Prometheus metrics (default: false).
+     * @param metrics Pointer to metric handles structure (default: nullptr).
      */
-    Processor(const Config& config, std::shared_ptr<Locator> locator, bool performanceLogs = false);
+    Processor(const Config& config, std::shared_ptr<Locator> locator, bool performanceLogs = false, bool prometheus = false, ProcMetricHandles* metrics = nullptr);
     ~Processor();
 
     /**
@@ -195,6 +198,10 @@ private:
             {0, "unknown"},
             {1, "roadSideUnit"}
     };
+
+    // Metrics
+    bool prometheus_;                // Enable Prometheus metrics
+    ProcMetricHandles* metrics_;     // Pointer to metric handles structure
 
     /**
      * @brief get the current timestamp as a string.

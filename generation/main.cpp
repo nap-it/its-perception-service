@@ -1,11 +1,13 @@
 #include "aggregator.h"
 #include "generation.h"
 #include "locator.h"
+#include "metrics.h"
+#include "config_reader.hpp"
+#include <spdlog/spdlog.h>
 #include <thread>
 #include <chrono>
-#include <spdlog/spdlog.h>
-#include "config_reader.hpp"
 #include <memory>
+
 
 int main() {
 
@@ -24,6 +26,21 @@ int main() {
         spdlog::set_level(spdlog::level::debug);
     } else {
         spdlog::set_level(spdlog::level::info);
+    }
+
+    // Start Prometheus exposer
+    bool prometheus = reader.GetBoolean("general", "prometheus", false);
+    spdlog::info("[CONFIG] General prometheus: {}", prometheus);
+    int prometheus_port = reader.GetInteger("general", "prometheus_port", 9102);
+    spdlog::info("[CONFIG] General prometheus port: {}", prometheus_port);
+
+    GenMetricHandles* metrics;
+
+    if (prometheus) {
+        std::string listen_addr = "0.0.0.0:" + std::to_string(prometheus_port);
+        MetricsManager::instance().init(listen_addr);
+        metrics = new GenMetricHandles(MetricsManager::instance().createGenerationMetrics("v1.0.4"));
+        spdlog::info("Prometheus metrics enabled on port {}", prometheus_port);
     }
 
     // Locator configuration
@@ -95,7 +112,9 @@ int main() {
                                                     aggregator_performance_logs,
                                                     zenoh_endpoint,
                                                     aggregator_priority_type,
-                                                    aggregator_add_pending_objects);
+                                                    aggregator_add_pending_objects,
+                                                    prometheus,
+                                                    metrics);
 
     aggregator->run();
 
@@ -120,7 +139,9 @@ int main() {
                     generation_dds_topic,
                     generation_performance_logs,
                     generation_max_objects, 
-                    generation_mqtt_debug);
+                    generation_mqtt_debug,
+                    prometheus,
+                    metrics);
     generation.run();
 
     while (true) {
