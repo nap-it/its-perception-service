@@ -15,6 +15,7 @@ find_package(Fastcdr REQUIRED)
 find_package(Fastrtps REQUIRED)
 find_package(zenohc REQUIRED)
 find_package(zenohcxx REQUIRED)
+find_package(prometheus-cpp CONFIG REQUIRED)
 
 add_subdirectory(paho-mqtt-cpp-wrapper)
 
@@ -35,6 +36,7 @@ add_executable(main main.cpp ${FASTDDS_SRC}
         locator.h
         generation.cpp
         generation.h
+        metrics.h
 )
 
 target_link_libraries(main 
@@ -46,4 +48,7 @@ target_link_libraries(main
         paho-mqttpp3 
         paho-mqtt3as
         zenohcxx::zenohc
+        prometheus-cpp::core
+        prometheus-cpp::pull
+        prometheus-cpp::civetweb
 )

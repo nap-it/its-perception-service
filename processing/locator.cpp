@@ -29,6 +29,9 @@ Locator::Locator(ProviderType provider,
         mqttConfig.address = mqttBroker;
         mqttConfig.client_id = "Locator-" + std::to_string(std::chrono::system_clock::now().time_since_epoch().count());
         mqttConfig.subscription_topic.push_back(mqttTopic_);
+        // Default subscriptions for incoming CAMs
+        mqttConfig.subscription_topic.push_back("vanetza/out/cam");
+        mqttConfig.subscription_topic.push_back("vanetza/out/cam_full");
         
         mqttClient_ = new MqttWrapper(mqttConfig, [this](const std::string& topic, const std::string& message){
             this->on_message_mqtt(topic, message);

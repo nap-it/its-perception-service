@@ -32,7 +32,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     python3 \
     python3-pip \
+    zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
+
+# ------------------------- Install Prometheus C++ Client -------------------------
+WORKDIR /usr/src
+RUN git clone https://github.com/jupp0r/prometheus-cpp.git
+WORKDIR /usr/src/prometheus-cpp
+RUN git submodule update --init --recursive
+RUN mkdir build && cd build
+WORKDIR /usr/src/prometheus-cpp/build
+RUN cmake .. -DBUILD_SHARED_LIBS=ON  -DENABLE_PULL=ON -DENABLE_CIVETWEB=ON -DENABLE_PUSH=OFF -DENABLE_TESTING=OFF
+RUN cmake --build . --parallel $(nproc)
+RUN cmake --build . --target install
+RUN ldconfig
 
 # ------------------------- Build Processing -------------------------
 WORKDIR /usr/src/processing
@@ -81,6 +94,7 @@ COPY --from=builder /usr/local/lib/libfastrtps.so* /usr/local/lib/
 COPY --from=builder /usr/local/lib/libfoonathan_memory* /usr/local/lib/
 COPY --from=builder /usr/local/lib/libspdlog.so* /usr/local/lib/
 COPY --from=builder /usr/local/lib/libzenoh* /usr/local/lib/
+COPY --from=builder /usr/local/lib/libprometheus-cpp*.so* /usr/local/lib/
 
 RUN ldconfig
 

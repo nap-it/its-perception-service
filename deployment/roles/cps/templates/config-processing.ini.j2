@@ -1,5 +1,9 @@
-[processing]
+[general]
 debug = {{ this_cfg.debug | lower }}
+prometheus = {{ this_cfg.prometheus | lower }}
+prometheus_port = {{ this_cfg.prometheus_port }}
+
+[processing]
 domain_id = {{ this_cfg.domain_id }}
 station_type = {{ this_cfg.station_type }}    ; only needed if station processes its own messages
 station_id = {{ this_cfg.station_id }}        ; only needed if station processes its own messages

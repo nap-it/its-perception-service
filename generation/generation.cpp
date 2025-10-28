@@ -4,7 +4,7 @@
 
 namespace fs = std::filesystem;
 
-Generation::Generation(std::shared_ptr<Aggregator> aggregator, std::shared_ptr<Locator> locator, int requestRateMs, int ddsDomain, std::string ddsTopic, bool performanceLogs, int maxObjects, bool mqttDebug)
+Generation::Generation(std::shared_ptr<Aggregator> aggregator, std::shared_ptr<Locator> locator, int requestRateMs, int ddsDomain, std::string ddsTopic, bool performanceLogs, int maxObjects, bool mqttDebug, bool prometheus, GenMetricHandles* metrics)
     : aggregator_(aggregator), 
     locator_(locator), 
     requestRateMs_(requestRateMs), 
@@ -13,7 +13,9 @@ Generation::Generation(std::shared_ptr<Aggregator> aggregator, std::shared_ptr<L
     performanceLogs_(performanceLogs), 
     maxObjects_(maxObjects), 
     mqttClient_(nullptr), 
-    mqttDebug_(mqttDebug) {
+    mqttDebug_(mqttDebug),
+    prometheus_(prometheus),
+    metrics_(metrics) {
     
     spdlog::info("[Generation] initialized with request rate {} ms", requestRateMs);
 
@@ -119,6 +121,8 @@ void Generation::runLoop() {
                     generation_file_logger_->flush();
                 }
 
+
+
                 spdlog::info("[Generation]: Publising CPM: {}", cpm_str);
 
                 // Publish CPM
@@ -143,6 +147,16 @@ void Generation::runLoop() {
             auto t1 = std::chrono::high_resolution_clock::now();
             std::string cpm_str = builder_.generateCPM(freshObjects, sensorInfo, addSensor, stationLatitude, stationLongitude, stationHeading, stationType);
             auto t2 = std::chrono::high_resolution_clock::now();
+
+            if (prometheus_ && metrics_) {
+                metrics_->cpm_built->Increment();
+                auto now_sec = std::chrono::duration<double>(now.time_since_epoch()).count();
+                metrics_->cpm_last_ts->Set(now_sec);
+                metrics_->objects_per_msg->Observe(freshObjects.size());
+                auto build_duration = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
+                metrics_->cpm_build_ms->Observe(build_duration);
+                spdlog::debug("[Generation]: Prometheus metrics updated: cpm_built incremented, last_cpm_ts set to current time, objects_per_msg observed with {}, cpm_build_seconds observed with {}", freshObjects.size(), build_duration); 
+            }
 
             if (performanceLogs_) {
                 auto generate_cpm_duration_us = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
@@ -178,6 +192,11 @@ void Generation::runLoop() {
         end = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
         spdlog::info("[Generation]: Cycle took {} ms, sleeping for {} ms", duration, requestRateMs_.load() - duration);
+
+        if (prometheus_ && metrics_) {
+            metrics_->cycle_ms->Observe(duration);
+            spdlog::debug("[Generation]: Prometheus metrics updated: cycle_ms observed with {}", duration);
+        }
 
         if (requestRateMs_.load() - duration > 0) std::this_thread::sleep_for(std::chrono::milliseconds(requestRateMs_.load() - duration));
     }
