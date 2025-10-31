@@ -121,7 +121,15 @@ void Generation::runLoop() {
                     generation_file_logger_->flush();
                 }
 
-
+                if (prometheus_ && metrics_) {
+                    metrics_->cpm_built->Increment();
+                    auto now_sec = std::chrono::duration<double>(now.time_since_epoch()).count();
+                    metrics_->cpm_last_ts->Set(now_sec);
+                    metrics_->objects_per_msg->Observe(freshObjects.size());
+                    auto build_duration = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
+                    metrics_->cpm_build_ms->Observe(build_duration);
+                    spdlog::debug("[Generation]: Prometheus metrics updated: cpm_built incremented, last_cpm_ts set to current time, objects_per_msg observed with {}, cpm_build_seconds observed with {}", freshObjects.size(), build_duration); 
+                }
 
                 spdlog::info("[Generation]: Publising CPM: {}", cpm_str);
 
