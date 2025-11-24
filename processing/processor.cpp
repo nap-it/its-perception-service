@@ -297,6 +297,8 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
         float sender_longitude = (cpm.HasMember("managementContainer") && cpm["managementContainer"].HasMember("referencePosition") && cpm["managementContainer"]["referencePosition"].HasMember("longitude"))
             ? static_cast<float>(cpm["managementContainer"]["referencePosition"]["longitude"].GetFloat()) : NOT_PRESENT_FLOAT;
         
+
+        // Sender station data
         SenderInfo sender_info = locator_->getStationData(sender_id);
 
         spdlog::debug("[Processor] Getting station data for sender ID {}: type {}, lat {}, lon {}, speed {}, heading {}, altitude {}, acceleration {}",
@@ -311,15 +313,28 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
         station_data.AddMember("type", sender_type, allocator_output_full);
         station_data.AddMember("latitude", sender_latitude, allocator_output_full);
         station_data.AddMember("longitude", sender_longitude, allocator_output_full);
-        if (sender_info.speed == NOT_PRESENT_FLOAT) station_data.AddMember("speed", 0, allocator_output_full);
-        else station_data.AddMember("speed", sender_info.speed, allocator_output_full);
-        if (sender_info.heading == NOT_PRESENT_FLOAT) station_data.AddMember("heading", rj::Value(rj::kNullType), allocator_output_full);
-        else station_data.AddMember("heading", sender_info.heading, allocator_output_full);
         if (sender_info.altitude == NOT_PRESENT_FLOAT) station_data.AddMember("altitude", rj::Value(rj::kNullType), allocator_output_full);
         else station_data.AddMember("altitude", sender_info.altitude, allocator_output_full);
+        if (sender_info.speed == NOT_PRESENT_FLOAT) station_data.AddMember("speed", rj::Value(rj::kNullType), allocator_output_full);
+        else station_data.AddMember("speed", sender_info.speed, allocator_output_full);
         if (sender_info.acceleration == NOT_PRESENT_FLOAT) station_data.AddMember("acceleration", rj::Value(rj::kNullType), allocator_output_full);
         else station_data.AddMember("acceleration", sender_info.acceleration, allocator_output_full);
+        if (sender_info.heading == NOT_PRESENT_FLOAT) station_data.AddMember("heading", rj::Value(rj::kNullType), allocator_output_full);
+        else station_data.AddMember("heading", sender_info.heading, allocator_output_full);
         objects_output_full.AddMember("sender", station_data, allocator_output_full);
+
+        // Receiver station data
+        rj::Value receiver_data(rj::kObjectType);
+        receiver_data.AddMember("id", receiver_id, allocator_output_full);
+        receiver_data.AddMember("type", receiver_type, allocator_output_full);
+        objects_output_full.AddMember("receiver", receiver_data, allocator_output_full);
+
+        // CPM data
+        rj::Value cpm_data(rj::kObjectType);
+        cpm_data.AddMember("age", age_cpm, allocator_output_full);
+        cpm_data.AddMember("timestamp", cpm_reference_time_unix, allocator_output_full);
+        cpm_data.AddMember("timestamp2004", cpm_reference_time_double, allocator_output_full);
+        objects_output_full.AddMember("cpm", cpm_data, allocator_output_full);
 
         rj::Value objects(rj::kArrayType);
         rj::Value objects_full(rj::kArrayType);
@@ -391,12 +406,15 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
             }
             float object_z_distance = (json_object.HasMember("position") && json_object["position"].HasMember("zCoordinate") && json_object["position"]["zCoordinate"].HasMember("value"))
                 ? json_object["position"]["zCoordinate"]["value"].GetFloat() : NOT_PRESENT_FLOAT;
-            float object_x_cov = (json_object.HasMember("position") && json_object["position"].HasMember("xCoordinate") && json_object["position"]["xCoordinate"].HasMember("confidence"))
+            float object_x_conf = (json_object.HasMember("position") && json_object["position"].HasMember("xCoordinate") && json_object["position"]["xCoordinate"].HasMember("confidence"))
                 ? json_object["position"]["xCoordinate"]["confidence"].GetFloat() : NOT_PRESENT_FLOAT;
-            float object_y_cov = (json_object.HasMember("position") && json_object["position"].HasMember("yCoordinate") && json_object["position"]["yCoordinate"].HasMember("confidence"))
+            if ((object_x_conf == 40.96f) || (object_x_conf == 4096.0f)) object_x_conf = NOT_PRESENT_FLOAT;
+            float object_y_conf = (json_object.HasMember("position") && json_object["position"].HasMember("yCoordinate") && json_object["position"]["yCoordinate"].HasMember("confidence"))
                 ? json_object["position"]["yCoordinate"]["confidence"].GetFloat() : NOT_PRESENT_FLOAT;
-            float object_z_cov = (json_object.HasMember("position") && json_object["position"].HasMember("zCoordinate") && json_object["position"]["zCoordinate"].HasMember("confidence"))
+            if ((object_y_conf == 40.96f) || (object_y_conf == 4096.0f)) object_y_conf = NOT_PRESENT_FLOAT;
+            float object_z_conf = (json_object.HasMember("position") && json_object["position"].HasMember("zCoordinate") && json_object["position"]["zCoordinate"].HasMember("confidence"))
                 ? json_object["position"]["zCoordinate"]["confidence"].GetFloat() : NOT_PRESENT_FLOAT;
+            if ((object_z_conf == 40.96f) || (object_z_conf == 4096.0f)) object_z_conf = NOT_PRESENT_FLOAT;
 
             float object_latitude = sender_latitude + M_180_PI * (object_y_distance/R);
             float object_longitude = sender_longitude + M_180_PI * (object_x_distance/R) / cos(M_PI_180 * sender_latitude);
@@ -406,10 +424,12 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
                 ? json_object["velocity"]["cartesianVelocity"]["xVelocity"]["value"].GetFloat() : NOT_PRESENT_FLOAT;
             float object_y_velocity = (json_object.HasMember("velocity") && json_object["velocity"].HasMember("cartesianVelocity") && json_object["velocity"]["cartesianVelocity"].HasMember("yVelocity") && json_object["velocity"]["cartesianVelocity"]["yVelocity"].HasMember("value"))
                 ? json_object["velocity"]["cartesianVelocity"]["yVelocity"]["value"].GetFloat() : NOT_PRESENT_FLOAT;
-            float object_x_velocity_cov = (json_object.HasMember("velocity") && json_object["velocity"].HasMember("cartesianVelocity") && json_object["velocity"]["cartesianVelocity"].HasMember("xVelocity") && json_object["velocity"]["cartesianVelocity"]["xVelocity"].HasMember("confidence"))
+            float object_x_velocity_conf = (json_object.HasMember("velocity") && json_object["velocity"].HasMember("cartesianVelocity") && json_object["velocity"]["cartesianVelocity"].HasMember("xVelocity") && json_object["velocity"]["cartesianVelocity"]["xVelocity"].HasMember("confidence"))
                 ? json_object["velocity"]["cartesianVelocity"]["xVelocity"]["confidence"].GetFloat() : NOT_PRESENT_FLOAT;
-            float object_y_velocity_cov = (json_object.HasMember("velocity") && json_object["velocity"].HasMember("cartesianVelocity") && json_object["velocity"]["cartesianVelocity"].HasMember("yVelocity") && json_object["velocity"]["cartesianVelocity"]["yVelocity"].HasMember("confidence"))
+            if ((object_x_velocity_conf == 1.27f) || (object_x_velocity_conf == 127.0f)) object_x_velocity_conf = NOT_PRESENT_FLOAT;
+            float object_y_velocity_conf = (json_object.HasMember("velocity") && json_object["velocity"].HasMember("cartesianVelocity") && json_object["velocity"]["cartesianVelocity"].HasMember("yVelocity") && json_object["velocity"]["cartesianVelocity"]["yVelocity"].HasMember("confidence"))
                 ? json_object["velocity"]["cartesianVelocity"]["yVelocity"]["confidence"].GetFloat() : NOT_PRESENT_FLOAT;
+            if ((object_y_velocity_conf == 1.27f) || (object_y_velocity_conf == 127.0f)) object_y_velocity_conf = NOT_PRESENT_FLOAT;
 
             float object_speed = NOT_PRESENT_FLOAT;
             if (object_x_velocity != NOT_PRESENT_FLOAT && object_y_velocity != NOT_PRESENT_FLOAT) {
@@ -421,10 +441,12 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
                 ? json_object["acceleration"]["cartesianAcceleration"]["xAcceleration"]["value"].GetFloat() : NOT_PRESENT_FLOAT;
             float object_y_acceleration = (json_object.HasMember("acceleration") && json_object["acceleration"].HasMember("cartesianAcceleration") && json_object["acceleration"]["cartesianAcceleration"].HasMember("yAcceleration") && json_object["acceleration"]["cartesianAcceleration"]["yAcceleration"].HasMember("value"))
                 ? json_object["acceleration"]["cartesianAcceleration"]["yAcceleration"]["value"].GetFloat() : NOT_PRESENT_FLOAT;
-            float object_x_acceleration_cov = (json_object.HasMember("acceleration") && json_object["acceleration"].HasMember("cartesianAcceleration") && json_object["acceleration"]["cartesianAcceleration"].HasMember("xAcceleration") && json_object["acceleration"]["cartesianAcceleration"]["xAcceleration"].HasMember("confidence"))
+            float object_x_acceleration_conf = (json_object.HasMember("acceleration") && json_object["acceleration"].HasMember("cartesianAcceleration") && json_object["acceleration"]["cartesianAcceleration"].HasMember("xAcceleration") && json_object["acceleration"]["cartesianAcceleration"]["xAcceleration"].HasMember("confidence"))
                 ? json_object["acceleration"]["cartesianAcceleration"]["xAcceleration"]["confidence"].GetFloat() : NOT_PRESENT_FLOAT;
-            float object_y_acceleration_cov = (json_object.HasMember("acceleration") && json_object["acceleration"].HasMember("cartesianAcceleration") && json_object["acceleration"]["cartesianAcceleration"].HasMember("yAcceleration") && json_object["acceleration"]["cartesianAcceleration"]["yAcceleration"].HasMember("confidence"))
+            if ((object_x_acceleration_conf == 1.27f) || (object_x_acceleration_conf == 127.0f) || (object_x_acceleration_conf == 1.3f)) object_x_acceleration_conf = NOT_PRESENT_FLOAT;
+            float object_y_acceleration_conf = (json_object.HasMember("acceleration") && json_object["acceleration"].HasMember("cartesianAcceleration") && json_object["acceleration"]["cartesianAcceleration"].HasMember("yAcceleration") && json_object["acceleration"]["cartesianAcceleration"]["yAcceleration"].HasMember("confidence"))
                 ? json_object["acceleration"]["cartesianAcceleration"]["yAcceleration"]["confidence"].GetFloat() : NOT_PRESENT_FLOAT;
+            if ((object_y_acceleration_conf == 1.27f) || (object_y_acceleration_conf == 127.0f) || (object_y_acceleration_conf == 1.3f)) object_y_acceleration_conf = NOT_PRESENT_FLOAT;
 
             float object_acceleration = NOT_PRESENT_FLOAT;
             if (object_x_acceleration != NOT_PRESENT_FLOAT && object_y_acceleration != NOT_PRESENT_FLOAT) {
@@ -434,8 +456,9 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
             // ------------- Heading data -------------
             float object_heading = (json_object.HasMember("angles") && json_object["angles"].HasMember("zAngle") && json_object["angles"]["zAngle"].HasMember("value"))
                 ? json_object["angles"]["zAngle"]["value"].GetFloat() : NOT_PRESENT_FLOAT;
-            float object_heading_cov = (json_object.HasMember("angles") && json_object["angles"].HasMember("zAngle") && json_object["angles"]["zAngle"].HasMember("confidence"))
+            float object_heading_conf = (json_object.HasMember("angles") && json_object["angles"].HasMember("zAngle") && json_object["angles"]["zAngle"].HasMember("confidence"))
                 ? json_object["angles"]["zAngle"]["confidence"].GetFloat() : NOT_PRESENT_FLOAT;
+            if ((object_heading_conf == 12.7f) || (object_heading_conf == 127.0f)) object_heading_conf = NOT_PRESENT_FLOAT;
 
             // ------------- Classification data -------------
             int object_classification = (json_object.HasMember("classification") && json_object["classification"].IsArray() && json_object["classification"].Size() > 0 && json_object["classification"][0].HasMember("objectClass") && json_object["classification"][0]["objectClass"].HasMember("vehicleSubClass"))
@@ -476,8 +499,9 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
             // ------------- Angular velocity data -------------
             float object_z_angular_velocity = (json_object.HasMember("zAngularVelocity") && json_object["zAngularVelocity"].HasMember("value"))
                 ? json_object["zAngularVelocity"]["value"].GetFloat() : NOT_PRESENT_FLOAT;
-            float object_z_angular_velocity_cov = (json_object.HasMember("zAngularVelocity") && json_object["zAngularVelocity"].HasMember("confidence"))
+            float object_z_angular_velocity_conf = (json_object.HasMember("zAngularVelocity") && json_object["zAngularVelocity"].HasMember("confidence"))
                 ? json_object["zAngularVelocity"]["confidence"].GetFloat() : NOT_PRESENT_FLOAT;
+            if ((object_z_angular_velocity_conf == 7.0f)) object_z_angular_velocity_conf = NOT_PRESENT_FLOAT;
 
             // ------------- Size data -------------
             float object_size_x = (json_object.HasMember("objectDimensionX") && json_object["objectDimensionX"].HasMember("value"))
@@ -492,75 +516,77 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
             // Misc
             object_full.AddMember("id", object_id, allocator_output_full);
             object_full.AddMember("uniqueID", static_cast<int64_t>(object_unique_id), allocator_output_full);
-            object_full.AddMember("sensorType", rj::Value(object_sensor_str.c_str(), allocator_output_full).Move(), allocator_output_full);
-            object_full.AddMember("sensorID", object_sensor_id, allocator_output_full);
+            object_full.AddMember("age", object_age, allocator_output_full);
+            object_full.AddMember("timestamp", object_timestamp_sec, allocator_output_full);
+            object_full.AddMember("classification", rj::Value(object_classification_str.c_str(), allocator_output_full).Move(), allocator_output_full);
+            object_full.AddMember("classificationID", object_classification, allocator_output_full);
             if (object_confidence == -1) object_full.AddMember("confidence", rj::Value(rj::kNullType), allocator_output_full);
             else object_full.AddMember("confidence", object_confidence, allocator_output_full);
 
             // Attributes
             object_full.AddMember("latitude", object_latitude, allocator_output_full);
             object_full.AddMember("longitude", object_longitude, allocator_output_full);
-            if (object_z_distance == NOT_PRESENT_FLOAT) object_full.AddMember("altitude", rj::Value(rj::kNullType), allocator_output_full);
-            else object_full.AddMember("altitude", object_z_distance, allocator_output_full);
             // object_full.AddMember("referenceLatitude", sender_latitude, allocator_output_full);
             // object_full.AddMember("referenceLongitude", sender_longitude, allocator_output_full);
             object_full.AddMember("xDistance", object_x_distance, allocator_output_full);
             object_full.AddMember("yDistance", object_y_distance, allocator_output_full);
-            if (object_x_cov == NOT_PRESENT_FLOAT) object_full.AddMember("xDistanceCov", rj::Value(rj::kNullType), allocator_output_full);
-            else object_full.AddMember("xDistanceCov", object_x_cov, allocator_output_full);
-            if (object_y_cov == NOT_PRESENT_FLOAT) object_full.AddMember("yDistanceCov", rj::Value(rj::kNullType), allocator_output_full);
-            else object_full.AddMember("yDistanceCov", object_y_cov, allocator_output_full);
-            if (object_z_cov == NOT_PRESENT_FLOAT) object_full.AddMember("altitudeCov", rj::Value(rj::kNullType), allocator_output_full);
-            else object_full.AddMember("altitudeCov", object_z_cov, allocator_output_full);
+            if (object_z_distance == NOT_PRESENT_FLOAT) object_full.AddMember("altitude", rj::Value(rj::kNullType), allocator_output_full);
+            else object_full.AddMember("altitude", object_z_distance, allocator_output_full);
+            if (object_x_conf == NOT_PRESENT_FLOAT) object_full.AddMember("xDistanceConf", rj::Value(rj::kNullType), allocator_output_full);
+            else object_full.AddMember("xDistanceConf", object_x_conf, allocator_output_full);
+            if (object_y_conf == NOT_PRESENT_FLOAT) object_full.AddMember("yDistanceConf", rj::Value(rj::kNullType), allocator_output_full);
+            else object_full.AddMember("yDistanceConf", object_y_conf, allocator_output_full);
+            if (object_z_conf == NOT_PRESENT_FLOAT) object_full.AddMember("altitudeConf", rj::Value(rj::kNullType), allocator_output_full);
+            else object_full.AddMember("altitudeConf", object_z_conf, allocator_output_full);
             if (object_speed == NOT_PRESENT_FLOAT) object_full.AddMember("speed", rj::Value(rj::kNullType), allocator_output_full);
             else object_full.AddMember("speed", object_speed, allocator_output_full);
             if (object_x_velocity == NOT_PRESENT_FLOAT) object_full.AddMember("xVelocity", rj::Value(rj::kNullType), allocator_output_full);
             else object_full.AddMember("xVelocity", object_x_velocity, allocator_output_full);
             if (object_y_velocity == NOT_PRESENT_FLOAT) object_full.AddMember("yVelocity", rj::Value(rj::kNullType), allocator_output_full);
             else object_full.AddMember("yVelocity", object_y_velocity, allocator_output_full);
-            if (object_x_velocity_cov == NOT_PRESENT_FLOAT) object_full.AddMember("xVelocityCov", rj::Value(rj::kNullType), allocator_output_full);
-            else object_full.AddMember("xVelocityCov", object_x_velocity_cov, allocator_output_full);
-            if (object_y_velocity_cov == NOT_PRESENT_FLOAT) object_full.AddMember("yVelocityCov", rj::Value(rj::kNullType), allocator_output_full);
-            else object_full.AddMember("yVelocityCov", object_y_velocity_cov, allocator_output_full);
+            if (object_x_velocity_conf == NOT_PRESENT_FLOAT) object_full.AddMember("xVelocityConf", rj::Value(rj::kNullType), allocator_output_full);
+            else object_full.AddMember("xVelocityConf", object_x_velocity_conf, allocator_output_full);
+            if (object_y_velocity_conf == NOT_PRESENT_FLOAT) object_full.AddMember("yVelocityConf", rj::Value(rj::kNullType), allocator_output_full);
+            else object_full.AddMember("yVelocityConf", object_y_velocity_conf, allocator_output_full);
+            if (object_z_angular_velocity == NOT_PRESENT_FLOAT) object_full.AddMember("angularVelocity", rj::Value(rj::kNullType), allocator_output_full);
+            else object_full.AddMember("angularVelocity", object_z_angular_velocity, allocator_output_full);
+            if (object_z_angular_velocity_conf == NOT_PRESENT_FLOAT) object_full.AddMember("angularVelocityConf", rj::Value(rj::kNullType), allocator_output_full);
+            else object_full.AddMember("angularVelocityConf", object_z_angular_velocity_conf, allocator_output_full);
             if (object_acceleration == NOT_PRESENT_FLOAT) object_full.AddMember("acceleration", rj::Value(rj::kNullType), allocator_output_full);
             else object_full.AddMember("acceleration", object_acceleration, allocator_output_full);
             if (object_x_acceleration == NOT_PRESENT_FLOAT) object_full.AddMember("xAcceleration", rj::Value(rj::kNullType), allocator_output_full);
             else object_full.AddMember("xAcceleration", object_x_acceleration, allocator_output_full);
             if (object_y_acceleration == NOT_PRESENT_FLOAT) object_full.AddMember("yAcceleration", rj::Value(rj::kNullType), allocator_output_full);
             else object_full.AddMember("yAcceleration", object_y_acceleration, allocator_output_full);
-            if (object_x_acceleration_cov == NOT_PRESENT_FLOAT) object_full.AddMember("xAccelerationCov", rj::Value(rj::kNullType), allocator_output_full);
-            else object_full.AddMember("xAccelerationCov", object_x_acceleration_cov, allocator_output_full);
-            if (object_y_acceleration_cov == NOT_PRESENT_FLOAT) object_full.AddMember("yAccelerationCov", rj::Value(rj::kNullType), allocator_output_full);
-            else object_full.AddMember("yAccelerationCov", object_y_acceleration_cov, allocator_output_full);
+            if (object_x_acceleration_conf == NOT_PRESENT_FLOAT) object_full.AddMember("xAccelerationConf", rj::Value(rj::kNullType), allocator_output_full);
+            else object_full.AddMember("xAccelerationConf", object_x_acceleration_conf, allocator_output_full);
+            if (object_y_acceleration_conf == NOT_PRESENT_FLOAT) object_full.AddMember("yAccelerationConf", rj::Value(rj::kNullType), allocator_output_full);
+            else object_full.AddMember("yAccelerationConf", object_y_acceleration_conf, allocator_output_full);
             if (object_heading == NOT_PRESENT_FLOAT) object_full.AddMember("heading", rj::Value(rj::kNullType), allocator_output_full);
             else object_full.AddMember("heading", object_heading, allocator_output_full);
-            if (object_heading_cov == NOT_PRESENT_FLOAT) object_full.AddMember("headingCov", rj::Value(rj::kNullType), allocator_output_full);
-            else object_full.AddMember("headingCov", object_heading_cov, allocator_output_full);
+            if (object_heading_conf == NOT_PRESENT_FLOAT) object_full.AddMember("headingConf", rj::Value(rj::kNullType), allocator_output_full);
+            else object_full.AddMember("headingConf", object_heading_conf, allocator_output_full);
             if (object_size_x == NOT_PRESENT_FLOAT) object_full.AddMember("xSize", rj::Value(rj::kNullType), allocator_output_full);
             else object_full.AddMember("xSize", object_size_x, allocator_output_full);
             if (object_size_y == NOT_PRESENT_FLOAT) object_full.AddMember("ySize", rj::Value(rj::kNullType), allocator_output_full);
             else object_full.AddMember("ySize", object_size_y, allocator_output_full);
             if (object_size_z == NOT_PRESENT_FLOAT) object_full.AddMember("zSize", rj::Value(rj::kNullType), allocator_output_full);
             else object_full.AddMember("zSize", object_size_z, allocator_output_full);
-            if (object_z_angular_velocity == NOT_PRESENT_FLOAT) object_full.AddMember("angularVelocity", rj::Value(rj::kNullType), allocator_output_full);
-            else object_full.AddMember("angularVelocity", object_z_angular_velocity, allocator_output_full);
-            if (object_z_angular_velocity_cov == NOT_PRESENT_FLOAT) object_full.AddMember("angularVelocityCov", rj::Value(rj::kNullType), allocator_output_full);
-            else object_full.AddMember("angularVelocityCov", object_z_angular_velocity_cov, allocator_output_full);
-            object_full.AddMember("classification", rj::Value(object_classification_str.c_str(), allocator_output_full).Move(), allocator_output_full);
-            object_full.AddMember("classificationID", object_classification, allocator_output_full);
+            object_full.AddMember("sensorType", rj::Value(object_sensor_str.c_str(), allocator_output_full).Move(), allocator_output_full);
+            object_full.AddMember("sensorID", object_sensor_id, allocator_output_full);
+            
             
             // Station
             // object_full.AddMember("stationSenderID", sender_id, allocator_output_full);
             // object_full.AddMember("stationSenderType", sender_type, allocator_output_full);
-            object_full.AddMember("stationReceiverID", receiver_id, allocator_output_full);
-            object_full.AddMember("stationReceiverType", receiver_type, allocator_output_full);
+            // object_full.AddMember("stationReceiverID", receiver_id, allocator_output_full);
+            // object_full.AddMember("stationReceiverType", receiver_type, allocator_output_full);
 
             // Timestamps
-            object_full.AddMember("objectAge", object_age, allocator_output_full);
-            object_full.AddMember("objectTimestamp", object_timestamp_sec, allocator_output_full);
-            object_full.AddMember("cpmAge", age_cpm, allocator_output_full);
-            object_full.AddMember("cpmTimestamp", cpm_reference_time_double, allocator_output_full);
-            object_full.AddMember("cpmTimestampUnix", cpm_reference_time_unix, allocator_output_full);
+            
+            // object_full.AddMember("cpmAge", age_cpm, allocator_output_full);
+            // object_full.AddMember("cpmTimestamp", cpm_reference_time_double, allocator_output_full);
+            // object_full.AddMember("cpmTimestampUnix", cpm_reference_time_unix, allocator_output_full);
 
             objects_full.PushBack(object_full, allocator_output_full);
 

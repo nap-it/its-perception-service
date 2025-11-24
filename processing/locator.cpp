@@ -161,7 +161,7 @@ void Locator::parseAndUpdateData(const std::string& topic, const std::string& me
                             referencePosition["altitude"]["altitudeValue"].IsFloat())
                         ? referencePosition["altitude"]["altitudeValue"].GetFloat() : NOT_PRESENT_FLOAT;
                     if (altitude > 5000.0f) {
-                        spdlog::warn("[Locator] Altitude value is too high: {}", altitude);
+                        spdlog::debug("[Locator] Altitude value is too high: {}", altitude);
                         altitude = NOT_PRESENT_FLOAT;
                     }
                 }
@@ -247,8 +247,13 @@ void Locator::parseAndUpdateData(const std::string& topic, const std::string& me
             }
 
         } else if (topic == "vanetza/out/cam_full") {
+            // Extract stationID
             int station_id = (doc.HasMember("fields") && doc["fields"].IsObject() && doc["fields"].HasMember("header") && doc["fields"]["header"].IsObject() && doc["fields"]["header"].HasMember("stationID") && doc["fields"]["header"]["stationID"].IsInt())
                 ? doc["fields"]["header"]["stationID"].GetInt() : -1;
+            
+            // If not found, try alternative stationId
+            station_id = (doc.HasMember("fields") && doc["fields"].IsObject() && doc["fields"].HasMember("header") && doc["fields"]["header"].IsObject() && doc["fields"]["header"].HasMember("stationId") && doc["fields"]["header"]["stationId"].IsInt())
+                ? doc["fields"]["header"]["stationId"].GetInt() : station_id;
             if (station_id == -1) {
                 spdlog::warn("[Locator] No station ID in message: {}", message);
                 return;
@@ -287,6 +292,12 @@ void Locator::parseAndUpdateData(const std::string& topic, const std::string& me
                             const rj::Value& accelerationObj = basicVehicle["longitudinalAcceleration"];
                             acceleration = (accelerationObj.HasMember("longitudinalAccelerationValue") && accelerationObj["longitudinalAccelerationValue"].IsFloat())
                                       ? accelerationObj["longitudinalAccelerationValue"].GetFloat() : NOT_PRESENT_FLOAT;
+                            // Fallback to "value" if "longitudinalAccelerationValue" is not present
+                            if (acceleration == NOT_PRESENT_FLOAT) {
+                                acceleration = (accelerationObj.HasMember("value") && accelerationObj["value"].IsFloat())
+                                               ? accelerationObj["value"].GetFloat() : NOT_PRESENT_FLOAT;
+                            }
+
                         }
                     }
                 }

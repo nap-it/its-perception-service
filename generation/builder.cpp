@@ -140,26 +140,26 @@ std::string Builder::generateCPM(const std::vector<Object>& freshObjects,
         rj::Value position(rj::kObjectType);
         rj::Value xCoordinate(rj::kObjectType);
         xCoordinate.AddMember("value", x, alloc);
-        double xConf = (obj.cov_latitude != NOT_PRESENT_FLOAT) ? sqrt(obj.cov_latitude) : 1;
+        double xConf = (obj.cov_latitude != NOT_PRESENT_FLOAT) ? sqrt(obj.cov_latitude) : 40.96;
         if (xConf == 0) xConf = 40.96;
-        if(xConf > 40.94) xConf = 40.95;
+        if (xConf > 40.96) xConf = 40.95;
         xCoordinate.AddMember("confidence", xConf, alloc);
         position.AddMember("xCoordinate", xCoordinate, alloc);
         
         rj::Value yCoordinate(rj::kObjectType);
         yCoordinate.AddMember("value", y, alloc);
-        double yConf = (obj.cov_longitude != NOT_PRESENT_FLOAT) ? sqrt(obj.cov_longitude) : 1;
+        double yConf = (obj.cov_longitude != NOT_PRESENT_FLOAT) ? sqrt(obj.cov_longitude) : 40.96;
         if (yConf == 0) yConf = 40.96;
-        if(yConf > 40.94) yConf = 40.95;
+        if (yConf > 40.96) yConf = 40.95;
         yCoordinate.AddMember("confidence", yConf, alloc);
         position.AddMember("yCoordinate", yCoordinate, alloc);
         
         if (obj.altitude != NOT_PRESENT_FLOAT) {
             rj::Value zCoordinate(rj::kObjectType);
             zCoordinate.AddMember("value", obj.altitude, alloc);
-            double zConf = (obj.cov_altitude != NOT_PRESENT_FLOAT) ? sqrt(obj.cov_altitude) : 1;
+            double zConf = (obj.cov_altitude != NOT_PRESENT_FLOAT) ? sqrt(obj.cov_altitude) : 40.96;
             if (zConf == 0) zConf = 40.96;
-            if(zConf > 40.94) zConf = 40.95;
+            if (zConf > 40.96) zConf = 40.95;
             zCoordinate.AddMember("confidence", zConf, alloc);
             position.AddMember("zCoordinate", zCoordinate, alloc);
         }
@@ -185,9 +185,9 @@ std::string Builder::generateCPM(const std::vector<Object>& freshObjects,
 
             rj::Value xVelocityVal(rj::kObjectType);
             xVelocityVal.AddMember("value", xVelocity, alloc);
-            double speedConf = (obj.cov_speed != NOT_PRESENT_FLOAT) ? sqrt(obj.cov_speed) : 1;
+            double speedConf = (obj.cov_speed != NOT_PRESENT_FLOAT) ? sqrt(obj.cov_speed) : 1.27;
             if (speedConf <= 0) speedConf = 1.27;
-            if(speedConf > 1.25) speedConf = 1.26;
+            if (speedConf > 1.27) speedConf = 1.26;
             xVelocityVal.AddMember("confidence", speedConf, alloc);
             cartesianVelocity.AddMember("xVelocity", xVelocityVal, alloc);
 
@@ -212,7 +212,7 @@ std::string Builder::generateCPM(const std::vector<Object>& freshObjects,
             if (ang > 256) ang = 256;
             zAngularVelocity.AddMember("value", ang, alloc);
             //double angConf = (obj.cov_angular_velocity != NOT_PRESENT_FLOAT) ? sqrt(obj.cov_angular_velocity) : 1;
-            zAngularVelocity.AddMember("confidence", 1, alloc);
+            zAngularVelocity.AddMember("confidence", 7, alloc);
             objJson.AddMember("zAngularVelocity", zAngularVelocity, alloc);
         }
         
@@ -235,11 +235,11 @@ std::string Builder::generateCPM(const std::vector<Object>& freshObjects,
             rj::Value cartesianAcceleration(rj::kObjectType);
             rj::Value xAccVal(rj::kObjectType);
             xAccVal.AddMember("value", xAcc, alloc);
-            xAccVal.AddMember("confidence", 1, alloc);
+            xAccVal.AddMember("confidence", 1.3, alloc);
             cartesianAcceleration.AddMember("xAcceleration", xAccVal, alloc);
             rj::Value yAccVal(rj::kObjectType);
             yAccVal.AddMember("value", yAcc, alloc);
-            yAccVal.AddMember("confidence", 1, alloc);
+            yAccVal.AddMember("confidence", 1.3, alloc);
             cartesianAcceleration.AddMember("yAcceleration", yAccVal, alloc);
             acceleration.AddMember("cartesianAcceleration", cartesianAcceleration, alloc);
             objJson.AddMember("acceleration", acceleration, alloc);
@@ -253,9 +253,9 @@ std::string Builder::generateCPM(const std::vector<Object>& freshObjects,
             rj::Value angles(rj::kObjectType);
             rj::Value zAngle(rj::kObjectType);
             zAngle.AddMember("value", obj.heading, alloc);
-            double headingConf = (obj.cov_heading != NOT_PRESENT_FLOAT) ? sqrt(obj.cov_heading) : 1;
+            double headingConf = (obj.cov_heading != NOT_PRESENT_FLOAT) ? sqrt(obj.cov_heading) : 12.7;
             if (headingConf == 0) headingConf = 12.7;
-            if(headingConf > 12.5) headingConf = 12.6;
+            if(headingConf > 12.7) headingConf = 12.6;
             zAngle.AddMember("confidence", headingConf, alloc);
             angles.AddMember("zAngle", zAngle, alloc);
             objJson.AddMember("angles", angles, alloc);
@@ -280,27 +280,27 @@ std::string Builder::generateCPM(const std::vector<Object>& freshObjects,
             rj::Value objectDimensionX(rj::kObjectType);
             float size_x = obj.size_x;
             if (size_x < 0.1) size_x = 0.5;
-            if (size_x > 25.0) size_x = 25.0; // Limit size to a maximum of 10m
+            if (size_x > 25.0) size_x = 25.0;
             objectDimensionX.AddMember("value", size_x, alloc);
-            objectDimensionX.AddMember("confidence", 1, alloc);
+            objectDimensionX.AddMember("confidence", 32, alloc);
             objJson.AddMember("objectDimensionX", objectDimensionX, alloc);
         }
         if (obj.size_y != NOT_PRESENT_FLOAT) {
             rj::Value objectDimensionY(rj::kObjectType);
             float size_y = obj.size_y;
             if (size_y < 0.1) size_y = 0.5;
-            if (size_y > 25.0) size_y = 25.0; // Limit size to a maximum of 10m
+            if (size_y > 25.0) size_y = 25.0;
             objectDimensionY.AddMember("value", size_y, alloc);
-            objectDimensionY.AddMember("confidence", 1, alloc);
+            objectDimensionY.AddMember("confidence", 32, alloc);
             objJson.AddMember("objectDimensionY", objectDimensionY, alloc);
         }
         if (obj.size_z != NOT_PRESENT_FLOAT) {
             rj::Value objectDimensionZ(rj::kObjectType);
             float size_z = obj.size_z;
             if (size_z < 0.1) size_z = 0.5;
-            if (size_z > 25.0) size_z = 25.0; // Limit size to a maximum of 10m
+            if (size_z > 25.0) size_z = 25.0;
             objectDimensionZ.AddMember("value", size_z, alloc);
-            objectDimensionZ.AddMember("confidence", 1, alloc);
+            objectDimensionZ.AddMember("confidence", 32, alloc);
             objJson.AddMember("objectDimensionZ", objectDimensionZ, alloc);
         }
         
