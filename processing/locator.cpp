@@ -131,20 +131,7 @@ void Locator::parseAndUpdateData(const std::string& topic, const std::string& me
             return;
         }
         
-        if (topic == "vanetza/in/cam" || topic == "vanetza/own/cam" || topic == "vanetza/out/cam") {
-            int id = station_id_;
-            float speed = (doc.HasMember("speed") && doc["speed"].IsFloat()) ? doc["speed"].GetFloat() : NOT_PRESENT_FLOAT;
-            float heading = (doc.HasMember("heading") && doc["heading"].IsFloat()) ? doc["heading"].GetFloat() : NOT_PRESENT_FLOAT;
-            float altitude = (doc.HasMember("altitude") && doc["altitude"].IsFloat()) ? doc["altitude"].GetFloat() : NOT_PRESENT_FLOAT;
-            float acceleration = (doc.HasMember("acceleration") && doc["acceleration"].IsFloat()) ? doc["acceleration"].GetFloat() : NOT_PRESENT_FLOAT;
-            std::chrono::steady_clock::time_point timestamp = std::chrono::steady_clock::now();
-            
-            {
-                std::lock_guard<std::mutex> lock(camMtx_);
-                camDataMap_[id] = {id, speed, heading, altitude, acceleration, timestamp};
-            }
-            spdlog::debug("[Locator] Updated own station data: id={}, speed={}, heading={}, altitude={}, acceleration={}", id, speed, heading, altitude, acceleration);
-        } else if (topic == "vanetza/in/cam_full") {
+        if (topic == "vanetza/in/cam" || topic == "vanetza/own/cam") {
             if (doc.HasMember("camParameters") && doc["camParameters"].IsObject()) {
                 const rj::Value& camParameters = doc["camParameters"];
                 int id = station_id_;
@@ -155,38 +142,38 @@ void Locator::parseAndUpdateData(const std::string& topic, const std::string& me
                 if (camParameters.HasMember("basicContainer") && camParameters["basicContainer"].IsObject()) {
                     const rj::Value& basicContainer = camParameters["basicContainer"];
                     if (basicContainer.HasMember("referencePosition") && basicContainer["referencePosition"].IsObject()) {
-                    const rj::Value& referencePosition = basicContainer["referencePosition"];
-                    altitude = (referencePosition.HasMember("altitude") && referencePosition["altitude"].IsObject() &&
-                            referencePosition["altitude"].HasMember("altitudeValue") &&
-                            referencePosition["altitude"]["altitudeValue"].IsFloat())
-                        ? referencePosition["altitude"]["altitudeValue"].GetFloat() : NOT_PRESENT_FLOAT;
-                    if (altitude > 5000.0f) {
-                        spdlog::debug("[Locator] Altitude value is too high: {}", altitude);
-                        altitude = NOT_PRESENT_FLOAT;
+                        const rj::Value& referencePosition = basicContainer["referencePosition"];
+                        altitude = (referencePosition.HasMember("altitude") && referencePosition["altitude"].IsObject() &&
+                                referencePosition["altitude"].HasMember("altitudeValue") &&
+                                referencePosition["altitude"]["altitudeValue"].IsFloat())
+                            ? referencePosition["altitude"]["altitudeValue"].GetFloat() : NOT_PRESENT_FLOAT;
+                        if (altitude > 5000.0f) {
+                            spdlog::debug("[Locator] Altitude value is too high: {}", altitude);
+                            altitude = NOT_PRESENT_FLOAT;
+                        }
                     }
                 }
-            }
-            if (camParameters.HasMember("highFrequencyContainer") && camParameters["highFrequencyContainer"].IsObject()) {
+                if (camParameters.HasMember("highFrequencyContainer") && camParameters["highFrequencyContainer"].IsObject()) {
                     const rj::Value& hfContainer = camParameters["highFrequencyContainer"];
                     if (hfContainer.HasMember("basicVehicleContainerHighFrequency") && hfContainer["basicVehicleContainerHighFrequency"].IsObject()) {
                         const rj::Value& basicVehicle = hfContainer["basicVehicleContainerHighFrequency"];
                         if (basicVehicle.HasMember("heading") && basicVehicle["heading"].IsObject()) {
                             const rj::Value& headingObj = basicVehicle["heading"];
                             heading = (headingObj.HasMember("headingValue") && headingObj["headingValue"].IsNumber())
-                                      ? headingObj["headingValue"].GetFloat() : 0.0f;
+                                    ? headingObj["headingValue"].GetFloat() : 0.0f;
                         }
                         if (basicVehicle.HasMember("speed") && basicVehicle["speed"].IsObject()) {
                             const rj::Value& speedObj = basicVehicle["speed"];
                             speed = (speedObj.HasMember("speedValue") && speedObj["speedValue"].IsFloat())
-                                      ? speedObj["speedValue"].GetFloat() : NOT_PRESENT_FLOAT;
+                                    ? speedObj["speedValue"].GetFloat() : NOT_PRESENT_FLOAT;
                         }
                         if(basicVehicle.HasMember("longitudinalAcceleration") && basicVehicle["longitudinalAcceleration"].IsObject()){
                             const rj::Value& accelerationObj = basicVehicle["longitudinalAcceleration"];
                             acceleration = (accelerationObj.HasMember("longitudinalAccelerationValue") && accelerationObj["longitudinalAccelerationValue"].IsFloat())
-                                      ? accelerationObj["longitudinalAccelerationValue"].GetFloat() : NOT_PRESENT_FLOAT;
+                                    ? accelerationObj["longitudinalAccelerationValue"].GetFloat() : NOT_PRESENT_FLOAT;
                             if (acceleration == NOT_PRESENT_FLOAT) {
                                 acceleration = (accelerationObj.HasMember("value") && accelerationObj["value"].IsFloat())
-                                               ? accelerationObj["value"].GetFloat() : NOT_PRESENT_FLOAT;
+                                            ? accelerationObj["value"].GetFloat() : NOT_PRESENT_FLOAT;
                             }
                         }
                     }
@@ -246,7 +233,7 @@ void Locator::parseAndUpdateData(const std::string& topic, const std::string& me
                 spdlog::debug("[Locator] Updated own station data: id={}, speed={}, heading={}, altitude={}, acceleration={}", id, speed, heading, altitude, acceleration);
             }
 
-        } else if (topic == "vanetza/out/cam_full") {
+        } else if (topic == "vanetza/out/cam") {
             // Extract stationID
             int station_id = (doc.HasMember("fields") && doc["fields"].IsObject() && doc["fields"].HasMember("header") && doc["fields"]["header"].IsObject() && doc["fields"]["header"].HasMember("stationID") && doc["fields"]["header"]["stationID"].IsInt())
                 ? doc["fields"]["header"]["stationID"].GetInt() : -1;
@@ -255,7 +242,7 @@ void Locator::parseAndUpdateData(const std::string& topic, const std::string& me
             station_id = (doc.HasMember("fields") && doc["fields"].IsObject() && doc["fields"].HasMember("header") && doc["fields"]["header"].IsObject() && doc["fields"]["header"].HasMember("stationId") && doc["fields"]["header"]["stationId"].IsInt())
                 ? doc["fields"]["header"]["stationId"].GetInt() : station_id;
             if (station_id == -1) {
-                spdlog::warn("[Locator] No station ID in message: {}", message);
+                spdlog::warn("[Locator] No station Id in message: {}", message);
                 return;
             }
             if (doc.HasMember("fields") && doc["fields"].IsObject() && doc["fields"].HasMember("cam") && doc["fields"]["cam"].IsObject() && doc["fields"]["cam"].HasMember("camParameters") && doc["fields"]["cam"]["camParameters"].IsObject()) {

@@ -125,11 +125,7 @@ void Locator::parseAndUpdateLocation(const std::string& topic, const std::string
         double lon = latestLongitude_;
         float heading = 0.0f;
         
-        if (topic == "vanetza/in/cam" || topic == "vanetza/own/cam") {
-            lat = (doc.HasMember("latitude") && doc["latitude"].IsDouble()) ? doc["latitude"].GetDouble() : latestLatitude_;
-            lon = (doc.HasMember("longitude") && doc["longitude"].IsDouble()) ? doc["longitude"].GetDouble() : latestLongitude_;
-            heading = (doc.HasMember("heading") && doc["heading"].IsFloat()) ? doc["heading"].GetFloat() : 0.0f;
-        } else if (topic == "vanetza/in/cam_full") {
+        if (topic == "vanetza/in/cam") {
             if (doc.HasMember("camParameters") && doc["camParameters"].IsObject()) {
                 const rj::Value& camParameters = doc["camParameters"];
                 if (camParameters.HasMember("basicContainer") && camParameters["basicContainer"].IsObject()) {
@@ -170,8 +166,11 @@ void Locator::parseAndUpdateLocation(const std::string& topic, const std::string
                 }
             }
         } else {
-            spdlog::warn("[Locator] Unknown topic: {}", topic);
-            throw std::runtime_error("[Locator] Unknown topic");
+            spdlog::warn("[Locator] Unknown topic: {}, trying to parse lat/lon/heading if available", topic);
+            lat = doc.HasMember("latitude") && doc["latitude"].IsNumber() ? doc["latitude"].GetDouble() : latestLatitude_;
+            lon = doc.HasMember("longitude") && doc["longitude"].IsNumber() ? doc["longitude"].GetDouble() : latestLongitude_;
+            heading = doc.HasMember("heading") && doc["heading"].IsNumber() ? doc["heading"].GetFloat() : 0.0f;
+            // throw std::runtime_error("[Locator] Unknown topic");
         }
         
         {
