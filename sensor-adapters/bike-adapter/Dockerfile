@@ -35,8 +35,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # ------------------------- Build Bike Adapter -------------------------
 WORKDIR /usr/src/bike-adapter
 RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/spdlog.git
-RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/mobility-networks/fastdds-cpp-wrapper.git
-RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/mobility-networks/paho-mqtt-cpp-wrapper.git
+RUN git -c http.sslVerify=false clone https://github.com/nap-it/fastdds-cpp-wrapper.git
+RUN git -c http.sslVerify=false clone https://github.com/nap-it/paho.mqtt.cpp.wrapper.git paho-mqtt-cpp-wrapper
 RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/rapidjson.git
 
 COPY *.cpp /usr/src/bike-adapter/

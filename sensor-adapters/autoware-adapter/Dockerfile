@@ -33,7 +33,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # ------------------------- Build Autoware Adapter -------------------------
 WORKDIR /usr/src/autoware-adapter
 RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/spdlog.git
-RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/mobility-networks/fastdds-cpp-wrapper.git
+RUN git -c http.sslVerify=false clone https://github.com/nap-it/fastdds-cpp-wrapper.git
 RUN git -c http.sslVerify=false clone https://code.nap.av.it.pt/external-tools/rapidjson.git
 
 COPY *.cpp /usr/src/autoware-adapter/
