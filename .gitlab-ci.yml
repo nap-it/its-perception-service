@@ -57,18 +57,21 @@ before_script:
     - echo "→ Logging in to Docker registry"
     - echo "$CI_TOKEN" | docker login -u "$CI_USER" --password-stdin code.nap.av.it.pt:5050
 
+    - docker buildx create --name ci-builder --use || docker buildx use ci-builder
+    - docker buildx inspect --bootstrap
+
     - |
-      echo "→ Building ${IMAGE_NAME}:${DOCKER_TAG}-${ARCH}"
-      docker build \
+      echo "→ Building and pushing ${IMAGE_NAME}:${DOCKER_TAG}-${ARCH}"
+      docker buildx build \
+        --platform linux/${ARCH} \
+        --provenance=false \
+        --sbom=false \
+        --push \
         --build-arg VERSION="$DOCKER_TAG" \
         --build-arg COMMIT="$CI_COMMIT_SHORT_SHA" \
         -t code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${DOCKER_TAG}-${ARCH} \
         -f ${DOCKERFILE_PATH}/Dockerfile \
         ${DOCKERFILE_PATH}
-
-    - |
-      echo "→ Pushing ${IMAGE_NAME}:${DOCKER_TAG}-${ARCH}"
-      docker push code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${DOCKER_TAG}-${ARCH}
 
   rules:
     # 1) Tag pipelines (except tag "latest")
@@ -180,27 +183,27 @@ build_radar_adapter_arm64:
       fi
 
     - |
+      export IMAGE_REF=code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${DOCKER_TAG}
       echo "→ Creating multi-arch manifest ${IMAGE_NAME}:${DOCKER_TAG}"
-      docker manifest create code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${DOCKER_TAG} \
+      docker buildx imagetools create -t $IMAGE_REF \
         code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${DOCKER_TAG}-amd64 \
         code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${DOCKER_TAG}-arm64
-      docker manifest annotate code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${DOCKER_TAG} \
-        code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${DOCKER_TAG}-amd64 --arch amd64
-      docker manifest annotate code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${DOCKER_TAG} \
-        code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${DOCKER_TAG}-arm64 --arch arm64
-      docker manifest push code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${DOCKER_TAG}
+      INSPECT_OUTPUT="$(docker buildx imagetools inspect $IMAGE_REF)"
+      echo "$INSPECT_OUTPUT"
+      echo "$INSPECT_OUTPUT" | grep -q "linux/amd64" || { echo "Missing linux/amd64 in $IMAGE_REF"; exit 1; }
+      echo "$INSPECT_OUTPUT" | grep -q "linux/arm64" || { echo "Missing linux/arm64 in $IMAGE_REF"; exit 1; }
 
       # Only on tag pipelines, also bump :latest
       if [[ -n "$CI_COMMIT_TAG" && "$CI_COMMIT_TAG" != "latest" ]]; then
+        export LATEST_REF=code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:latest
         echo "→ Also updating multi-arch manifest ${IMAGE_NAME}:latest"
-        docker manifest create code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:latest \
+        docker buildx imagetools create -t $LATEST_REF \
           code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${DOCKER_TAG}-amd64 \
           code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${DOCKER_TAG}-arm64
-        docker manifest annotate code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:latest \
-          code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${DOCKER_TAG}-amd64 --arch amd64
-        docker manifest annotate code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:latest \
-          code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${DOCKER_TAG}-arm64 --arch arm64
-        docker manifest push code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:latest
+        INSPECT_OUTPUT="$(docker buildx imagetools inspect $LATEST_REF)"
+        echo "$INSPECT_OUTPUT"
+        echo "$INSPECT_OUTPUT" | grep -q "linux/amd64" || { echo "Missing linux/amd64 in $LATEST_REF"; exit 1; }
+        echo "$INSPECT_OUTPUT" | grep -q "linux/arm64" || { echo "Missing linux/arm64 in $LATEST_REF"; exit 1; }
       fi
 
   rules:
