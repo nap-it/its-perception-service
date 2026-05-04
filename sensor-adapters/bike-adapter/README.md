@@ -10,9 +10,31 @@ RPi camera pipeline → MQTT "<mqtt_topic>" → Bike Adapter → DDS "generation
 
 ### Expected Input (MQTT)
 
-Each MQTT message must be a JSON object containing an `objects` array. Each element must include at minimum: `objectID`, `sensorID`, `timestamp`, `latitude`, `longitude`, `heading`, `speed`, `confidence`, and `classification`. Optional fields not provided by the bike camera pipeline (`altitude`, `size_*`, covariances) default to `0.0`.
+Each MQTT message must be a JSON object with a `detections` array. `sensorID` is hardcoded to `3` (Monovideo) by the adapter. Note the bike pipeline uses shorter field names (`lat`/`lon`, `object_id`, `class`) compared to other adapters.
 
-See the root [README.md](../../README.md#object-data----input-topic-generationobjects) for the full field reference.
+```json
+{
+    "detections": [
+        {
+            "object_id": 1,
+            "timestamp": 1746000000.123,
+            "class": 1,
+            "confidence": 75,
+            "lat": 40.63045,
+            "lon": -8.65410
+        }
+    ]
+}
+```
+
+| Field | Required | Description |
+|---|---|---|
+| `detections[].object_id` | yes | Unique object identifier |
+| `detections[].lat` | yes | Object latitude (degrees) |
+| `detections[].lon` | yes | Object longitude (degrees) |
+| `detections[].timestamp` | no | UNIX timestamp of the detection (seconds) |
+| `detections[].class` | no | ETSI TrafficParticipantType integer |
+| `detections[].confidence` | no | Detection confidence (0–100) |
 
 ## `config.ini` Configuration
 

@@ -10,9 +10,35 @@ Camera pipeline → MQTT "<mqtt_topic>" → Camera Adapter → DDS "generation/o
 
 ### Expected Input (MQTT)
 
-Each MQTT message must be a JSON object containing an `objects` array. Each element must include at minimum: `objectID`, `sensorID`, `timestamp`, `latitude`, `longitude`, `heading`, `speed`, `confidence`, and `classification`. Optional fields (`altitude`, `size_*`, covariances) default to `0.0` when absent.
+Each MQTT message must be a JSON object with a top-level `timestamp` and a `listOfObjects` array. `sensorID` is hardcoded to `3` (Monovideo) by the adapter.
 
-See the root [README.md](../../README.md#object-data----input-topic-generationobjects) for the full field reference.
+```json
+{
+    "timestamp": 1746000000.123,
+    "listOfObjects": [
+        {
+            "objectID": 1,
+            "classification": 1,
+            "confidence": 80,
+            "speed": 1.4,
+            "heading": 90.0,
+            "latitude": 40.63045,
+            "longitude": -8.65410
+        }
+    ]
+}
+```
+
+| Field | Location | Required | Description |
+|---|---|---|---|
+| `timestamp` | top-level | yes | UNIX timestamp of the detection batch (seconds) |
+| `listOfObjects[].objectID` | per object | yes | Unique object identifier |
+| `listOfObjects[].latitude` | per object | yes | Object latitude (degrees) |
+| `listOfObjects[].longitude` | per object | yes | Object longitude (degrees) |
+| `listOfObjects[].classification` | per object | no | ETSI TrafficParticipantType integer |
+| `listOfObjects[].confidence` | per object | no | Detection confidence (0–100) |
+| `listOfObjects[].speed` | per object | no | Speed (m/s) |
+| `listOfObjects[].heading` | per object | no | Heading (0–360°) |
 
 ## `config.ini` Configuration
 
