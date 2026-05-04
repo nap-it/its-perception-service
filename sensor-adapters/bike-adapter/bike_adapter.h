@@ -1,3 +1,26 @@
+/**
+ * @file bike_adapter.h
+ * @brief Bike Raspberry Pi camera-to-DDS bridge adapter for the CPS sensor pipeline
+ * @date 2026
+ *
+ * This file defines the BikeAdapter class, which bridges object detections from
+ * a Raspberry Pi camera mounted on a bicycle into the CPS Generation service.
+ *
+ * Key Responsibilities:
+ * - Subscribes to an MQTT topic carrying object detections from the bike camera
+ * - Parses incoming JSON detections and maps them to the CPS Object format
+ * - Publishes the normalised object list to the DDS topic "generation/objects"
+ *   for consumption by the Generation service
+ *
+ * Expected Input (MQTT, JSON):
+ * Each message should contain object fields: objectID, sensorID, timestamp,
+ * latitude, longitude, heading, speed, confidence, classification.
+ * See the root README.md for the full generation/objects format specification.
+ *
+ * Fields not provided by the bike camera pipeline (altitude, size, covariances)
+ * are published as 0.0 and treated as unavailable by the Generation service.
+ */
+
 #ifndef BIKEADAPTER_H
 #define BIKEADAPTER_H
 
@@ -48,7 +71,7 @@ struct Object {
 
 class BikeAdapter {
 public:
-BikeAdapter(const Config& config);
+    BikeAdapter(const Config& config);
     void run();
 
 private:

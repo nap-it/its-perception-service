@@ -1,3 +1,21 @@
+/**
+ * @file metrics.h
+ * @brief Prometheus metrics manager and handle structs for the CPS Processing service
+ * @date 2026
+ *
+ * This file provides a singleton MetricsManager and ProcMetricHandles struct that
+ * give the Processing service direct access to its Prometheus metrics.
+ *
+ * Exposed metrics (Processing, port 9103):
+ * - cps_processing_object_age_ms        Histogram — age of received objects (ms)
+ * - cps_processing_cycle_ms             Histogram — full processing cycle duration (ms)
+ * - cps_processing_pub_messages_total   Counter   — total messages published
+ *
+ * Usage:
+ *   MetricsManager::instance().init("0.0.0.0:9103");
+ *   ProcMetricHandles h = MetricsManager::instance().createProcessingMetrics(version);
+ */
+
 #pragma once
 #include <memory>
 #include <map>

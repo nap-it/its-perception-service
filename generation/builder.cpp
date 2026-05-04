@@ -140,26 +140,26 @@ std::string Builder::generateCPM(const std::vector<Object>& freshObjects,
         rj::Value position(rj::kObjectType);
         rj::Value xCoordinate(rj::kObjectType);
         xCoordinate.AddMember("value", x, alloc);
-        double xConf = (obj.cov_latitude != NOT_PRESENT_FLOAT) ? sqrt(obj.cov_latitude) : 40.96;
-        if (xConf == 0) xConf = 40.96;
-        if (xConf > 40.96) xConf = 40.95;
+        double xConf = (obj.cov_longitude != NOT_PRESENT_FLOAT) ? sqrt(obj.cov_longitude) : 40.95;
+        if (xConf == 0) xConf = 40.95;
+        if (xConf > 40.95) xConf = 40.95;
         xCoordinate.AddMember("confidence", xConf, alloc);
         position.AddMember("xCoordinate", xCoordinate, alloc);
-        
+
         rj::Value yCoordinate(rj::kObjectType);
         yCoordinate.AddMember("value", y, alloc);
-        double yConf = (obj.cov_longitude != NOT_PRESENT_FLOAT) ? sqrt(obj.cov_longitude) : 40.96;
-        if (yConf == 0) yConf = 40.96;
-        if (yConf > 40.96) yConf = 40.95;
+        double yConf = (obj.cov_latitude != NOT_PRESENT_FLOAT) ? sqrt(obj.cov_latitude) : 40.95;
+        if (yConf == 0) yConf = 40.95;
+        if (yConf > 40.95) yConf = 40.95;
         yCoordinate.AddMember("confidence", yConf, alloc);
         position.AddMember("yCoordinate", yCoordinate, alloc);
         
         if (obj.altitude != NOT_PRESENT_FLOAT) {
             rj::Value zCoordinate(rj::kObjectType);
             zCoordinate.AddMember("value", obj.altitude, alloc);
-            double zConf = (obj.cov_altitude != NOT_PRESENT_FLOAT) ? sqrt(obj.cov_altitude) : 40.96;
-            if (zConf == 0) zConf = 40.96;
-            if (zConf > 40.96) zConf = 40.95;
+            double zConf = (obj.cov_altitude != NOT_PRESENT_FLOAT) ? sqrt(obj.cov_altitude) : 40.95;
+            if (zConf == 0) zConf = 40.95;
+            if (zConf > 40.95) zConf = 40.95;
             zCoordinate.AddMember("confidence", zConf, alloc);
             position.AddMember("zCoordinate", zCoordinate, alloc);
         }
@@ -187,7 +187,7 @@ std::string Builder::generateCPM(const std::vector<Object>& freshObjects,
             xVelocityVal.AddMember("value", xVelocity, alloc);
             double speedConf = (obj.cov_speed != NOT_PRESENT_FLOAT) ? sqrt(obj.cov_speed) : 1.27;
             if (speedConf <= 0) speedConf = 1.27;
-            if (speedConf > 1.27) speedConf = 1.26;
+            if (speedConf > 1.27) speedConf = 1.27;
             xVelocityVal.AddMember("confidence", speedConf, alloc);
             cartesianVelocity.AddMember("xVelocity", xVelocityVal, alloc);
 
@@ -211,7 +211,6 @@ std::string Builder::generateCPM(const std::vector<Object>& freshObjects,
             if (ang < -255) ang = -255;
             if (ang > 256) ang = 256;
             zAngularVelocity.AddMember("value", ang, alloc);
-            //double angConf = (obj.cov_angular_velocity != NOT_PRESENT_FLOAT) ? sqrt(obj.cov_angular_velocity) : 1;
             zAngularVelocity.AddMember("confidence", 7, alloc);
             objJson.AddMember("zAngularVelocity", zAngularVelocity, alloc);
         }
@@ -255,7 +254,7 @@ std::string Builder::generateCPM(const std::vector<Object>& freshObjects,
             zAngle.AddMember("value", obj.heading, alloc);
             double headingConf = (obj.cov_heading != NOT_PRESENT_FLOAT) ? sqrt(obj.cov_heading) : 12.7;
             if (headingConf == 0) headingConf = 12.7;
-            if(headingConf > 12.7) headingConf = 12.6;
+            if (headingConf > 12.7) headingConf = 12.7;
             zAngle.AddMember("confidence", headingConf, alloc);
             angles.AddMember("zAngle", zAngle, alloc);
             objJson.AddMember("angles", angles, alloc);

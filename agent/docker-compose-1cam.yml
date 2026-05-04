@@ -1,6 +1,6 @@
 services:
   camera-adapter:
-    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/camera-adapter:v1.0.1
+    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/camera-adapter:latest
     restart: always
     volumes:
       - /services/cps/camera-adapter/config.ini:/config.ini

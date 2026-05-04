@@ -23,8 +23,13 @@ void readConfigFile(const std::string& path, Config& config) {
     spdlog::info("[CAMERA-CONFIG] MQTT Host: {}", config.mqtt_host);
     config.mqtt_port = reader.GetInteger("camera-adapter", "mqtt_port", 1883);
     spdlog::info("[CAMERA-CONFIG] MQTT Port: {}", config.mqtt_port);
-    config.mqtt_topic = reader.Get("camera-adapter", "mqtt_topic", "jetson/camera/1/tracking/objects");
-    spdlog::info("[CAMERA-CONFIG] MQTT Topic: {}", config.mqtt_topic);
+    std::string configuration_mqtt_topics = reader.Get("camera-adapter", "mqtt_topics", "jetson/camera/1/tracking/objects,jetson/camera/2/tracking/objects,jetson/camera/3/tracking/objects,jetson/camera/4/tracking/objects");
+    std::istringstream ss(configuration_mqtt_topics);
+    std::string topic;
+    while (std::getline(ss, topic, ',')) {
+        config.mqtt_topics.push_back(topic);
+        spdlog::info("[CAMERA-CONFIG] MQTT Topic added: {}", topic);
+    }
     config.mqtt_client_id = reader.Get("camera-adapter", "mqtt_client_id", "camera-adapter");
     spdlog::info("[CAMERA-CONFIG] MQTT Client ID: {}", config.mqtt_client_id);
 }

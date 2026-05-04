@@ -1,26 +1,14 @@
 services:
-{% set counts = {} %}
 {% for svc in generic_services %}
-  {# Each loop, maintain a counter to form unique container names #}
-  {% set _ = counts.update({svc: (counts.get(svc, 0) + 1)}) %}
-  {% if counts[svc] == 1 %}
-    {% set svc_name = svc %}
-  {% else %}
-    {% set svc_name = svc + counts[svc]|string %}
-  {% endif %}
-
-  {{ svc_name }}:
+  {{ svc }}:
     image: {{ docker_registry }}/{{ svc }}:{{ image_tag }}
     restart: always
     volumes:
-      - ./{{ svc_name }}/config.ini:/config.ini
-{% if svc_name == 'generation' %}
-      - ./logs:/logs
-{% endif %}
-{% if svc_name == 'processing' %}
+      - ./{{ svc }}/config.ini:/config.ini
+{% if svc == 'generation' or svc == 'processing' %}
       - ./logs:/logs
 {% endif %}
     network_mode: host
     ipc: host
-    
+
 {% endfor %}

@@ -154,7 +154,7 @@ void Processor::on_message_dds(const std::string& topic, const std::string& mess
         try {
             if (dds_) {
                 dds_->publish(config_.dds_output_topic, output);
-                spdlog::info("[Processor] Published DDS message on topic {}", config_.dds_output_topic);
+                spdlog::debug("[Processor] Published DDS message on topic {}", config_.dds_output_topic);
             } else {
                 spdlog::error("[Processor] DDS client is not available");
             }
@@ -165,7 +165,7 @@ void Processor::on_message_dds(const std::string& topic, const std::string& mess
         try {
             if (config_.local_mqtt_enabled && local_mqtt_client_) {
                 local_mqtt_client_->publish(config_.local_mqtt_output_topic, output);
-                spdlog::info("[Processor] Published Local MQTT message on topic {}", config_.local_mqtt_output_topic);
+                spdlog::debug("[Processor] Published Local MQTT message on topic {}", config_.local_mqtt_output_topic);
                 if (metrics_ && prometheus_) {
                     metrics_->pub_messages->Increment();
                 }
@@ -179,7 +179,7 @@ void Processor::on_message_dds(const std::string& topic, const std::string& mess
         try {
             if (config_.remote_mqtt_enabled && remote_mqtt_client_) {
                 remote_mqtt_client_->publish(config_.remote_mqtt_output_topic, output);
-                spdlog::info("[Processor] Published Remote MQTT message on topic {}", config_.remote_mqtt_output_topic);
+                spdlog::debug("[Processor] Published Remote MQTT message on topic {}", config_.remote_mqtt_output_topic);
             } else if (config_.remote_mqtt_enabled) {
                 spdlog::error("[Processor] Remote MQTT client is not available");
             }
@@ -194,7 +194,7 @@ void Processor::on_message_dds(const std::string& topic, const std::string& mess
                 zenoh::ZShmMut&& output_buf = std::get<zenoh::ZShmMut>(std::move(output_alloc_result));
                 memcpy(output_buf.data(), output.data(), output_len);
                 session_->put(config_.zenoh_output_topic, std::move(output_buf));
-                spdlog::info("[Processor] Published Zenoh message on topic {}", config_.zenoh_output_topic);
+                spdlog::debug("[Processor] Published Zenoh message on topic {}", config_.zenoh_output_topic);
             } else {
                 spdlog::error("[Processor] Zenoh session is not available");
             }
@@ -526,8 +526,6 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
             // Attributes
             object_full.AddMember("latitude", object_latitude, allocator_output_full);
             object_full.AddMember("longitude", object_longitude, allocator_output_full);
-            // object_full.AddMember("referenceLatitude", sender_latitude, allocator_output_full);
-            // object_full.AddMember("referenceLongitude", sender_longitude, allocator_output_full);
             object_full.AddMember("xDistance", object_x_distance, allocator_output_full);
             object_full.AddMember("yDistance", object_y_distance, allocator_output_full);
             if (object_z_distance == NOT_PRESENT_FLOAT) object_full.AddMember("altitude", rj::Value(rj::kNullType), allocator_output_full);
@@ -574,19 +572,6 @@ void Processor::processCPM(const std::string& topic, const std::string& message,
             else object_full.AddMember("zSize", object_size_z, allocator_output_full);
             object_full.AddMember("sensorType", rj::Value(object_sensor_str.c_str(), allocator_output_full).Move(), allocator_output_full);
             object_full.AddMember("sensorID", object_sensor_id, allocator_output_full);
-            
-            
-            // Station
-            // object_full.AddMember("stationSenderID", sender_id, allocator_output_full);
-            // object_full.AddMember("stationSenderType", sender_type, allocator_output_full);
-            // object_full.AddMember("stationReceiverID", receiver_id, allocator_output_full);
-            // object_full.AddMember("stationReceiverType", receiver_type, allocator_output_full);
-
-            // Timestamps
-            
-            // object_full.AddMember("cpmAge", age_cpm, allocator_output_full);
-            // object_full.AddMember("cpmTimestamp", cpm_reference_time_double, allocator_output_full);
-            // object_full.AddMember("cpmTimestampUnix", cpm_reference_time_unix, allocator_output_full);
 
             objects_full.PushBack(object_full, allocator_output_full);
 

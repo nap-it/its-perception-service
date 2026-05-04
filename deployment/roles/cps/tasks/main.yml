@@ -86,25 +86,9 @@
     cps_configs: "{{ cps_configs | combine(cps_overrides, recursive=True) }}"
   when: cps_overrides is defined
 
-- name: "Generate unique service names"
-  ansible.builtin.set_fact:
-    unique_services: >-
-      {%- set counts = {} -%}
-      {%- set result = [] -%}
-      {%- for svc in generic_services -%}
-        {%- set cnt = counts.get(svc, 0) + 1 -%}
-        {%- set _ = counts.update({svc: cnt}) -%}
-        {%- if cnt == 1 -%}
-          {%- set _ = result.append(svc) -%}
-        {%- else -%}
-          {%- set _ = result.append(svc + cnt|string) -%}
-        {%- endif -%}
-      {%- endfor -%}
-      {{ result }}
-
-- name: Debug unique_services
+- name: Debug generic_services
   ansible.builtin.debug:
-    var: unique_services
+    var: generic_services
 
 - name: "Create one folder per service under /services/cps/"
   ansible.builtin.file:
@@ -113,7 +97,7 @@
     mode: "0775"
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
-  loop: "{{ unique_services }}"
+  loop: "{{ generic_services }}"
   loop_control:
     loop_var: item
 
@@ -125,46 +109,20 @@
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
 
-- name: "Set per-service variables before templating configs"
-  ansible.builtin.set_fact:
-    real_configs: >-
-      {%- set ns = namespace(cam=1, rad=1, out={}) -%}
-      {%- for svc_name in unique_services -%}
-        {# strip trailing digits to get the base #}
-        {%- set base = svc_name | regex_replace('\\d+$', '') -%}
-        {%- set cfg = cps_configs[base] | default({}) | combine({}) -%}
-
-        {# for camera-adapter, inject numbered topic and bump cam counter #}
-        {%- if base == 'camera-adapter' -%}
-          {%- set derived = camera_adapter_mqtt_topic_base ~ '/' ~ ns.cam|string ~ '/tracking/objects' -%}
-          {%- set cfg = cfg | combine({'mqtt_topic': derived}) -%}
-          {%- set ns.cam = ns.cam + 1 -%}
-
-        {# for radar-adapter, inject its topic and bump rad counter #}
-        {%- elif base == 'radar-adapter' -%}
-          {%- set cfg = cfg | combine({'mqtt_topic': radar_adapter_mqtt_topic}) -%}
-          {%- set ns.rad = ns.rad + 1 -%}
-        {%- endif -%}
-
-        {# stash it under the real service name #}
-        {%- set ns.out = ns.out | combine({ (svc_name): cfg }) -%}
-      {%- endfor -%}
-      {{ ns.out }}
-
-- name: Render config.ini for each unique service
+- name: Render config.ini for each service
   ansible.builtin.template:
     src: >-
-      {%- if svc.startswith('generation') -%}
+      {%- if svc == 'generation' -%}
         config-generation.ini.j2
-      {%- elif svc.startswith('processing') -%}
+      {%- elif svc == 'processing' -%}
         config-processing.ini.j2
-      {%- elif svc.startswith('camera-adapter') -%}
+      {%- elif svc == 'camera-adapter' -%}
         config-camera-adapter.ini.j2
-      {%- elif svc.startswith('radar-adapter') -%}
+      {%- elif svc == 'radar-adapter' -%}
         config-radar-adapter.ini.j2
-      {%- elif svc.startswith('bike-adapter') -%}
+      {%- elif svc == 'bike-adapter' -%}
         config-bike-adapter.ini.j2
-      {%- elif svc.startswith('autoware-adapter') -%}
+      {%- elif svc == 'autoware-adapter' -%}
         config-autoware-adapter.ini.j2
       {%- else -%}
         {{ fail("Unknown service type: " ~ svc) }}
@@ -174,8 +132,8 @@
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
   vars:
-    this_cfg: "{{ real_configs[svc] }}"
-  loop: "{{ unique_services }}"
+    this_cfg: "{{ cps_configs[svc] }}"
+  loop: "{{ generic_services }}"
   loop_control:
     loop_var: svc
 

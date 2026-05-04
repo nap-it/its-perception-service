@@ -1,3 +1,26 @@
+/**
+ * @file camera_adapter.h
+ * @brief Camera-to-DDS bridge adapter for the CPS sensor pipeline
+ * @date 2026
+ *
+ * This file defines the CameraAdapter class, which bridges a camera detection
+ * pipeline into the CPS Generation service.
+ *
+ * Key Responsibilities:
+ * - Subscribes to one or more MQTT topics carrying camera object detections
+ * - Parses incoming JSON detections and maps them to the CPS Object format
+ * - Publishes the normalised object list to the DDS topic "generation/objects"
+ *   for consumption by the Generation service
+ *
+ * Expected Input (MQTT, JSON):
+ * Each message should contain object fields: objectID, sensorID, timestamp,
+ * latitude, longitude, heading, speed, confidence, classification.
+ * See the root README.md for the full generation/objects format specification.
+ *
+ * Fields not provided by camera pipelines (altitude, size, covariances) are
+ * published as 0.0 and are treated as unavailable by the Generation service.
+ */
+
 #ifndef CAMERAADAPTER_H
 #define CAMERAADAPTER_H
 
@@ -18,7 +41,7 @@ struct Config {
     bool debug;
     std::string mqtt_host;
     int mqtt_port;
-    std::string mqtt_topic;
+    std::vector<std::string> mqtt_topics;
     std::string mqtt_client_id;
 };
 

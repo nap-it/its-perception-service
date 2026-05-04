@@ -23,8 +23,13 @@ void readConfigFile(const std::string& path, Config& config) {
     spdlog::info("[RADAR-CONFIG] MQTT Host: {}", config.mqtt_host);
     config.mqtt_port = reader.GetInteger("radar-adapter", "mqtt_port", 1883);
     spdlog::info("[RADAR-CONFIG] MQTT Port: {}", config.mqtt_port);
-    config.mqtt_topic = reader.Get("radar-adapter", "mqtt_topic", "jetson/radar-plus");
-    spdlog::info("[RADAR-CONFIG] MQTT Topic: {}", config.mqtt_topic);
+    std::string configuration_mqtt_topics = reader.Get("radar-adapter", "mqtt_topics", "jetson/radar-plus");
+    std::istringstream ss(configuration_mqtt_topics);
+    std::string topic;
+    while (std::getline(ss, topic, ',')) {
+        config.mqtt_topics.push_back(topic);
+        spdlog::info("[RADAR-CONFIG] MQTT Topic added: {}", topic);
+    }
     config.mqtt_client_id = reader.Get("radar-adapter", "mqtt_client_id", "radar-adapter");
     spdlog::info("[RADAR-CONFIG] MQTT Client ID: {}", config.mqtt_client_id);
 }

@@ -1,3 +1,36 @@
+/**
+ * @file processor.h
+ * @brief CPM consumer and object enrichment component for the CPS Processing service
+ * @date 2026
+ *
+ * This file defines the Processor class, which receives CPMs from the DDS domain,
+ * decodes them, enriches each perceived object with geodetic computations, and
+ * republishes the result in an application-friendly JSON format.
+ *
+ * Key Responsibilities:
+ * - Subscribes to one or more DDS CPM topics (e.g. vanetza/in/cpm, cps-v2/in/cpm)
+ * - Resolves sender station metadata (speed, heading, altitude) from incoming CAMs
+ *   via the Locator
+ * - Converts ETSI relative x/y distance values back to absolute WGS-84 coordinates
+ * - Decomposes speed/heading into x/y velocity components (north/east)
+ * - Maps integer sensor type and classification codes to human-readable strings
+ * - Publishes enriched object lists on:
+ *     - Local MQTT broker (topic: objects)
+ *     - Remote MQTT broker (optional)
+ *     - DDS topic (objects)
+ *     - Zenoh topic (objects)
+ * - Collects Prometheus metrics when enabled
+ *
+ * Output Format:
+ * The output JSON (published on the "objects" topic) contains sender metadata,
+ * CPM metadata, and a list of enriched objects. See the root README.md for the
+ * full field reference.
+ *
+ * Thread Safety:
+ * DDS callbacks arrive on a separate thread. The CAM data map (camMtx_) is
+ * protected by a mutex. The stop flag is atomic.
+ */
+
 #ifndef PROCESSOR_H
 #define PROCESSOR_H
 

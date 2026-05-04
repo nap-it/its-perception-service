@@ -55,13 +55,13 @@ Aggregator::Aggregator(int ddsDomain, long maxObjectAge, long cleanInterval, boo
     if(!zenohEndpoint.empty()) {
         config.insert_json5("connect/endpoints", "[\"tcp/" + zenohEndpoint + ":7447\"]", err);
     } else {
-        spdlog::debug("[Processor] No Zenoh endpoint configured, using default configuration.");
+        spdlog::debug("[Aggregator] No Zenoh endpoint configured, using default configuration.");
     }
 
     if (err) {
-        spdlog::error("[Processor] Error in Zenoh configuration: {}", static_cast<const void*>(err));
+        spdlog::error("[Aggregator] Error in Zenoh configuration: {}", static_cast<const void*>(err));
     } else {
-        spdlog::debug("[Processor] Zenoh configuration: {}", config.to_string());
+        spdlog::debug("[Aggregator] Zenoh configuration: {}", config.to_string());
     }
 
     spdlog::info("[Aggregator] Opening Zenoh session ...");
@@ -74,7 +74,6 @@ Aggregator::Aggregator(int ddsDomain, long maxObjectAge, long cleanInterval, boo
     }
     
     zenoh::KeyExpr zenoh_sub_topics("cps/**");
-    // subscriber_ = new zenoh::Subscriber(std::move(session_->declare_subscriber(zenoh_sub_topics, &zenohCallback, zenoh::closures::none)));
     session_->declare_background_subscriber(zenoh_sub_topics, &zenohCallback, zenoh::closures::none);
 }
 
@@ -286,9 +285,6 @@ std::vector<Object> Aggregator::getFreshObjects(int maxObjects) {
     }
 
 
-    // std::string message = serializeFreshObjects(freshList);
-    // dds_->publish("cps/pending", message);
-    
     std::vector<Object> freshObjects;
     for (const auto& obj : freshList) {
         freshObjects.push_back(obj.current);
@@ -319,16 +315,11 @@ bool Aggregator::isFresh(const Object& newObj, const Object& oldObj) {
     long old_ts = static_cast<long>(oldObj.timestamp * 1000);
     long dt = new_ts - old_ts;
 
-    // If at least one condition is met, we could return true:
     bool timeCondition = (dt >= minTimeDiff_);
-    //spdlog::debug("[Aggregator] (Object ID: {}) Time difference: {} ms", newObj.objectID, dt);
     double distance = calculateHaversineDistance(newObj.latitude, newObj.longitude, oldObj.latitude, oldObj.longitude);
-    //spdlog::debug("[Aggregator] (Object ID: {}) Distance difference: {} = calculateHaversineDistance({}, {}, {}, {})", newObj.objectID, distance, newObj.latitude, newObj.longitude, oldObj.latitude, oldObj.longitude);
     bool distanceCondition = (distance >= minDistanceDiff_);
     bool speedCondition = (std::abs(newObj.speed - oldObj.speed) >= minSpeedDiff_);
-    //spdlog::debug("[Aggregator] (Object ID: {}) Speed difference: {} = std::abs({} - {})", newObj.objectID, std::abs(newObj.speed - oldObj.speed), newObj.speed, oldObj.speed);
     bool headingCondition = (std::abs(newObj.heading - oldObj.heading) >= minHeadingDiff_);
-    //spdlog::debug("[Aggregator] (Object ID: {}) Heading difference: {} = std::abs({} - {})", newObj.objectID, std::abs(newObj.heading - oldObj.heading), newObj.heading, oldObj.heading);
 
     if (timeCondition || distanceCondition || speedCondition || headingCondition) {
         return true;

@@ -1,3 +1,27 @@
+/**
+ * @file locator.h
+ * @brief Station position provider for the CPS Generation and Processing services
+ * @date 2026
+ *
+ * This file defines the Locator class, which supplies the current station
+ * latitude, longitude, heading, and type to both the Generation and Processing
+ * services.
+ *
+ * Three provider modes are supported:
+ * - STATIC: Fixed coordinates read directly from config.ini. Suitable for RSUs.
+ * - MQTT:   Subscribes to a CAM/VAM topic on a local MQTT broker and extracts
+ *           position from incoming messages. Suitable for OBUs.
+ * - DDS:    Subscribes to a CAM/VAM topic on the DDS bus. Alternative to MQTT
+ *           for deployments where the V2X stack uses DDS natively.
+ *
+ * Supported input topics (MQTT and DDS):
+ *   vanetza/in/cam, vanetza/in/cam_full (legacy), vanetza/own/cam, vanetza/in/vam
+ *
+ * Thread Safety:
+ * In MQTT and DDS modes the location is updated from a callback thread.
+ * All reads and writes of the position fields are protected by mtx_.
+ */
+
 #ifndef LOCATOR_H
 #define LOCATOR_H
 

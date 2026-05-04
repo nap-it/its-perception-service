@@ -1,3 +1,25 @@
+/**
+ * @file generation.h
+ * @brief CPM generation loop component for the Collective Perception Service
+ * @date 2026
+ *
+ * This file defines the Generation class, responsible for driving the periodic
+ * CPM (Collective Perception Message) production cycle.
+ *
+ * Key Responsibilities:
+ * - Runs a configurable-rate loop (default 100 ms / 10 Hz)
+ * - Queries the Aggregator for fresh objects on each cycle
+ * - Retrieves current station location from the Locator
+ * - Delegates CPM JSON construction to the Builder
+ * - Publishes the resulting CPM on a DDS topic (e.g. vanetza/in/cpm)
+ * - Optionally echoes the CPM to a local MQTT topic for debugging
+ * - Collects Prometheus metrics when enabled
+ *
+ * Thread Safety:
+ * Runs in its own thread via run()/stop(). The request rate can be updated
+ * dynamically from any thread via setRequestRate().
+ */
+
 #ifndef GENERATION_H
 #define GENERATION_H
 

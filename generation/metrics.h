@@ -1,3 +1,27 @@
+/**
+ * @file metrics.h
+ * @brief Prometheus metrics manager and handle structs for the CPS services
+ * @date 2026
+ *
+ * This file provides a singleton MetricsManager and two handle structs
+ * (GenMetricHandles, ProcMetricHandles) that give the Generation and Processing
+ * services direct access to their respective Prometheus counters, gauges, and
+ * histograms.
+ *
+ * Exposed metrics (Generation, port 9102):
+ * - cps_generation_cpm_publish_total        Counter  — total CPMs published
+ * - cps_generation_last_cpm_ts_seconds      Gauge    — UNIX timestamp of last CPM
+ * - cps_generation_cpm_build_ms             Histogram — CPM build latency (ms)
+ * - cps_generation_cycle_ms                 Histogram — full loop cycle duration (ms)
+ * - cps_generation_objects_per_msg          Histogram — objects included per CPM
+ * - cps_generation_radar_messages_total     Counter  — radar object messages received
+ * - cps_generation_camera_messages_total    Counter  — camera object messages received
+ *
+ * Usage:
+ *   MetricsManager::instance().init("0.0.0.0:9102");
+ *   GenMetricHandles h = MetricsManager::instance().createGenerationMetrics(version);
+ */
+
 #pragma once
 #include <memory>
 #include <map>

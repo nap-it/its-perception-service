@@ -1,3 +1,27 @@
+/**
+ * @file builder.h
+ * @brief Stateless CPM JSON constructor for the CPS Generation service
+ * @date 2026
+ *
+ * This file defines the Builder class, which translates a list of fresh Object
+ * structs and SensorInfo metadata into a JSON-encoded Collective Perception
+ * Message (CPM) that conforms to ETSI TS 103 324.
+ *
+ * Key Responsibilities:
+ * - Constructs the CPM Management Container (station ID, timestamp, position)
+ * - Constructs per-object Perceived Object Containers (position, velocity,
+ *   acceleration, heading, size, classification, confidence)
+ * - Converts absolute lat/lon coordinates to relative x/y distances from the
+ *   originating station using a flat-Earth approximation
+ * - Converts UNIX timestamps to the ETSI ITS epoch (2004-01-01T00:00:00Z)
+ * - Includes a Sensor Information Container when sensor metadata is available
+ *
+ * The Builder is stateless — it can be called repeatedly without side effects.
+ * All coordinate math uses double precision; ETSI unit scaling (0.01 m, 0.01°)
+ * is applied internally and the output JSON carries SI-scaled integer values
+ * as expected by Vanetza-NAP.
+ */
+
 #ifndef BUILDER_H
 #define BUILDER_H
 

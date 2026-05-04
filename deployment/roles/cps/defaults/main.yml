@@ -3,11 +3,13 @@
 generation_enable: true
 processing_enable: true
 
-# How many of each adapter to run
-camera_adapter_count: 0
-radar_adapter_count: 0
 bike_adapter_enable: false
 autoware_adapter_enable: false
+
+# 0 = disabled; N = one adapter subscribing to N topics (jetson/camera/1/..., ..., jetson/camera/N/...)
+camera_adapter_num_topics: 0
+# 0 = disabled; 1 = one radar adapter (only 1 makes sense)
+radar_adapter_num_topics: 0
 
 # If you want to “clean up” /services/cps first, set true,
 # otherwise the directory is left intact and compose will pick up existing files.
@@ -83,7 +85,7 @@ cps_configs:
     domain_id: "{{ id }}"
     mqtt_host: 127.0.0.1
     mqtt_port: 1883
-    mqtt_topic: "{{ radar_adapter_mqtt_topic }}"
+    mqtt_topics: "{{ radar_adapter_mqtt_topic }}"
     mqtt_client_id: "radar-adapter"
 
   "camera-adapter":
@@ -91,7 +93,7 @@ cps_configs:
     domain_id: "{{ id }}"
     mqtt_host: 127.0.0.1
     mqtt_port: 1883
-    mqtt_topic: ""
+    mqtt_topics: "{{ camera_adapter_mqtt_topics }}"
     mqtt_client_id: "camera-adapter"
 
   "bike-adapter":

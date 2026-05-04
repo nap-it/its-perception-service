@@ -43,7 +43,9 @@ RadarAdapter::RadarAdapter(const Config& config) : config(config) {
     data_mqtt_server mqttInfo;
     mqttInfo.address = "tcp://" + config.mqtt_host + ":" + std::to_string(config.mqtt_port);
     mqttInfo.client_id = config.mqtt_client_id + "-" + std::to_string(config.domain_id) + getRandomNumberString();
-    mqttInfo.subscription_topic.push_back(config.mqtt_topic);
+    for (const auto& topic : config.mqtt_topics) {
+        mqttInfo.subscription_topic.push_back(topic);
+    }
 
     mqtt_wrapper = new MqttWrapper(mqttInfo, [this](const std::string& topic, const std::string& message) {
         this->on_message_mqtt(topic, message);
@@ -53,7 +55,10 @@ RadarAdapter::RadarAdapter(const Config& config) : config(config) {
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
         spdlog::info("Waiting for MQTT connection, retrying...");
     }
-    spdlog::info("[Locator] MQTT client connected to broker {} on topic {}", mqttInfo.address, config.mqtt_topic);
+    spdlog::info("MQTT client connected to broker {} on topics:", mqttInfo.address);
+    for (const auto& topic : config.mqtt_topics) {
+        spdlog::info("  - {}", topic);
+    }
 }
 
 void RadarAdapter::run() {

@@ -9,14 +9,23 @@ cps_token_v2: glpat-BZYHmcoyr2u-Bsx1sFoZ
 
 generic_services: >-
   {{
-    [] 
+    []
       + ([ 'generation' ] if generation_enable else [])
       + ([ 'processing' ] if processing_enable else [])
       + ([ 'autoware-adapter' ] if autoware_adapter_enable else [])
       + ([ 'bike-adapter' ] if bike_adapter_enable else [])
-      + ([ 'camera-adapter' ] * camera_adapter_count)
-      + ([ 'radar-adapter' ] * radar_adapter_count)
+      + ([ 'camera-adapter' ] if camera_adapter_num_topics | int > 0 else [])
+      + ([ 'radar-adapter' ] if radar_adapter_num_topics | int > 0 else [])
   }}
+
+# Builds comma-separated MQTT topics for the camera adapter:
+# jetson/camera/1/tracking/objects,jetson/camera/2/tracking/objects,...
+camera_adapter_mqtt_topics: >-
+  {%- set topics = [] -%}
+  {%- for i in range(1, camera_adapter_num_topics + 1) -%}
+    {%- set _ = topics.append(camera_adapter_mqtt_topic_base ~ '/' ~ i ~ '/tracking/objects') -%}
+  {%- endfor -%}
+  {{ topics | join(',') }}
 
 # ----------------------------------------------------------------------------
 # For processing’s remote MQTT: Depending on station_type, prefix = “p” or “obu”

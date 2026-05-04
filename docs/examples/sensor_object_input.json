@@ -1,0 +1,38 @@
+{
+    "objects": [
+        {
+            "objectID": 1,
+            "sensorID": 3,
+            "timestamp": 1746000000.123,
+            "latitude": 40.63045,
+            "longitude": -8.65410,
+            "heading": 90.0,
+            "speed": 1.4,
+            "confidence": 80,
+            "classification": 1,
+            "altitude": 12.5,
+            "acceleration": 0.1,
+            "size_x": 0.5,
+            "size_y": 1.7,
+            "size_z": 1.8,
+            "angular_velocity": 0.0,
+            "cov_heading": 0.5,
+            "cov_speed": 0.1,
+            "cov_latitude": 0.01,
+            "cov_longitude": 0.01,
+            "cov_altitude": 0.5,
+            "cov_angular_velocity": 0.0
+        },
+        {
+            "objectID": 2,
+            "sensorID": 3,
+            "timestamp": 1746000000.100,
+            "latitude": 40.63060,
+            "longitude": -8.65395,
+            "heading": 270.0,
+            "speed": 0.8,
+            "confidence": 65,
+            "classification": 2
+        }
+    ]
+}

@@ -1,3 +1,34 @@
+/**
+ * @file aggregator.h
+ * @brief Object ingestion and ETSI freshness/priority engine for the CPS Generation service
+ * @date 2026
+ *
+ * This file defines the Aggregator class, which is the central data hub of the
+ * Generation service. It receives raw object detections from Sensor Adapters
+ * over DDS or Zenoh, maintains a live object cache, and determines which objects
+ * are "fresh" enough to be included in the next CPM.
+ *
+ * Key Responsibilities:
+ * - Subscribes to the DDS/Zenoh topic "generation/objects" for object data
+ * - Subscribes to "generation/sensors" for sensor metadata
+ * - Maintains a per-object cache (objectID → ObjectEntity) with last-sent state
+ * - Evaluates object freshness against ETSI TS 103 324 priority thresholds:
+ *     position change, speed change, heading change, time since last inclusion
+ * - Supports two priority modes: "etsi" (standard) and "predictor" (movement-based)
+ * - Periodically evicts stale objects from the cache via a background cleanup thread
+ * - Assigns stable CPM object IDs independent of sensor IDs
+ *
+ * Priority Thresholds (ETSI TS 103 324):
+ * - P_MIN / P_MAX: position change thresholds (0–8 m)
+ * - S_MIN / S_MAX: ground speed change thresholds (0–1 m/s)
+ * - O_MIN / O_MAX: velocity orientation change thresholds (0–8°)
+ * - T_MIN / T_MAX: time since last inclusion thresholds (100–1000 ms)
+ *
+ * Thread Safety:
+ * Object cache (objMtx_) and sensor cache (sensorMtx_) are individually mutex-protected.
+ * DDS and Zenoh callbacks post into these maps from their own threads.
+ */
+
 #ifndef AGGREGATOR_H
 #define AGGREGATOR_H
 

@@ -1,3 +1,26 @@
+/**
+ * @file autoware_adapter.h
+ * @brief Autoware VPI-to-DDS bridge adapter for the CPS sensor pipeline
+ * @date 2026
+ *
+ * This file defines the AutowareAdapter class, which bridges object detections
+ * from the Autoware VPI autonomous driving platform into the CPS Generation service.
+ *
+ * Key Responsibilities:
+ * - Subscribes to a DDS topic carrying object detections from Autoware VPI
+ * - Parses incoming JSON detections and re-publishes them in the CPS Object format
+ * - Publishes the normalised object list to the DDS topic "generation/objects"
+ *   for consumption by the Generation service
+ *
+ * Unlike the camera and radar adapters, this adapter uses DDS as its input
+ * transport (no MQTT), since Autoware VPI already publishes on DDS.
+ *
+ * Expected Input (DDS, JSON):
+ * Each message should contain object fields: objectID, sensorID, timestamp,
+ * latitude, longitude, heading, speed, confidence, classification, size_x.
+ * See the root README.md for the full generation/objects format specification.
+ */
+
 #ifndef AUTOWAREADAPTER_H
 #define AUTOWAREADAPTER_H
 

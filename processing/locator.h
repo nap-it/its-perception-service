@@ -1,3 +1,30 @@
+/**
+ * @file locator.h
+ * @brief Sender station data provider for the CPS Processing service
+ * @date 2026
+ *
+ * This file defines the Locator class used by the Processing service to track
+ * the kinematic state (speed, heading, altitude, acceleration) of CPM-originating
+ * stations by listening to their CAM broadcasts.
+ *
+ * The Processing service uses this information to annotate each processed object
+ * message with accurate sender metadata (speed, heading, altitude, acceleration).
+ *
+ * Three provider modes are supported:
+ * - STATIC: Serves a fixed, minimal SenderInfo for the configured station ID.
+ *           Used when the processing station does not receive external CAMs.
+ * - MQTT:   Subscribes to a CAM topic on a local MQTT broker.
+ * - DDS:    Subscribes to a CAM topic on the DDS bus.
+ *
+ * Supported input topics (MQTT and DDS):
+ *   vanetza/in/cam, vanetza/own/cam, vanetza/out/cam,
+ *   vanetza/in/cam_full (legacy), vanetza/in/vam, vanetza/out/cam_full (legacy)
+ *
+ * Thread Safety:
+ * The CAM data map (camDataMap_) is protected by camMtx_. Updates arrive from
+ * the MQTT/DDS callback threads; reads occur from the Processor's message thread.
+ */
+
 #ifndef LOCATOR_H
 #define LOCATOR_H
 
