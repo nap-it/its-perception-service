@@ -359,9 +359,6 @@ Performance CSV logs (when `performance_logs = true`) are written to `/logs/` in
 - Prometheus metrics
 - Ansible deployment
 
-### Planned
-- Wrapping in ETSI ASN.1 encoding without Vanetza-NAP dependency
-
 ## Documentation & Examples
 
 - **Component configuration:** See each component's `README.md` for `config.ini` parameter reference
