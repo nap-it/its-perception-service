@@ -22,7 +22,7 @@ domain_id = 0
 debug = false
 mqtt_host = 127.0.0.1
 mqtt_port = 1883
-mqtt_topic = jetson/radar-plus
+mqtt_topics = jetson/radar-plus
 mqtt_client_id = radar-adapter
 ```
 
@@ -32,5 +32,5 @@ mqtt_client_id = radar-adapter
 | `debug` | `false` | Enable debug-level logging |
 | `mqtt_host` | `127.0.0.1` | MQTT broker address where radar detections are published |
 | `mqtt_port` | `1883` | MQTT broker port |
-| `mqtt_topic` | `jetson/radar-plus` | MQTT topic(s) to subscribe to. Supports comma-separated values for multiple radars |
+| `mqtt_topics` | `jetson/radar-plus` | Comma-separated list of MQTT topics to subscribe to — one per radar |
 | `mqtt_client_id` | `radar-adapter` | MQTT client identifier |

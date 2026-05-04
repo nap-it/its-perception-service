@@ -22,7 +22,7 @@ domain_id = 0
 debug = false
 mqtt_host = 127.0.0.1
 mqtt_port = 1883
-mqtt_topic = jetson/camera/1/tracking/objects
+mqtt_topics = jetson/camera/1/tracking/objects,jetson/camera/2/tracking/objects
 mqtt_client_id = camera-adapter
 ```
 
@@ -32,5 +32,5 @@ mqtt_client_id = camera-adapter
 | `debug` | `false` | Enable debug-level logging |
 | `mqtt_host` | `127.0.0.1` | MQTT broker address where camera detections are published |
 | `mqtt_port` | `1883` | MQTT broker port |
-| `mqtt_topic` | `jetson/camera/1/tracking/objects` | MQTT topic(s) to subscribe to. Supports comma-separated values for multiple cameras |
+| `mqtt_topics` | `jetson/camera/1/tracking/objects,...` | Comma-separated list of MQTT topics to subscribe to — one per camera |
 | `mqtt_client_id` | `camera-adapter` | MQTT client identifier |
