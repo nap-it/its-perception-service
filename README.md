@@ -139,7 +139,7 @@ On each generation cycle (default: every 100 ms), the Generation service:
 
 These thresholds can be bypassed by setting `aggregator.ignore_rules = true` in the Generation config.
 
-### Processing Logic
+### CPM Processing Logic
 
 For each received CPM, the Processing service:
 1. Extracts sender metadata from a CAM lookup (speed, heading, altitude, acceleration)
