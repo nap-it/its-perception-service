@@ -16,6 +16,17 @@ int main() {
         return 1;
     }
 
+    // Logger level configuration
+    std::string level_str = reader.Get("general", "log_level", "info");
+    std::transform(level_str.begin(), level_str.end(), level_str.begin(), ::tolower);
+    auto level = spdlog::level::from_str(level_str);
+
+    if (level == spdlog::level::info && level_str != "info") {
+        spdlog::warn("Unknown log level '{}', defaulting to 'info'", level_str);
+    }
+    spdlog::set_level(level);
+
+
     // Start Prometheus exposer
     bool prometheus = reader.GetBoolean("general", "prometheus", false);
     spdlog::info("[CONFIG] General prometheus: {}", prometheus);
@@ -67,8 +78,6 @@ int main() {
     locator->run();
 
     Config config;
-    config.debug = reader.GetBoolean("general", "debug", false);
-    spdlog::info("[CONFIG] Processing debug mode: {}", config.debug);
     config.dds_domain = reader.GetInteger("processing", "domain_id", 0);
     spdlog::info("[CONFIG] DDS domain: {}", config.dds_domain);
     config.host_station_type = reader.GetInteger("processing", "station_type", 5);

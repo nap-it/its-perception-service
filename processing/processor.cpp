@@ -14,12 +14,6 @@ Processor::Processor(const Config& config, std::shared_ptr<Locator> locator, boo
         prometheus_(prometheus), metrics_(metrics),
         stopFlag_(false) {
     
-    if (config.debug) {
-        spdlog::set_level(spdlog::level::debug);
-    } else {
-        spdlog::set_level(spdlog::level::info);
-    }
-
     // File logger
     if (!fs::exists("/logs")) {
         fs::create_directory("/logs");
@@ -31,7 +25,7 @@ Processor::Processor(const Config& config, std::shared_ptr<Locator> locator, boo
     if(performanceLogs_) {
         processor_file_logger_ = spdlog::basic_logger_mt("processor_logger", "/logs/processor.csv");
         processor_file_logger_->set_pattern("%v");
-        processor_file_logger_->flush_on(spdlog::level::info);
+        processor_file_logger_->set_level(spdlog::level::info);
     }
 
     // Set up Local MQTT client.

@@ -26,7 +26,7 @@ Generation::Generation(std::shared_ptr<Aggregator> aggregator, std::shared_ptr<L
     if(performanceLogs_) {
         generation_file_logger_ = spdlog::basic_logger_mt("generation_logger", "/logs/generation.csv");
         generation_file_logger_->set_pattern("%v");
-        generation_file_logger_->flush_on(spdlog::level::info);
+        generation_file_logger_->set_level(spdlog::level::info);
     }
 
     dds_ = new Dds("Generation", ddsDomain, nullptr);
@@ -118,7 +118,6 @@ void Generation::runLoop() {
 
                 if (performanceLogs_) {
                     generation_file_logger_->info("Generation,generateCPM,{},{},{}", aggregator_->getCurrentTimestampString(), freshObjects.size(), std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count());
-                    generation_file_logger_->flush();
                 }
 
                 if (prometheus_ && metrics_) {
@@ -171,7 +170,6 @@ void Generation::runLoop() {
                 // Convert t1 to timestamp since epoch in seconds
                 double t1_timestamp = std::chrono::duration<double>(t1.time_since_epoch()).count();
                 generation_file_logger_->info("Generation,generateCPM,{},{},{},{}", aggregator_->getCurrentTimestampString(), freshObjects.size(), t1_timestamp, generate_cpm_duration_us);
-                generation_file_logger_->flush();
             }
 
             spdlog::info("[Generation]: Publising CPM: {}", cpm_str);

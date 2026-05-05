@@ -92,7 +92,7 @@ struct Object {
 };
 
 struct Config {
-    bool debug;
+    std::string log_level;
     int dds_domain;
     int host_station_type;
     int host_station_id;
