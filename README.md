@@ -17,23 +17,19 @@ If you find this code useful in your research, please consider citing:
 
 ### Key Features
 - ETSI TS 103 324 compliant CPM generation
-- Multi-sensor fusion (radar, camera, lidar / Autoware VPI, bike camera)
-- ETSI priority-based object freshness evaluation
 - Modular sensor adapter architecture — easy to extend with new sensor types
 - Flexible station location providers: static (RSU) or dynamic via MQTT/DDS (OBU)
 - Multi-transport output: DDS, local MQTT, remote MQTT, Zenoh
 - Prometheus metrics for both generation and processing services
-- Ansible-based production deployment
+
 
 ## Table of Contents
 - [Requirements](#requirements)
 - [Quick Start](#quick-start)
 - [Architecture](#architecture)
-- [How It Works](#how-it-works)
 - [Message Formats](#message-formats)
 - [Configuration](#configuration)
 - [Deployment](#deployment)
-- [Sensor Adapters](#sensor-adapters)
 - [Monitoring & Metrics](#monitoring--metrics)
 - [Development Status](#development-status)
 - [Documentation & Examples](#documentation--examples)
@@ -49,6 +45,7 @@ If you find this code useful in your research, please consider citing:
   sudo systemctl start mosquitto
   ```
 
+
 - **Docker & Docker Compose** *(mandatory)*  
   Used to run all CPS components.
   ```bash
@@ -59,22 +56,28 @@ If you find this code useful in your research, please consider citing:
 - **V2X Stack (Vanetza-NAP)** *(optional)*  
   Required only for transmitting CPMs over a V2X network.  
   The CPS can run without it — Generation publishes CPMs on DDS and the Processing service can consume them locally.  
-  Vanetza-NAP is available at https://github.com/nap-it/vanetza-nap
+
+  Vanetza-NAP is available at [GitHub](https://github.com/nap-it/vanetza-nap)
+
+
+<br>
+
+> For NAP members the Mosquitto broker, the Docker and the Vanetza-NAP deployment should be done using the `playbook_mosquitto.yml`, `playbook_docker.yml`, `playbook_vanetza.yml` available in the `individual-playbook` folder [here](https://code.nap.av.it.pt/mobility-networks/apu-playbooks)
 
 ## Quick Start
 
 1. Clone the repository and enter the project folder:
 ```bash
-git clone <YOUR_REPOSITORY_URL>
-cd cps-v2
+git clone https://github.com/nap-it/its-perception-service.git
+cd its-perception-service
 ```
 
-2. Start the CPS (Generation + Processing + Camera Adapter + Radar Adapter):
+2. Start the CPS. Note that by default the docker compose starts 4 containers: Generation, Processing, Camera Adapter, and Radar Adapter:
 ```bash
 docker compose up -d
 ```
 
-3. Simulate a sensor detection by publishing an object to the camera adapter:
+3. Simulate a sensor detection by publishing, for example, an object to the camera adapter:
 ```bash
 mosquitto_pub -h localhost -t "jetson/camera/1/tracking/objects" -m '{
   "objects": [{
@@ -98,33 +101,47 @@ mosquitto_sub -h localhost -t "objects" -v
 
 ## Architecture
 
+The Collective Perception Service (CPS) is composed of several Docker containers that work together to generate and process Collective Perception Messages (CPMs).
+
+The main components are:
+- **Sensor Adapters**: lightweight bridges that receive data from external sensor sources, convert it to the CPS object format, and publish it to the `generation/objects` DDS topic. 
+- **Generation**: receives object and sensor information from the Sensor Adapters through DDS or Zenoh. It keeps track of the detected objects, checks which ones are fresh enough to be included according to ETSI priority rules, builds a compliant CPM JSON message, and publishes it through DDS, typically to `vanetza/in/cpm` for V2X transmission.
+
+- **Processing**: receives CPMs from DDS topics, decodes each message, enriches the objects with absolute coordinates and decomposed velocity vectors, and republishes the result in an application-friendly JSON format through MQTT, DDS, and Zenoh.
+
 ![Collective Perception Service Architecture](docs/images/architecture.png)
 
-The CPS is composed of several Docker containers that together form a complete CPM generation and processing pipeline:
-
-### Generation
-The core service that produces CPMs. It ingests object and sensor data from Sensor Adapters over DDS or Zenoh, evaluates which objects are fresh enough to be reported (using ETSI priority rules), constructs a compliant CPM JSON, and publishes it via DDS (typically to `vanetza/in/cpm` for V2X transmission).
-
-Internally composed of three classes:
-- **Aggregator** — subscribes to `generation/objects` and `generation/sensors`, maintains the object cache, and applies ETSI freshness/priority logic
-- **Builder** — stateless CPM JSON constructor; converts the fresh object list and sensor metadata into an ETSI-compliant structure
-- **Locator** — supplies the station's current position (static config, or live from MQTT/DDS CAM/VAM messages)
-
-### Processing
-Subscribes to DDS CPM topics, decodes each message, enriches objects with absolute coordinates and decomposed velocity vectors, and republishes the result in an application-friendly JSON format on MQTT, DDS, and Zenoh.
 
 ### Sensor Adapters
-Lightweight bridges that translate sensor-specific data formats into the CPS object format and publish them to the `generation/objects` DDS topic. Available adapters:
-- **[Camera Adapter](sensor-adapters/camera-adapter/)** — camera detection pipelines (e.g. Jetson)
-- **[Radar Adapter](sensor-adapters/radar-adapter/)** — radar detection pipelines
-- **[Bike Adapter](sensor-adapters/bike-adapter/)** — Raspberry Pi camera on a bicycle
-- **[Autoware Adapter](sensor-adapters/autoware-adapter/)** — Autoware VPI autonomous driving platform (DDS input)
+Sensor adapters connect the CPS to external data sources such as cameras, radars, or autonomous vehicle stacks.
+Each adapter receives data from a specific source, converts it to the internal CPS object format, and publishes it to the `generation/objects` DDS topic.  
+Multiple adapters can run at the same time, depending on the available sensors.
 
-## How It Works
 
-### CPM Generation Logic
+Some examples of adapters include: 
+- **[Camera Adapter](sensor-adapters/camera-adapter/)** — subscribes to MQTT topics containing the output of a camera detection pipeline.
+- **[Radar Adapter](sensor-adapters/radar-adapter/)** — subscribes to an MQTT topic containing radar detections.
+- **[Bike Adapter](sensor-adapters/bike-adapter/)** — subscribes to an MQTT topic containing detections from a Raspberry Pi camera mounted on a bicycle.
+- **[Autoware Adapter](sensor-adapters/autoware-adapter/)** — subscribes to DDS topics produced by the Autoware VPI (more information in [Autoware VPI](https://github.com/nap-it/autoware_vpi)).
 
-On each generation cycle (default: every 100 ms), the Generation service:
+#### Implementing a Custom Adapter
+
+To integrate a new sensor type, create an adapter that publishes a JSON message to the DDS topic `generation/objects` (domain ID matching `aggregator.domain_id` in the Generation config) in the format described in the [Object Data](#object-data----input-topic-generationobjects) section.
+
+Optionally, also publish to `generation/sensors` to include a Sensor Information Container in the CPM.
+
+
+### Generation
+The Generation service is responsible for creating CPMs.
+It receives object and sensor data from the Sensor Adapters through DDS or Zenoh, checks which objects should be included in the next CPM, builds the CPM JSON message, and publishes it to DDS.
+
+The service is composed of four main classes:
+- **Generation** - controls the CPM generation cycle.
+- **Aggregator** — subscribes to `generation/objects` and `generation/sensors`, maintains the object cache, and applies ETSI freshness/priority logic.
+- **Builder** — builds the CPM JSON message in an ETSI-compliant structure from the selected objects, sensor data, and station position.
+- **Locator** — provides the current station position. This can come from a static configuration or from live CAM/VAM messages over MQTT or DDS.
+
+On each generation cycle, by default every 100 ms, the service:
 
 1. Queries the Aggregator for **fresh objects** — objects whose state has changed enough to be included in a new CPM, according to ETSI TS 103 324 priority rules
 2. Gets the current station position from the Locator
@@ -137,16 +154,17 @@ On each generation cycle (default: every 100 ms), the Generation service:
 - Heading change ≥ 4° (O_MIN–O_MAX: 0–8°)
 - Time since last inclusion ≥ 1000 ms (T_MIN–T_MAX: 100–1000 ms)
 
-These thresholds can be bypassed by setting `aggregator.ignore_rules = true` in the Generation config.
+These thresholds can be bypassed by setting `aggregator.ignore_rules = true` in the Generation config. In this case all objects are included in the CPM.
 
-### CPM Processing Logic
+### Processing 
+The Processing service receives CPMs from DDS topics and converts them into an easier-to-use object format.
 
 For each received CPM, the Processing service:
-1. Extracts sender metadata from a CAM lookup (speed, heading, altitude, acceleration)
-2. Converts ETSI relative x/y distances back to absolute WGS-84 lat/lon coordinates
-3. Decomposes object speed and heading into x/y (north/east) velocity components
-4. Maps integer sensor type and classification codes to human-readable strings
-5. Publishes the enriched object list
+1. Extracts sender information from a CAM lookup (speed, heading, altitude, acceleration).
+2. Converts ETSI relative object positions back to absolute WGS-84 latitude and longitude coordinates.
+3. Converts object speed and heading into north/east velocity components.
+4. Converts sensor type and classification codes into readable strings.
+5. Publishes the enriched object list through MQTT, DDS, and Zenoh.
 
 ## Message Formats
 
@@ -162,7 +180,7 @@ For each received CPM, the Processing service:
 
 | Field | Type | Description |
 |---|---|---|
-| `sensorID` | integer | Unique sensor identifier (usually matches sensorType) |
+| `sensorID` | integer | Unique sensor identifier |
 | `sensorType` | integer | ETSI [SensorType](https://forge.etsi.org/rep/ITS/asn1/cpm_ts103324/-/blob/master/docs/ETSI-ITS-CDD.md#SensorType): 1=Radar, 2=Lidar, 3=Monovideo, 12=LocalAggregation, 13=ITSAggregation |
 | `shadowingApplies` | boolean | Whether shadowing applies to this sensor |
 
@@ -198,7 +216,7 @@ For each received CPM, the Processing service:
 }
 ```
 
-Fields marked as optional can be omitted; the Generation service will treat missing values as unavailable.
+Fields marked as optional can be omitted; the Generation service treats missing values as unavailable.
 
 | Field | Type | Required | Description |
 |---|---|---|---|
@@ -305,20 +323,6 @@ Edit [`deployment/inventory/hosts.yml`](deployment/inventory/hosts.yml) to set t
 
 Supported deployment scenarios (defined in `hosts.yml`): RSU, PIXKIT, HOLOLENS, BIKE, and others.
 
-## Sensor Adapters
-
-Sensor Adapters are the integration point between sensor-specific pipelines and the CPS. Each adapter:
-1. Receives detections from a sensor pipeline (via MQTT or DDS)
-2. Normalises the data into the CPS `generation/objects` JSON format
-3. Publishes to the DDS topic `generation/objects`
-
-### Implementing a Custom Adapter
-
-To integrate a new sensor type, create an adapter that publishes a JSON message to the DDS topic `generation/objects` (domain ID matching `aggregator.domain_id` in the Generation config) in the format described in the [Object Data](#object-data----input-topic-generationobjects) section above.
-
-Optionally, also publish to `generation/sensors` to include a Sensor Information Container in the CPM.
-
-The existing adapters ([camera](sensor-adapters/camera-adapter/), [radar](sensor-adapters/radar-adapter/)) are minimal and serve as practical templates.
 
 ## Monitoring & Metrics
 
@@ -375,6 +379,8 @@ Performance CSV logs (when `performance_logs = true`) are written to `/logs/` in
 ## Authors
 
 Development of the CPS is part of ongoing research work at [Instituto de Telecomunicações' Network Architectures and Protocols Group](https://www.it.pt/Groups/Index/36).
+
+Questions and Bug Reports: andreiagf@av.it.pt / jp.amaral@av.it.pt 
 
 ## License
 
