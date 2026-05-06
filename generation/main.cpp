@@ -18,15 +18,17 @@ int main() {
         return 1;
     }
 
-    // General configuration
-    bool debug = reader.GetBoolean("general", "debug", false);
-    spdlog::info("[CONFIG] General debug: {}", debug);
+    // Logger level configuration
+    std::string level_str = reader.Get("general", "log_level", "info");
+    std::transform(level_str.begin(), level_str.end(), level_str.begin(), ::tolower);
+    auto level = spdlog::level::from_str(level_str);
 
-    if (debug) {
-        spdlog::set_level(spdlog::level::debug);
-    } else {
-        spdlog::set_level(spdlog::level::info);
+    if (level == spdlog::level::info && level_str != "info") {
+        spdlog::warn("Unknown log level '{}', defaulting to 'info'", level_str);
     }
+    spdlog::set_level(level);
+
+
 
     // Start Prometheus exposer
     bool prometheus = reader.GetBoolean("general", "prometheus", false);
