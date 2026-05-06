@@ -1,0 +1,5 @@
+<map id="Aggregator::getFreshObjects" name="Aggregator::getFreshObjects">
+<area shape="rect" id="Node000001" title="Retrieve the list of fresh objects (pending for a CPM) and update internal state." alt="" coords="5,13,194,38"/>
+<area shape="rect" id="Node000002" href="$class_aggregator.html#a6f20c767b7d6707454691a47adae1133" title="get the current timestamp as a string." alt="" coords="242,5,460,46"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="194,23,229,25,223,26,194,28"/>
+</map>

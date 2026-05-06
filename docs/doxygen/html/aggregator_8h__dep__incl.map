@@ -1,0 +1,8 @@
+<map id="generation/aggregator.h" name="generation/aggregator.h">
+<area shape="rect" id="Node000001" title="Object ingestion and ETSI freshness/priority engine for the CPS Generation service." alt="" coords="46,5,202,31"/>
+<area shape="rect" id="Node000002" href="$builder_8h.html" title="Stateless CPM JSON constructor for the CPS Generation service." alt="" coords="5,79,139,105"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="108,41,83,80,79,77,105,46"/>
+<area shape="rect" id="Node000003" href="$generation_8h.html" title="CPM generation loop component for the Collective Perception Service." alt="" coords="46,153,202,178"/>
+<area shape="poly" id="edge3_Node000001_Node000003" title=" " alt="" coords="140,42,152,73,153,105,144,132,133,154,129,150,139,130,148,104,147,74,138,47"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="91,115,118,152,113,152,88,119"/>
+</map>

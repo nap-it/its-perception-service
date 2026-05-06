@@ -1,0 +1,52 @@
+<map id="processing/processor.h" name="processing/processor.h">
+<area shape="rect" id="Node000001" title="CPM consumer and object enrichment component for the CPS Processing service." alt="" coords="897,5,1052,31"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="438,86,498,112"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="894,24,722,44,619,60,518,82,511,84,509,78,516,76,618,55,721,39,899,23"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="868,175,921,201"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="971,30,908,163,905,159,966,33"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="1136,86,1247,112"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="1008,29,1146,81,1141,81,1007,34"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="946,175,1003,201"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="976,30,976,161,972,158,972,33"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="5,175,109,201"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="894,19,823,25,738,34,648,52,562,81,547,91,538,101,527,112,511,122,455,142,406,153,362,158,319,158,231,157,180,161,122,170,109,173,108,168,120,165,180,156,231,152,319,153,361,153,405,148,454,137,509,117,524,108,534,98,544,87,560,77,647,47,737,29,823,19,899,18"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="705,168,844,208"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="963,31,810,160,808,155,957,32"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="1272,86,1384,112"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="1038,29,1259,76,1273,82,1268,82,1258,82,1038,34"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="1408,79,1538,120"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="1052,25,1206,45,1395,79,1390,79,1205,51,1052,31"/>
+<area shape="rect" id="Node000010" href="$processing_2locator_8h.html" title="Sender station data provider for the CPS Processing service." alt="" coords="572,86,643,112"/>
+<area shape="poly" id="edge9_Node000001_Node000010" title=" " alt="" coords="920,31,659,90,658,85,915,32"/>
+<area shape="rect" id="Node000015" href="$processing_2metrics_8h.html" title="Prometheus metrics manager and handle structs for the CPS Processing service." alt="" coords="1037,86,1112,112"/>
+<area shape="poly" id="edge17_Node000001_Node000015" title=" " alt="" coords="990,29,1050,77,1045,76,989,34"/>
+<area shape="rect" id="Node000023" title=" " alt="" coords="1562,86,1643,112"/>
+<area shape="poly" id="edge27_Node000001_Node000023" title=" " alt="" coords="1053,19,1153,24,1278,34,1415,51,1551,76,1561,81,1556,81,1550,82,1414,56,1278,39,1153,29,1053,24"/>
+<area shape="poly" id="edge10_Node000010_Node000003" title=" " alt="" coords="643,105,741,129,857,165,861,169,856,168,855,170,739,134,643,111"/>
+<area shape="poly" id="edge15_Node000010_Node000006" title=" " alt="" coords="580,112,555,122,490,135,434,143,338,148,242,153,187,159,122,170,109,173,107,168,120,165,186,154,242,147,338,143,433,137,489,130,554,117,575,113"/>
+<area shape="poly" id="edge16_Node000010_Node000007" title=" " alt="" coords="632,110,726,161,721,160,631,115"/>
+<area shape="rect" id="Node000011" title=" " alt="" coords="454,175,511,201"/>
+<area shape="poly" id="edge11_Node000010_Node000011" title=" " alt="" coords="593,112,514,168,511,164,588,113"/>
+<area shape="rect" id="Node000012" title=" " alt="" coords="535,175,680,201"/>
+<area shape="poly" id="edge12_Node000010_Node000012" title=" " alt="" coords="610,111,610,161,606,158,606,115"/>
+<area shape="rect" id="Node000013" title=" " alt="" coords="133,175,253,201"/>
+<area shape="poly" id="edge13_Node000010_Node000013" title=" " alt="" coords="580,112,555,122,474,140,410,148,347,156,266,170,252,173,251,168,264,165,346,151,410,143,473,134,554,117,574,113"/>
+<area shape="rect" id="Node000014" title=" " alt="" coords="277,175,429,201"/>
+<area shape="poly" id="edge14_Node000010_Node000014" title=" " alt="" coords="577,112,555,122,405,172,404,167,553,117,572,113"/>
+<area shape="poly" id="edge20_Node000015_Node000003" title=" " alt="" coords="1052,112,934,171,932,166,1046,113"/>
+<area shape="poly" id="edge21_Node000015_Node000005" title=" " alt="" coords="1063,112,1001,167,999,162,1058,114"/>
+<area shape="rect" id="Node000016" title=" " alt="" coords="1715,175,1783,201"/>
+<area shape="poly" id="edge18_Node000015_Node000016" title=" " alt="" coords="1103,110,1126,117,1212,133,1287,140,1415,139,1477,138,1543,140,1618,148,1704,165,1713,170,1707,169,1703,170,1617,153,1543,145,1477,143,1415,145,1286,145,1212,138,1124,122,1102,115"/>
+<area shape="rect" id="Node000017" title=" " alt="" coords="1807,175,1854,201"/>
+<area shape="poly" id="edge19_Node000015_Node000017" title=" " alt="" coords="1103,110,1126,117,1226,134,1313,140,1390,138,1462,133,1534,130,1611,131,1697,141,1796,165,1801,169,1796,168,1795,170,1696,147,1611,136,1535,135,1462,139,1390,143,1313,145,1226,139,1124,122,1102,115"/>
+<area shape="rect" id="Node000018" title=" " alt="" coords="1877,175,2026,201"/>
+<area shape="poly" id="edge22_Node000015_Node000018" title=" " alt="" coords="1103,110,1126,117,1236,137,1331,147,1415,150,1493,150,1657,148,1753,153,1865,165,1891,172,1885,171,1865,170,1753,158,1657,153,1493,155,1415,156,1330,153,1236,142,1124,122,1102,115"/>
+<area shape="rect" id="Node000019" title=" " alt="" coords="1027,175,1172,201"/>
+<area shape="poly" id="edge23_Node000015_Node000019" title=" " alt="" coords="1079,110,1094,162,1090,159,1076,115"/>
+<area shape="rect" id="Node000020" title=" " alt="" coords="1196,175,1342,201"/>
+<area shape="poly" id="edge24_Node000015_Node000020" title=" " alt="" coords="1102,110,1231,169,1225,168,1101,115"/>
+<area shape="rect" id="Node000021" title=" " alt="" coords="1366,175,1505,201"/>
+<area shape="poly" id="edge25_Node000015_Node000021" title=" " alt="" coords="1104,110,1126,117,1189,134,1240,143,1355,165,1372,171,1367,171,1354,170,1239,149,1188,139,1124,122,1104,115"/>
+<area shape="rect" id="Node000022" title=" " alt="" coords="1530,175,1691,201"/>
+<area shape="poly" id="edge26_Node000015_Node000022" title=" " alt="" coords="1103,110,1126,117,1234,138,1320,146,1407,151,1517,165,1543,172,1537,172,1517,170,1406,157,1320,151,1233,143,1124,122,1103,115"/>
+</map>

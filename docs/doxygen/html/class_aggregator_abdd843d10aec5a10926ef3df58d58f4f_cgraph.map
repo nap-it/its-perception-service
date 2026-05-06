@@ -1,0 +1,24 @@
+<map id="Aggregator::on_message" name="Aggregator::on_message">
+<area shape="rect" id="Node000001" title="Non&#45;static message handler. Called when a new DDS/Zenoh message arrives on &quot;generation/objects&quot;." alt="" coords="5,108,172,133"/>
+<area shape="rect" id="Node000002" href="$class_aggregator.html#ae2bd342a9cd191b12e44492375e8baa0" title="Calculate the CPM object ID based on the sensor and object IDs." alt="" coords="243,5,415,46"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="114,105,219,57,243,50,239,52,221,61,116,109"/>
+<area shape="rect" id="Node000003" href="$class_aggregator.html#a6f20c767b7d6707454691a47adae1133" title="get the current timestamp as a string." alt="" coords="220,71,438,111"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="172,108,207,105,202,107,173,113"/>
+<area shape="rect" id="Node000004" href="$class_aggregator.html#acc20524d70906e180bf58d05ae629209" title="Calculate the priority of an object." alt="" coords="253,136,404,161"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="172,127,241,137,236,139,172,133"/>
+<area shape="rect" id="Node000010" href="$class_aggregator.html#aa58e2e4af11261516ff814af1ead331d" title="Check if a new object is fresh compared to the previously sent object." alt="" coords="514,186,650,212"/>
+<area shape="poly" id="edge11_Node000001_Node000010" title=" " alt="" coords="116,131,164,153,220,171,293,184,367,193,501,201,496,201,367,198,292,190,219,176,162,158,115,136"/>
+<area shape="rect" id="Node000005" href="$class_aggregator.html#a1b4f3417f3efa1063936d14df4bb06df" title="Calculate the priority of an object based the ETSI rules." alt="" coords="502,137,663,162"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="405,146,489,149,483,149,405,151"/>
+<area shape="rect" id="Node000008" href="$class_aggregator.html#a5f8edb5c3c8c1f192423648a55a70048" title="Calculate the priority of an object based on movement predictor." alt="" coords="486,72,678,113"/>
+<area shape="poly" id="edge7_Node000004_Node000008" title=" " alt="" coords="390,132,470,117,475,116,391,138"/>
+<area shape="rect" id="Node000006" href="$class_aggregator.html#afa98f90035018c9abfad84fc3186f6ca" title="Calculate the distance between two lat/lon coordinates (in meters) using the Haversine formula." alt="" coords="726,129,930,170"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="663,147,713,150,708,150,664,152"/>
+<area shape="rect" id="Node000007" href="$class_aggregator.html#a6028af19b1f78b27002a98541e60f43d" title="Convert degrees to radians." alt="" coords="978,109,1116,134"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="930,134,959,133,965,132,930,139"/>
+<area shape="poly" id="edge8_Node000008_Node000006" title=" " alt="" coords="673,111,726,125,720,125,672,116"/>
+<area shape="poly" id="edge9_Node000008_Node000007" title=" " alt="" coords="679,96,965,116,960,117,679,101"/>
+<area shape="rect" id="Node000009" href="$class_aggregator.html#a482deb37649172f3b734fad963e9f4fb" title="Convert radians to degrees." alt="" coords="759,29,897,54"/>
+<area shape="poly" id="edge10_Node000008_Node000009" title=" " alt="" coords="678,70,745,59,750,58,679,75"/>
+<area shape="poly" id="edge12_Node000010_Node000006" title=" " alt="" coords="650,183,709,173,714,173,650,188"/>
+</map>

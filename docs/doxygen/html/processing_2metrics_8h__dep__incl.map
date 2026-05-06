@@ -1,0 +1,5 @@
+<map id="processing/metrics.h" name="processing/metrics.h">
+<area shape="rect" id="Node000001" title="Prometheus metrics manager and handle structs for the CPS Processing service." alt="" coords="12,5,154,31"/>
+<area shape="rect" id="Node000002" href="$processor_8h.html" title="CPM consumer and object enrichment component for the CPS Processing service." alt="" coords="5,79,161,105"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="85,45,85,79,81,78,81,48"/>
+</map>

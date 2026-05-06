@@ -1,0 +1,7 @@
+<map id="Aggregator::Aggregator" name="Aggregator::Aggregator">
+<area shape="rect" id="Node000001" title="Construct a new Aggregator object." alt="" coords="5,31,161,56"/>
+<area shape="rect" id="Node000002" href="$class_aggregator.html#a6b29991f97ba3f39bfb8de6e3e6c9950" title="Static DDS callback that forwards the call to the Aggregator instance. This is needed because the DDS..." alt="" coords="216,5,380,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="160,32,202,29,197,30,161,37"/>
+<area shape="rect" id="Node000003" href="$class_aggregator.html#a70f6c525e7ab8dd198a54231d13a836d" title="Static Zenoh callback that forwards the call to the Aggregator instance. This is needed because the Z..." alt="" coords="209,55,387,80"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="161,49,196,56,190,56,161,55"/>
+</map>

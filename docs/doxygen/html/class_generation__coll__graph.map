@@ -1,0 +1,7 @@
+<map id="Generation" name="Generation">
+<area shape="rect" id="Node000001" title=" " alt="" coords="54,102,138,128"/>
+<area shape="rect" id="Node000002" href="$class_builder.html" title=" " alt="" coords="5,5,67,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="53,42,91,101,86,102,50,46"/>
+<area shape="rect" id="Node000003" href="$struct_gen_metric_handles.html" title=" " alt="" coords="91,5,221,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="147,44,129,79,109,104,106,100,124,77,143,47"/>
+</map>

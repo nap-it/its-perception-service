@@ -1,0 +1,5 @@
+<map id="BikeAdapter" name="BikeAdapter">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,102,98,128"/>
+<area shape="rect" id="Node000002" href="$struct_config.html" title=" " alt="" coords="22,5,81,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="54,45,54,102,49,101,49,48"/>
+</map>
