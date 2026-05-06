@@ -52,11 +52,11 @@ mqtt_topics = jetson/radar-plus
 mqtt_client_id = radar-adapter
 ```
 
-| Key | Default | Description |
-|---|---|---|
-| `domain_id` | `0` | DDS domain ID — **change this** to match `aggregator.domain_id` in the Generation config |
-| `debug` | `false` | Enable debug-level logging |
-| `mqtt_host` | `127.0.0.1` | MQTT broker address where radar detections are published |
-| `mqtt_port` | `1883` | MQTT broker port |
-| `mqtt_topics` | `jetson/radar-plus` | Comma-separated list of MQTT topics to subscribe to — one per radar |
-| `mqtt_client_id` | `radar-adapter` | MQTT client identifier |
+| Key | Default | Description | Range |
+|---|---|---|---|
+| `domain_id` | `0` | DDS domain ID — **change this** to match `aggregator.domain_id` in the Generation config | `0` to `230` |
+| `debug` | `false` | Enable debug-level logging | `true/false` |
+| `mqtt_host` | `127.0.0.1` | MQTT broker address where radar detections are published | - |
+| `mqtt_port` | `1883` | MQTT broker port | - |
+| `mqtt_topics` | `jetson/radar-plus` | Comma-separated list of MQTT topics to subscribe to — one per radar | - |
+| `mqtt_client_id` | `radar-adapter` | MQTT client identifier | - |

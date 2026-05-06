@@ -56,29 +56,29 @@ max_objects = -1
 mqtt_debug = false
 ```
 
-| Key | Default | Description |
-|---|---|---|
-| `general.debug` | `false` | Enable debug-level logging |
-| `locator.station_type` | `15` | ETSI station type: `5` for OBU, `15` for RSU |
-| `locator.station_latitude` | `0.0` | Station latitude (degrees) — used when `location_provider = static` |
-| `locator.station_longitude` | `0.0` | Station longitude (degrees) — used when `location_provider = static` |
-| `locator.location_provider` | `static` | Position source: `static`, `mqtt`, or `dds` |
-| `locator.mqtt_host` | `127.0.0.1` | MQTT broker address — used when `location_provider = mqtt` |
-| `locator.mqtt_port` | `1883` | MQTT broker port |
-| `locator.mqtt_topic` | `""` | CAM/VAM topic — supported: `vanetza/in/cam`, `vanetza/in/cam_full`, `vanetza/own/cam`, `vanetza/in/vam` |
-| `locator.domain_id` | `0` | DDS domain ID — **change this** to match the location data DDS domain when `location_provider = dds` |
-| `locator.dds_topic` | `""` | CAM/VAM DDS topic — same supported values as `mqtt_topic` |
-| `aggregator.domain_id` | `0` | DDS domain ID — **change this** to match the Sensor Adapters domain |
-| `aggregator.max_object_age` | `2` | Maximum age (seconds) before an object is evicted from the cache |
-| `aggregator.clean_interval` | `1` | How often (seconds) the cache cleanup runs |
-| `aggregator.ignore_rules` | `false` | If `true`, all cached objects are included in every CPM regardless of freshness |
-| `aggregator.performance_logs` | `false` | Write CSV performance logs to `/logs/aggregator.csv` |
-| `aggregator.priority` | `etsi` | Priority mode: `etsi` or `predictor` |
-| `aggregator.zenoh_endpoint` | `""` | Zenoh locator for peer/router discovery (leave empty to disable Zenoh) |
-| `aggregator.add_pending_objects` | `false` | Include objects that did not meet freshness thresholds in the previous cycle |
-| `generation.interval` | `100` | CPM generation interval (milliseconds) |
-| `generation.domain_id` | `0` | DDS domain ID — **change this** to match the Vanetza/V2X stack domain |
-| `generation.dds_topic` | `vanetza/in/cpm` | DDS topic to publish CPMs — also supports `cps-v2/in/cpm` for loopback testing |
-| `generation.performance_logs` | `false` | Write CSV performance logs to `/logs/generation.csv` |
-| `generation.max_objects` | `-1` | Maximum objects per CPM (`-1` = no limit) |
-| `generation.mqtt_debug` | `false` | Mirror each CPM to local MQTT topic `mqtt/in/cpm` for debugging |
+| Key | Default | Description | Range |
+|---|---|---|---|
+| `general.debug` | `false` | Enable debug-level logging | `true/false` |
+| `locator.station_type` | `15` | ETSI station type: `5` for OBU, `15` for RSU | `5/15` |
+| `locator.station_latitude` | `0.0` | Station latitude (degrees) — used when `location_provider = static` | `-90.0` to `90.0` |
+| `locator.station_longitude` | `0.0` | Station longitude (degrees) — used when `location_provider = static` | `-180.0` to `180.0` |
+| `locator.location_provider` | `static` | Position source: `static`, `mqtt`, or `dds` | - |
+| `locator.mqtt_host` | `127.0.0.1` | MQTT broker address — used when `location_provider = mqtt` | - |
+| `locator.mqtt_port` | `1883` | MQTT broker port | - |
+| `locator.mqtt_topic` | `""` | CAM/VAM topic — supported: `vanetza/in/cam`, `vanetza/in/cam_full`, `vanetza/own/cam`, `vanetza/in/vam` | - |
+| `locator.domain_id` | `0` | DDS domain ID — **change this** to match the location data DDS domain when `location_provider = dds` | `0` to `230` |
+| `locator.dds_topic` | `""` | CAM/VAM DDS topic — same supported values as `mqtt_topic` | - |
+| `aggregator.domain_id` | `0` | DDS domain ID — **change this** to match the Sensor Adapters domain | `0` to `230` |
+| `aggregator.max_object_age` | `2` | Maximum age (seconds) before an object is evicted from the cache | `>0` |
+| `aggregator.clean_interval` | `1` | How often (seconds) the cache cleanup runs | `>0` |
+| `aggregator.ignore_rules` | `false` | If `true`, all cached objects are included in every CPM regardless of freshness | `true/false` |
+| `aggregator.performance_logs` | `false` | Write CSV performance logs to `/logs/aggregator.csv` | `true/false` |
+| `aggregator.priority` | `etsi` | Priority mode: `etsi` or `predictor` | - |
+| `aggregator.zenoh_endpoint` | `""` | Zenoh locator for peer/router discovery (leave empty to disable Zenoh) | - |
+| `aggregator.add_pending_objects` | `false` | Include objects that did not meet freshness thresholds in the previous cycle | `true/false` |
+| `generation.interval` | `100` | CPM generation interval (milliseconds) | `>0` |
+| `generation.domain_id` | `0` | DDS domain ID — **change this** to match the Vanetza/V2X stack domain | `0` to `230` |
+| `generation.dds_topic` | `vanetza/in/cpm` | DDS topic to publish CPMs — also supports `cps-v2/in/cpm` for loopback testing | - |
+| `generation.performance_logs` | `false` | Write CSV performance logs to `/logs/generation.csv` | `true/false` |
+| `generation.max_objects` | `-1` | Maximum objects per CPM (`-1` = no limit) | `>0` or `-1` |
+| `generation.mqtt_debug` | `false` | Mirror each CPM to local MQTT topic `mqtt/in/cpm` for debugging | `true/false` |

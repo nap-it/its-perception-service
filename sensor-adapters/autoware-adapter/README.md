@@ -66,7 +66,7 @@ debug = false
 domain_id = 0
 ```
 
-| Key | Default | Description |
-|---|---|---|
-| `domain_id` | `0` | DDS domain ID — **change this** to match the Autoware VPI DDS domain |
-| `debug` | `false` | Enable debug-level logging |
+| Key | Default | Description | Range |
+|---|---|---|---|
+| `domain_id` | `0` | DDS domain ID — **change this** to match the Autoware VPI DDS domain | `0` to `230` |
+| `debug` | `false` | Enable debug-level logging | `true/false` |
