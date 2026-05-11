@@ -24,7 +24,9 @@ Setting `aggregator.ignore_rules = true` bypasses both modes and includes all tr
 
 ```ini
 [general]
-debug = false
+log_level = info
+prometheus = true
+prometheus_port = 9102
 
 [locator]
 station_type = 15
@@ -58,7 +60,9 @@ mqtt_debug = false
 
 | Key | Default | Description | Range |
 |---|---|---|---|
-| `general.debug` | `false` | Enable debug-level logging | `true/false` |
+| `general.log_level` | `info` | Logging verbosity | `trace`, `debug`, `info`, `warn`, `error`, `critical`, `off` |
+| `general.prometheus` | `false` | Enable Prometheus metrics endpoint | `true/false` |
+| `general.prometheus_port` | `9102` | Port for the Prometheus metrics HTTP endpoint | `1024`–`65535` |
 | `locator.station_type` | `15` | ETSI station type: `5` for OBU, `15` for RSU | `5/15` |
 | `locator.station_latitude` | `0.0` | Station latitude (degrees) — used when `location_provider = static` | `-90.0` to `90.0` |
 | `locator.station_longitude` | `0.0` | Station longitude (degrees) — used when `location_provider = static` | `-180.0` to `180.0` |

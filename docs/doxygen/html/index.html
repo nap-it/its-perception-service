@@ -135,13 +135,10 @@ Citation</h2>
 Key Features</h2>
 <ul>
 <li>ETSI TS 103 324 compliant CPM generation</li>
-<li>Multi-sensor fusion (radar, camera, lidar / Autoware VPI, bike camera)</li>
-<li>ETSI priority-based object freshness evaluation</li>
 <li>Modular sensor adapter architecture — easy to extend with new sensor types</li>
 <li>Flexible station location providers: static (RSU) or dynamic via MQTT/DDS (OBU)</li>
 <li>Multi-transport output: DDS, local MQTT, remote MQTT, Zenoh</li>
 <li>Prometheus metrics for both generation and processing services</li>
-<li>Ansible-based production deployment</li>
 </ul>
 <h1 class="doxsection"><a class="anchor" id="table-of-contents"></a>
 Table of Contents</h1>
@@ -155,9 +152,6 @@ Table of Contents</h1>
 <li><a class="el" href="#architecture" title="Architecture">Architecture</a>Architecture</li>
 </ul>
 <ul>
-<li><a class="el" href="#how-it-works" title="How It Works">How It Works</a>How It Works</li>
-</ul>
-<ul>
 <li><a class="el" href="#message-formats" title="Message Formats">Message Formats</a>Message Formats</li>
 </ul>
 <ul>
@@ -165,9 +159,6 @@ Table of Contents</h1>
 </ul>
 <ul>
 <li><a class="el" href="#deployment" title="Deployment">Deployment</a>Deployment</li>
-</ul>
-<ul>
-<li><a class="el" href="#sensor-adapters" title="Sensor Adapters">Sensor Adapters</a>Sensor Adapters</li>
 </ul>
 <ul>
 <li><a class="el" href="#monitoring--metrics" title="Monitoring &amp; Metrics">Monitoring &amp; Metrics</a>Monitoring &amp; Metrics</li>
@@ -195,20 +186,27 @@ Requirements</h1>
  Used to run all CPS components. <div class="fragment"><div class="line">docker --version</div>
 <div class="line">docker compose version</div>
 </div><!-- fragment --></li>
-<li><b>V2X Stack (Vanetza-NAP)</b> <em>(optional)</em> <br  />
+<li><p class="startli"><b>V2X Stack (Vanetza-NAP)</b> <em>(optional)</em> <br  />
  Required only for transmitting CPMs over a V2X network. <br  />
  The CPS can run without it — <a class="el" href="class_generation.html">Generation</a> publishes CPMs on DDS and the Processing service can consume them locally. <br  />
- Vanetza-NAP is available at <a href="https://github.com/nap-it/vanetza-nap">https://github.com/nap-it/vanetza-nap</a></li>
+</p>
+<p class="startli">Vanetza-NAP is available at <a href="https://github.com/nap-it/vanetza-nap">GitHub</a></p>
+</li>
 </ul>
+<p><br  />
+</p>
+<blockquote class="doxtable">
+<p>For NAP members the Mosquitto broker, the Docker and the Vanetza-NAP deployment should be done using the <span class="tt">playbook_mosquitto.yml</span>, <span class="tt">playbook_docker.yml</span>, <span class="tt">playbook_vanetza.yml</span> available in the <span class="tt">individual-playbook</span> folder <a href="https://code.nap.av.it.pt/mobility-networks/apu-playbooks">here</a> </p>
+</blockquote>
 <h1 class="doxsection"><a class="anchor" id="quick-start"></a>
 Quick Start</h1>
 <ol type="1">
-<li>Clone the repository and enter the project folder: <div class="fragment"><div class="line">git clone &lt;YOUR_REPOSITORY_URL&gt;</div>
-<div class="line">cd cps-v2</div>
+<li>Clone the repository and enter the project folder: <div class="fragment"><div class="line">git clone https://github.com/nap-it/its-perception-service.git</div>
+<div class="line">cd its-perception-service</div>
 </div><!-- fragment --></li>
-<li>Start the CPS (<a class="el" href="class_generation.html">Generation</a> + Processing + Camera Adapter + Radar Adapter): <div class="fragment"><div class="line">docker compose up -d</div>
+<li>Start the CPS. Note that by default the docker compose starts 4 containers: <a class="el" href="class_generation.html">Generation</a>, Processing, Camera Adapter, and Radar Adapter: <div class="fragment"><div class="line">docker compose up -d</div>
 </div><!-- fragment --></li>
-<li>Simulate a sensor detection by publishing an object to the camera adapter: <div class="fragment"><div class="line">mosquitto_pub -h localhost -t &quot;jetson/camera/1/tracking/objects&quot; -m &#39;{</div>
+<li>Simulate a sensor detection by publishing, for example, an object to the camera adapter: <div class="fragment"><div class="line">mosquitto_pub -h localhost -t &quot;jetson/camera/1/tracking/objects&quot; -m &#39;{</div>
 <div class="line">  &quot;objects&quot;: [{</div>
 <div class="line">    &quot;objectID&quot;: 1,</div>
 <div class="line">    &quot;sensorID&quot;: 3,</div>
@@ -227,32 +225,37 @@ Quick Start</h1>
 </ol>
 <h1 class="doxsection"><a class="anchor" id="architecture"></a>
 Architecture</h1>
-<p><img src="docs/images/architecture.png" alt="Collective Perception Service Architecture" class="inline"/></p>
-<p>The CPS is composed of several Docker containers that together form a complete CPM generation and processing pipeline:</p>
-<h2 class="doxsection"><a class="anchor" id="generation"></a>
-Generation</h2>
-<p>The core service that produces CPMs. It ingests object and sensor data from Sensor Adapters over DDS or Zenoh, evaluates which objects are fresh enough to be reported (using ETSI priority rules), constructs a compliant CPM JSON, and publishes it via DDS (typically to <span class="tt">vanetza/in/cpm</span> for V2X transmission).</p>
-<p>Internally composed of three classes:</p><ul>
-<li><b><a class="el" href="class_aggregator.html">Aggregator</a></b> — subscribes to <span class="tt">generation/objects</span> and <span class="tt">generation/sensors</span>, maintains the object cache, and applies ETSI freshness/priority logic</li>
-<li><b><a class="el" href="class_builder.html">Builder</a></b> — stateless CPM JSON constructor; converts the fresh object list and sensor metadata into an ETSI-compliant structure</li>
-<li><b><a class="el" href="class_locator.html">Locator</a></b> — supplies the station's current position (static config, or live from MQTT/DDS CAM/VAM messages)</li>
+<p>The Collective Perception Service (CPS) is composed of several Docker containers that work together to generate and process Collective Perception Messages (CPMs).</p>
+<p>The main components are:</p><ul>
+<li><b>Sensor Adapters</b>: lightweight bridges that receive data from external sensor sources, convert it to the CPS object format, and publish it to the <span class="tt">generation/objects</span> DDS topic.</li>
+<li><b><a class="el" href="class_generation.html">Generation</a></b>: receives object and sensor information from the Sensor Adapters through DDS or Zenoh. It keeps track of the detected objects, checks which ones are fresh enough to be included according to ETSI priority rules, builds a compliant CPM JSON message, and publishes it through DDS, typically to <span class="tt">vanetza/in/cpm</span> for V2X transmission.</li>
+<li><b>Processing</b>: receives CPMs from DDS topics, decodes each message, enriches the objects with absolute coordinates and decomposed velocity vectors, and republishes the result in an application-friendly JSON format through MQTT, DDS, and Zenoh.</li>
 </ul>
-<h2 class="doxsection"><a class="anchor" id="processing"></a>
-Processing</h2>
-<p>Subscribes to DDS CPM topics, decodes each message, enriches objects with absolute coordinates and decomposed velocity vectors, and republishes the result in an application-friendly JSON format on MQTT, DDS, and Zenoh.</p>
+<p><img src="docs/images/architecture.png" alt="Collective Perception Service Architecture" class="inline"/></p>
 <h2 class="doxsection"><a class="anchor" id="sensor-adapters"></a>
 Sensor Adapters</h2>
-<p>Lightweight bridges that translate sensor-specific data formats into the CPS object format and publish them to the <span class="tt">generation/objects</span> DDS topic. Available adapters:</p><ul>
-<li><b><a href="sensor-adapters/camera-adapter/">Camera Adapter</a></b> — camera detection pipelines (e.g. Jetson)</li>
-<li><b><a href="sensor-adapters/radar-adapter/">Radar Adapter</a></b> — radar detection pipelines</li>
-<li><b><a href="sensor-adapters/bike-adapter/">Bike Adapter</a></b> — Raspberry Pi camera on a bicycle</li>
-<li><b><a href="sensor-adapters/autoware-adapter/">Autoware Adapter</a></b> — Autoware VPI autonomous driving platform (DDS input)</li>
+<p>Sensor adapters connect the CPS to external data sources such as cameras, radars, or autonomous vehicle stacks. Each adapter receives data from a specific source, converts it to the internal CPS object format, and publishes it to the <span class="tt">generation/objects</span> DDS topic. <br  />
+ Multiple adapters can run at the same time, depending on the available sensors.</p>
+<p>Some examples of adapters include:</p><ul>
+<li><b><a href="sensor-adapters/camera-adapter/">Camera Adapter</a></b> — subscribes to MQTT topics containing the output of a camera detection pipeline.</li>
+<li><b><a href="sensor-adapters/radar-adapter/">Radar Adapter</a></b> — subscribes to an MQTT topic containing radar detections.</li>
+<li><b><a href="sensor-adapters/bike-adapter/">Bike Adapter</a></b> — subscribes to an MQTT topic containing detections from a Raspberry Pi camera mounted on a bicycle.</li>
+<li><b><a href="sensor-adapters/autoware-adapter/">Autoware Adapter</a></b> — subscribes to DDS topics produced by the Autoware VPI (more information in <a href="https://github.com/nap-it/autoware_vpi">Autoware VPI</a>).</li>
 </ul>
-<h1 class="doxsection"><a class="anchor" id="how-it-works"></a>
-How It Works</h1>
-<h2 class="doxsection"><a class="anchor" id="cpm-generation-logic"></a>
-CPM Generation Logic</h2>
-<p>On each generation cycle (default: every 100 ms), the <a class="el" href="class_generation.html">Generation</a> service:</p>
+<h3 class="doxsection"><a class="anchor" id="implementing-a-custom-adapter"></a>
+Implementing a Custom Adapter</h3>
+<p>To integrate a new sensor type, create an adapter that publishes a JSON message to the DDS topic <span class="tt">generation/objects</span> (domain ID matching <span class="tt">aggregator.domain_id</span> in the <a class="el" href="class_generation.html">Generation</a> config) in the format described in the Object Data<a class="el" href="struct_object.html">Object</a> Data section.</p>
+<p>Optionally, also publish to <span class="tt">generation/sensors</span> to include a Sensor Information Container in the CPM.</p>
+<h2 class="doxsection"><a class="anchor" id="generation"></a>
+Generation</h2>
+<p>The <a class="el" href="class_generation.html">Generation</a> service is responsible for creating CPMs. It receives object and sensor data from the Sensor Adapters through DDS or Zenoh, checks which objects should be included in the next CPM, builds the CPM JSON message, and publishes it to DDS.</p>
+<p>The service is composed of four main classes:</p><ul>
+<li><b><a class="el" href="class_generation.html">Generation</a></b> - controls the CPM generation cycle.</li>
+<li><b><a class="el" href="class_aggregator.html">Aggregator</a></b> — subscribes to <span class="tt">generation/objects</span> and <span class="tt">generation/sensors</span>, maintains the object cache, and applies ETSI freshness/priority logic.</li>
+<li><b><a class="el" href="class_builder.html">Builder</a></b> — builds the CPM JSON message in an ETSI-compliant structure from the selected objects, sensor data, and station position.</li>
+<li><b><a class="el" href="class_locator.html">Locator</a></b> — provides the current station position. This can come from a static configuration or from live CAM/VAM messages over MQTT or DDS.</li>
+</ul>
+<p>On each generation cycle, by default every 100 ms, the service:</p>
 <ol type="1">
 <li>Queries the <a class="el" href="class_aggregator.html">Aggregator</a> for <b>fresh objects</b> — objects whose state has changed enough to be included in a new CPM, according to ETSI TS 103 324 priority rules</li>
 <li>Gets the current station position from the <a class="el" href="class_locator.html">Locator</a></li>
@@ -265,15 +268,16 @@ CPM Generation Logic</h2>
 <li>Heading change ≥ 4° (O_MIN–O_MAX: 0–8°)</li>
 <li>Time since last inclusion ≥ 1000 ms (T_MIN–T_MAX: 100–1000 ms)</li>
 </ul>
-<p>These thresholds can be bypassed by setting <span class="tt">aggregator.ignore_rules = true</span> in the <a class="el" href="class_generation.html">Generation</a> config.</p>
-<h2 class="doxsection"><a class="anchor" id="cpm-processing-logic"></a>
-CPM Processing Logic</h2>
+<p>These thresholds can be bypassed by setting <span class="tt">aggregator.ignore_rules = true</span> in the <a class="el" href="class_generation.html">Generation</a> config. In this case all objects are included in the CPM.</p>
+<h2 class="doxsection"><a class="anchor" id="processing"></a>
+Processing</h2>
+<p>The Processing service receives CPMs from DDS topics and converts them into an easier-to-use object format.</p>
 <p>For each received CPM, the Processing service:</p><ol type="1">
-<li>Extracts sender metadata from a CAM lookup (speed, heading, altitude, acceleration)</li>
-<li>Converts ETSI relative x/y distances back to absolute WGS-84 lat/lon coordinates</li>
-<li>Decomposes object speed and heading into x/y (north/east) velocity components</li>
-<li>Maps integer sensor type and classification codes to human-readable strings</li>
-<li>Publishes the enriched object list</li>
+<li>Extracts sender information from a CAM lookup (speed, heading, altitude, acceleration).</li>
+<li>Converts ETSI relative object positions back to absolute WGS-84 latitude and longitude coordinates.</li>
+<li>Converts object speed and heading into north/east velocity components.</li>
+<li>Converts sensor type and classification codes into readable strings.</li>
+<li>Publishes the enriched object list through MQTT, DDS, and Zenoh.</li>
 </ol>
 <h1 class="doxsection"><a class="anchor" id="message-formats"></a>
 Message Formats</h1>
@@ -288,7 +292,7 @@ Sensor Data — input topic <span class="tt">generation/sensors</span></h2>
 <tr class="markdownTableHead">
 <th class="markdownTableHeadNone">Field  </th><th class="markdownTableHeadNone">Type  </th><th class="markdownTableHeadNone">Description  </th></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone"><span class="tt">sensorID</span>  </td><td class="markdownTableBodyNone">integer  </td><td class="markdownTableBodyNone">Unique sensor identifier (usually matches sensorType)  </td></tr>
+<td class="markdownTableBodyNone"><span class="tt">sensorID</span>  </td><td class="markdownTableBodyNone">integer  </td><td class="markdownTableBodyNone">Unique sensor identifier  </td></tr>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone"><span class="tt">sensorType</span>  </td><td class="markdownTableBodyNone">integer  </td><td class="markdownTableBodyNone">ETSI <a href="https://forge.etsi.org/rep/ITS/asn1/cpm_ts103324/-/blob/master/docs/ETSI-ITS-CDD.md#SensorType">SensorType</a>: 1=Radar, 2=Lidar, 3=Monovideo, 12=LocalAggregation, 13=ITSAggregation  </td></tr>
 <tr class="markdownTableRowOdd">
@@ -323,7 +327,7 @@ Object Data — input topic <span class="tt">generation/objects</span></h2>
 <div class="line">        }</div>
 <div class="line">    ]</div>
 <div class="line">}</div>
-</div><!-- fragment --><p>Fields marked as optional can be omitted; the <a class="el" href="class_generation.html">Generation</a> service will treat missing values as unavailable.</p>
+</div><!-- fragment --><p>Fields marked as optional can be omitted; the <a class="el" href="class_generation.html">Generation</a> service treats missing values as unavailable.</p>
 <table class="markdownTable">
 <tr class="markdownTableHead">
 <th class="markdownTableHeadNone">Field  </th><th class="markdownTableHeadNone">Type  </th><th class="markdownTableHeadNone">Required  </th><th class="markdownTableHeadNone">Description  </th></tr>
@@ -431,18 +435,6 @@ Ansible (production)</h2>
 <div class="line">ansible-playbook deploy.yml -i inventory/hosts.yml</div>
 </div><!-- fragment --><p>Edit <a href="deployment/inventory/hosts.yml"><span class="tt">deployment/inventory/hosts.yml</span></a> to set the target host(s) and override any configuration variables. The full list of configurable variables is in <a href="deployment/roles/cps/defaults/main.yml"><span class="tt">deployment/roles/cps/defaults/main.yml</span></a>.</p>
 <p>Supported deployment scenarios (defined in <span class="tt">hosts.yml</span>): RSU, PIXKIT, HOLOLENS, BIKE, and others.</p>
-<h1 class="doxsection"><a class="anchor" id="sensor-adapters-1"></a>
-Sensor Adapters</h1>
-<p>Sensor Adapters are the integration point between sensor-specific pipelines and the CPS. Each adapter:</p><ol type="1">
-<li>Receives detections from a sensor pipeline (via MQTT or DDS)</li>
-<li>Normalises the data into the CPS <span class="tt">generation/objects</span> JSON format</li>
-<li>Publishes to the DDS topic <span class="tt">generation/objects</span></li>
-</ol>
-<h2 class="doxsection"><a class="anchor" id="implementing-a-custom-adapter"></a>
-Implementing a Custom Adapter</h2>
-<p>To integrate a new sensor type, create an adapter that publishes a JSON message to the DDS topic <span class="tt">generation/objects</span> (domain ID matching <span class="tt">aggregator.domain_id</span> in the <a class="el" href="class_generation.html">Generation</a> config) in the format described in the Object Data<a class="el" href="struct_object.html">Object</a> Data section above.</p>
-<p>Optionally, also publish to <span class="tt">generation/sensors</span> to include a Sensor Information Container in the CPM.</p>
-<p>The existing adapters (<a href="sensor-adapters/camera-adapter/">camera</a>, <a href="sensor-adapters/radar-adapter/">radar</a>) are minimal and serve as practical templates.</p>
 <h1 class="doxsection"><a class="anchor" id="monitoring--metrics"></a>
 Monitoring &amp; Metrics</h1>
 <p>When Prometheus metrics are enabled (<span class="tt">prometheus = true</span> in config), the services expose metrics endpoints:</p>
@@ -506,6 +498,7 @@ Documentation &amp; Examples</h1>
 <h1 class="doxsection"><a class="anchor" id="authors"></a>
 Authors</h1>
 <p>Development of the CPS is part of ongoing research work at <a href="https://www.it.pt/Groups/Index/36">Instituto de Telecomunicações' Network Architectures and Protocols Group</a>.</p>
+<p>Questions and Bug Reports: <a href="#" onclick="location.href='mai'+'lto:'+'and'+'re'+'iag'+'f@'+'av.'+'it'+'.pt'; return false;">andre<span class="obfuscator">.nosp@m.</span>iagf<span class="obfuscator">.nosp@m.</span>@av.i<span class="obfuscator">.nosp@m.</span>t.pt</a> / <a href="#" onclick="location.href='mai'+'lto:'+'jp.'+'am'+'ara'+'l@'+'av.'+'it'+'.pt'; return false;">jp.am<span class="obfuscator">.nosp@m.</span>aral<span class="obfuscator">.nosp@m.</span>@av.i<span class="obfuscator">.nosp@m.</span>t.pt</a></p>
 <h1 class="doxsection"><a class="anchor" id="license"></a>
 License</h1>
 <p>The Collective Perception Service is licensed under LGPLv3. See the [LICENSE](LICENSE) file for details. </p>

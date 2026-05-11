@@ -1,7 +1,8 @@
 var searchData=
 [
-  ['level_20structure_0',['Top-Level Structure',['../md_docs_2cpm_reference.html#top-level-structure',1,'']]],
-  ['license_1',['License',['../index.html#license',1,'']]],
-  ['local_20development_2',['Docker Compose (local / development)',['../index.html#docker-compose-local--development',1,'']]],
-  ['logic_3',['Logic',['../index.html#cpm-generation-logic',1,'CPM Generation Logic'],['../index.html#cpm-processing-logic',1,'CPM Processing Logic']]]
+  ['management_20container_0',['Management Container',['../md_docs_2cpm_reference.html#management-container',1,'']]],
+  ['measurementdeltatime_1',['measurementDeltaTime',['../md_docs_2cpm_reference.html#measurementdeltatime',1,'']]],
+  ['message_20formats_2',['Message Formats',['../index.html#message-formats',1,'']]],
+  ['metrics_3',['Monitoring &amp;amp; Metrics',['../index.html#monitoring--metrics',1,'']]],
+  ['monitoring_20metrics_4',['Monitoring &amp;amp; Metrics',['../index.html#monitoring--metrics',1,'']]]
 ];

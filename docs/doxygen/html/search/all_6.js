@@ -21,9 +21,7 @@ var searchData=
   ['containers_20array_18',['CPM Containers Array',['../md_docs_2cpm_reference.html#cpm-containers-array',1,'']]],
   ['contents_19',['Table of Contents',['../index.html#table-of-contents',1,'']]],
   ['cpm_20containers_20array_20',['CPM Containers Array',['../md_docs_2cpm_reference.html#cpm-containers-array',1,'']]],
-  ['cpm_20generation_20logic_21',['CPM Generation Logic',['../index.html#cpm-generation-logic',1,'']]],
-  ['cpm_20processing_20logic_22',['CPM Processing Logic',['../index.html#cpm-processing-logic',1,'']]],
-  ['cpm_20structure_20reference_23',['CPM Structure Reference',['../md_docs_2cpm_reference.html',1,'']]],
-  ['cps_24',['Collective Perception Service (CPS)',['../index.html',1,'']]],
-  ['custom_20adapter_25',['Implementing a Custom Adapter',['../index.html#implementing-a-custom-adapter',1,'']]]
+  ['cpm_20structure_20reference_21',['CPM Structure Reference',['../md_docs_2cpm_reference.html',1,'']]],
+  ['cps_22',['Collective Perception Service (CPS)',['../index.html',1,'']]],
+  ['custom_20adapter_23',['Implementing a Custom Adapter',['../index.html#implementing-a-custom-adapter',1,'']]]
 ];
