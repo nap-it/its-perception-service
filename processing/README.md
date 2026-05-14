@@ -1,25 +1,51 @@
 # Processing Service
 
-The Processing service subscribes to DDS CPM topics, decodes each received CPM, and republishes the contained object data in an enriched, application-friendly JSON format on MQTT, DDS, and Zenoh.
+The Processing service receives Collective Perception Messages (CPMs) through DDS, decodes the contained object information, enriches the data, and republishes the processed objects through DDS, MQTT, and Zenoh.
 
-### What It Does
+## Internal Components
 
-For each incoming CPM the Processing service:
-1. Extracts sender station metadata (position, speed, heading, altitude, acceleration) from the station's last known CAM, looked up via the Locator
-2. Converts ETSI-encoded relative x/y distances back to absolute WGS-84 lat/lon coordinates
-3. Decomposes object speed and heading into north/east (x/y) velocity components
-4. Maps ETSI integer codes for sensor types and object classifications to human-readable strings
-5. Publishes the enriched object list on all configured outputs
-
-### Output Topic: `objects`
-
-The output is published on the `objects` topic across all enabled transports. See the root [README.md](../README.md#processed-objects----output-topic-objects) for the full JSON format and field reference.
+| Component | Responsibility |
+|---|---|
+| `Processor` | Receives CPMs, extracts perceived object information, converts ETSI-relative coordinates to absolute coordinates, computes derived kinematic information, and publishes processed objects. |
+| `Locator` | Tracks the state of CPM-sending stations from incoming CAM/VAM messages. Provides sender station metadata used to enrich the processed output. |
+| `Publisher` | Publishes processed object information through DDS, MQTT, and Zenoh outputs. |
 
 ### Locator
 
 The Processing service includes its own Locator component that tracks the kinematic state of CPM-sending stations by listening to their CAM broadcasts. This data is used to populate the `sender` block of the output message. In `static` mode (when the processing station is receiving its own CPMs), the configured `station_id` is used with a minimal static entry.
 
+## Communication Interfaces
+
+The Processing service exchanges information with other ITS Perception Service components and external systems through the following communication interfaces:
+
+| Interface | Direction | Technologies |
+|---|---|---|
+| CPM input | V2X stack / Generation → Processing | DDS |
+| Station information input | CAM/VAM → Locator | DDS, MQTT |
+| Processed object output | Processing → External applications | DDS, MQTT, Zenoh |
+
+## Processing Cycle
+
+For each received CPM, the service performs the following steps:
+
+1. Decodes the CPM structure and extracts perceived objects
+2. Retrieves sender station metadata from the Locator
+3. Converts ETSI relative object coordinates to WGS-84 latitude and longitude
+4. Computes north/east velocity components from speed and heading
+5. Maps ETSI object classifications and sensor types to readable strings
+6. Publishes the processed object list through all enabled outputs
+
+### Output Topic
+
+Processed objects are published on the `objects` topic across all enabled transports.
+
+See the root [README.md](../README.md#processed-objects----output-topic-objects) for the full JSON structure and field reference.
+
+
+
 ## `config.ini` Configuration
+
+The Processing service is configured through a `config.ini` file mounted into the container.
 
 ```ini
 [general]

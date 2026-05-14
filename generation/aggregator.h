@@ -74,42 +74,42 @@ constexpr int SENSOR_TYPE_LIDAR = 2;
 constexpr int SENSOR_TYPE_CAMERA = 3;
 
 struct Object {
-    int objectID;
-    int cpmObjectID;
-    int sensorID;
-    double timestamp;
-    int classification;
-    int confidence;
-    float speed;
-    float heading;
-    float acceleration;
-    float latitude;
-    float longitude;
-    float altitude = NOT_PRESENT_FLOAT;
-    float size_x = NOT_PRESENT_FLOAT;
-    float size_y = NOT_PRESENT_FLOAT;
-    float size_z = NOT_PRESENT_FLOAT;
-    float angular_velocity = NOT_PRESENT_FLOAT;
-    float cov_latitude = NOT_PRESENT_FLOAT;
-    float cov_longitude = NOT_PRESENT_FLOAT;
-    float cov_altitude = NOT_PRESENT_FLOAT;
-    float cov_heading = NOT_PRESENT_FLOAT;
-    float cov_speed = NOT_PRESENT_FLOAT;
-    float cov_angular_velocity = NOT_PRESENT_FLOAT;
+    int objectID;                 ///< Object identifier from the sensor source.
+    int cpmObjectID;              ///< CPM object identifier assigned by the Aggregator.
+    int sensorID;                 ///< Identifier of the sensor that produced the object.
+    double timestamp;             ///< Object timestamp in UNIX seconds.
+    int classification;           ///< Object classification code.
+    int confidence;               ///< Classification confidence value.
+    float speed;                  ///< Speed in m/s.
+    float heading;                ///< Heading in degrees.
+    float acceleration;           ///< Longitudinal acceleration in m/s².
+    float latitude;               ///< Latitude in WGS-84 degrees.
+    float longitude;              ///< Longitude in WGS-84 degrees.
+    float altitude = NOT_PRESENT_FLOAT; ///< Altitude in meters, or NOT_PRESENT_FLOAT when unavailable.
+    float size_x = NOT_PRESENT_FLOAT;   ///< Object length in meters, or NOT_PRESENT_FLOAT when unavailable.
+    float size_y = NOT_PRESENT_FLOAT;   ///< Object width in meters, or NOT_PRESENT_FLOAT when unavailable.
+    float size_z = NOT_PRESENT_FLOAT;   ///< Object height in meters, or NOT_PRESENT_FLOAT when unavailable.
+    float angular_velocity = NOT_PRESENT_FLOAT; ///< Yaw rate in degrees/s, or NOT_PRESENT_FLOAT when unavailable.
+    float cov_latitude = NOT_PRESENT_FLOAT;      ///< Latitude covariance.
+    float cov_longitude = NOT_PRESENT_FLOAT;     ///< Longitude covariance.
+    float cov_altitude = NOT_PRESENT_FLOAT;      ///< Altitude covariance.
+    float cov_heading = NOT_PRESENT_FLOAT;       ///< Heading covariance.
+    float cov_speed = NOT_PRESENT_FLOAT;         ///< Speed covariance.
+    float cov_angular_velocity = NOT_PRESENT_FLOAT; ///< Angular velocity covariance.
 };
 
 struct ObjectEntity {
-    bool to_send = false;
-    Object last_sent;
-    Object current;
-    double priority = 0.0;
-    bool has_updated = false;
+    bool to_send = false;   ///< True when the object should be included in the next CPM.
+    Object last_sent;       ///< Last object state that was included in a CPM.
+    Object current;         ///< Most recent object state received from the sensor.
+    double priority = 0.0;  ///< Computed freshness/priority score.
+    bool has_updated = false; ///< True when current differs from last_sent.
 };
 
 struct SensorInfo {
-    int sensorID = NOT_PRESENT_INT;
-    int sensorType = NOT_PRESENT_INT;
-    bool shadowingApplies = false;
+    int sensorID = NOT_PRESENT_INT;      ///< Sensor identifier.
+    int sensorType = NOT_PRESENT_INT;    ///< Sensor type code.
+    bool shadowingApplies = false;       ///< True when shadowing rules apply to this sensor.
 };
 
 class Aggregator {
@@ -195,101 +195,127 @@ public:
     }
 
 private:
-    Dds* dds_;
+    Dds* dds_;  ///< DDS client used to publish and subscribe.
 
-    zenoh::Session* session_ = nullptr;
+    zenoh::Session* session_ = nullptr;  ///< Optional Zenoh session used when Zenoh transport is enabled.
     
-    std::mutex objMtx_;
-    std::unordered_map<int, ObjectEntity> all_objects_; // All objects received
+    std::mutex objMtx_;  ///< Protects access to all_objects_.
+    std::unordered_map<int, ObjectEntity> all_objects_; ///< Cache of all received objects keyed by object ID.
 
-    std::mutex sensorMtx_;
-    std::unordered_map<int, SensorInfo> sensor_info_; // Sensor information
+    std::mutex sensorMtx_;  ///< Protects access to sensor_info_.
+    std::unordered_map<int, SensorInfo> sensor_info_; ///< Cache of sensor metadata keyed by sensor ID.
 
     // Freshness thresholds
-    double minTimeDiff_ = 1000;      // Minimum time difference in milliseconds
-    double minDistanceDiff_ = 4.0;   // Minimum distance difference in meters
-    double minSpeedDiff_ = 0.5;      // Minimum speed difference (m/s)
-    double minHeadingDiff_ = 4.0;    // Minimum heading difference (degrees)
-    bool ignoreRules_;               // Ignore freshness rules
-    bool performanceLogs_;           // Enable performance logs
-    std::string zenohEndpoint_;      // Zenoh endpoint for communication
-    std::string priorityType_;       // Priority type
+    double minTimeDiff_ = 1000;      ///< Minimum time difference in milliseconds.
+    double minDistanceDiff_ = 4.0;   ///< Minimum distance difference in meters.
+    double minSpeedDiff_ = 0.5;      ///< Minimum speed difference in m/s.
+    double minHeadingDiff_ = 4.0;    ///< Minimum heading difference in degrees.
+    bool ignoreRules_;               ///< When true, bypass freshness checks.
+    bool performanceLogs_;           ///< When true, emit performance timing logs.
+    std::string zenohEndpoint_;      ///< Zenoh endpoint used for communication.
+    std::string priorityType_;       ///< Priority calculation mode.
 
     // Cleanup configuration
-    long maxObjectAge_;     // Maximum object age in seconds
-    long cleanInterval_;    // Cleanup interval in seconds
-    bool addPendingObjects_; // Flag to add past objects
+    long maxObjectAge_;     ///< Maximum object age in seconds before eviction.
+    long cleanInterval_;    ///< Cleanup interval in seconds.
+    bool addPendingObjects_; ///< When true, include pending historical objects.
 
     // ID map for CPM object IDs
-    int currentID_ = 1;
-    std::unordered_map<int, int> idMap_;
+    int currentID_ = 1;  ///< Next CPM object ID to assign.
+    std::unordered_map<int, int> idMap_; ///< Mapping from raw object ID to stable CPM object ID.
 
     // Thread control for periodic cleanup
-    std::atomic<bool> stopFlag_;
-    std::thread runThread_;
+    std::atomic<bool> stopFlag_;  ///< Signals the run loop and cleanup thread to stop.
+    std::thread runThread_;       ///< Worker thread that executes the main run loop.
 
     // File logger
-    std::shared_ptr<spdlog::logger> aggregator_file_logger_;
+    std::shared_ptr<spdlog::logger> aggregator_file_logger_; ///< File-backed logger for diagnostics.
 
     // Metrics
-    bool prometheus_;
-    GenMetricHandles* metrics_;
+    bool prometheus_;           ///< When true, publish Prometheus metrics.
+    GenMetricHandles* metrics_; ///< Metric handles owned by the caller.
 
     /**
-     * @brief The main loop that periodically cleans the lastSent list.
+     * @brief The main loop that periodically cleans the object cache.
+     * Executed in a background worker thread, evicts stale objects at regular intervals.
      */
     void runLoop();
 
     /**
-     * @brief Remove entries from lastSent_ that are older than maxObjectAgeMs_.
+     * @brief Remove entries from lastSent_ cache that are older than maxObjectAge_.
+     * Prevents unbounded memory growth from inactive objects.
      */
     void cleanLastSent();
 
     /**
      * @brief Check if a new object is fresh compared to the previously sent object.
+     * Uses ETSI or movement-predictor priority thresholds to determine freshness.
+     * @param newObj The most recent object state.
+     * @param oldObj The previously sent object state.
+     * @return true if the object meets freshness criteria, false otherwise.
      */
     bool isFresh(const Object& newObj, const Object& oldObj);
 
     /**
-     * @brief Calculate the distance between two lat/lon coordinates (in meters) using the Haversine formula.
+     * @brief Calculate the geodetic distance between two lat/lon coordinates using the Haversine formula.
+     * Returns distance in meters, accurate for small distances (< 500 km).
+     * @param lat1 Latitude of point 1 in degrees.
+     * @param lon1 Longitude of point 1 in degrees.
+     * @param lat2 Latitude of point 2 in degrees.
+     * @param lon2 Longitude of point 2 in degrees.
+     * @return double Distance in meters.
      */
     double calculateHaversineDistance(double lat1, double lon1, double lat2, double lon2);
 
     /**
-     * @brief Calculate the CPM object ID based on the sensor and object IDs.
+     * @brief Calculate the CPM object ID based on sensor and object identifiers.
+     * Ensures consistent ID mapping across CPM cycles independent of sensor IDs.
+     * @param sensorID Identifier of the source sensor.
+     * @param objectID Raw object identifier from the sensor.
+     * @return int CPM object ID.
      */
     int calculateCpmObjectID(int sensorID, int objectID);
 
     /**
-     * @brief Calculate the priority of an object.
-     * @return float Priority value.
+     * @brief Calculate the priority/freshness score of an object.
+     * Routes to either ETSI or movement-predictor priority calculation based on priorityType_.
+     * @param last_sent The previously sent object state.
+     * @param current The most recent object state.
+     * @return float Priority value (higher = more urgent to include in CPM).
      */
-
     float getPriority(Object last_sent, Object current);
 
     /**
-     * @brief Calculate the priority of an object based the ETSI rules.
-     * @return float Priority value.
+     * @brief Calculate object priority using ETSI TS 103 324 rules.
+     * Evaluates position change, speed change, heading change, and time since last inclusion.
+     * @param last_sent The previously sent object state.
+     * @param current The most recent object state.
+     * @return float Priority value based on ETSI thresholds.
      */
     float priorityETSI(Object last_sent, Object current);
 
     /**
-     * @brief Calculate the priority of an object based on movement predictor.
-     * @return float Priority value.
+     * @brief Calculate object priority using movement prediction.
+     * Estimates position based on last dynamics sent and computed the error of the prediction.
+     * @param last_sent The previously sent object state.
+     * @param current The most recent object state.
+     * @return float Priority value based on predicted movement.
      */
     float priorityMovementPredictor(Object last_sent, Object current);
 
     /**
-     * @brief Convert degrees to radians
-     * @return double Angle in radians
+     * @brief Convert degrees to radians.
+     * @param deg Angle in degrees.
+     * @return double Angle in radians.
      */
     double deg2rad(double deg) {
         return deg * M_PI_180;
     }
 
     /**
-     * @brief Convert radians to degrees
-     * @return double Angle in degrees
+     * @brief Convert radians to degrees.
+     * @param rad Angle in radians.
+     * @return double Angle in degrees.
      */
     double rad2deg(double rad) {
         return rad * M_180_PI;

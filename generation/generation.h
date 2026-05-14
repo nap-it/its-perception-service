@@ -39,16 +39,16 @@ class Generation {
 public:
     /**
      * @brief Construct a new Generation object.
-     * @param aggregator Aggregator object.
-     * @param locator Locator object.
-     * @param requestRateMs Initial request rate in milliseconds.
-     * @param ddsDomain DDS domain ID if provider is DDS.
-     * @param ddsTopic DDS topic to subscribe for CAMs if provider is DDS.
-     * @param performanceLogs Enable performance logs.
-     * @param maxObjects Maximum number of objects to get from the aggregator (default: -1 for no limit).
-     * @param mqttDebug Enable MQTT debug logs (default: false).
-     * @param prometheus Enable Prometheus metrics (default: false).
-     * @param metrics Pointer to metric handles structure (default: nullptr).
+     * @param aggregator Shared pointer to Aggregator for querying fresh objects.
+     * @param locator Shared pointer to Locator for station metadata.
+     * @param requestRateMs Initial CPM generation rate in milliseconds.
+     * @param ddsDomain DDS domain ID for CPM publication.
+     * @param ddsTopic DDS topic name for CPM publication (e.g., "vanetza/in/cpm").
+     * @param performanceLogs Enable performance timing logs (default: false).
+     * @param maxObjects Maximum objects per CPM, -1 for unlimited (default: -1).
+     * @param mqttDebug Enable MQTT debug output (default: false).
+     * @param prometheus Enable Prometheus metrics collection (default: false).
+     * @param metrics Pointer to metric handles provided by the caller (default: nullptr).
      */
     Generation(std::shared_ptr<Aggregator> aggregator, std::shared_ptr<Locator> locator, int requestRateMs, int ddsDomain, std::string ddsTopic, bool performanceLogs = false, int maxObjects = -1, bool mqttDebug = false, bool prometheus = false, GenMetricHandles* metrics = nullptr);
 
@@ -58,7 +58,7 @@ public:
     ~Generation();
 
     /**
-     * @brief Start the generation loop.
+     * @brief Start the generation loop in a worker thread.
      */
     void run();
 
@@ -68,41 +68,42 @@ public:
     void stop();
 
     /**
-     * @brief Dynamically update the request rate.
-     * @param newRateMs New request rate in milliseconds.
+     * @brief Dynamically update the CPM generation rate.
+     * Can be called from any thread; the change takes effect on the next cycle.
+     * @param newRateMs New generation rate in milliseconds.
      */
     void setRequestRate(int newRateMs);
 
     /**
-     * @brief Get the current request rate.
-     * @return int Request rate in milliseconds.
+     * @brief Get the current CPM generation rate.
+     * @return int Current generation rate in milliseconds.
      */
     int getRequestRate() const { return requestRateMs_.load(); }
 
 private:
-    std::shared_ptr<Aggregator> aggregator_;
-    std::shared_ptr<Locator> locator_;
-    bool performanceLogs_;
-    int maxObjects_;
-    std::atomic<int> requestRateMs_;
-    std::atomic<bool> stopFlag_;
-    std::thread generationThread_;
-    Builder builder_;
+    std::shared_ptr<Aggregator> aggregator_;  ///< Shared reference to the Aggregator for querying fresh objects.
+    std::shared_ptr<Locator> locator_;        ///< Shared reference to the Locator for station metadata.
+    bool performanceLogs_;                    ///< Enables performance timing logs.
+    int maxObjects_;                          ///< Maximum objects per CPM, -1 for no limit.
+    std::atomic<int> requestRateMs_;          ///< Current request rate in milliseconds.
+    std::atomic<bool> stopFlag_;              ///< Signals the generation loop to stop.
+    std::thread generationThread_;            ///< Worker thread that executes the main generation loop.
+    Builder builder_;                         ///< Stateless CPM JSON builder.
 
     // File logger
-    std::shared_ptr<spdlog::logger> generation_file_logger_;
+    std::shared_ptr<spdlog::logger> generation_file_logger_; ///< File-backed logger for diagnostics.
 
     // DDS client
-    Dds* dds_;
-    std::string ddsTopic_;
+    Dds* dds_;                ///< DDS client used for publishing CPMs.
+    std::string ddsTopic_;    ///< DDS topic for CPM publication.
 
     // MQTT client 
-    bool mqttDebug_;
-    MqttWrapper* mqttClient_;
+    bool mqttDebug_;          ///< When true, echo CPMs to MQTT for debugging.
+    MqttWrapper* mqttClient_; ///< Optional MQTT client for debug output.
 
     // Metrics
-    bool prometheus_;
-    GenMetricHandles* metrics_;
+    bool prometheus_;           ///< Enables Prometheus metrics collection.
+    GenMetricHandles* metrics_; ///< Pointer to metric handles provided by the caller.
 
     /**
      * @brief Main loop that periodically retrieves fresh objects, sensor data and constructs CPMs.

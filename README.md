@@ -1,6 +1,6 @@
-# Collective Perception Service (CPS)
+# ITS Perception Service
 
-The Collective Perception Service (CPS) is a C++ V2X communication module implementing the **Collective Perception Service** according to ETSI TS 103 324. It collects object detections from multiple heterogeneous sensors — radars, cameras, and lidar-based platforms — and generates **Collective Perception Messages (CPMs)** that inform nearby vehicles and infrastructure of the detected objects. A companion **Processing** service decodes incoming CPMs and republishes the enriched object data on standard messaging transports for consumption by other applications.
+The ITS Perception Service is a C++ V2X communication module implementing the **Collective Perception Service (CPS)** according to ETSI TS 103 324. It collects object detections from multiple heterogeneous sensors — radars, cameras, and lidar-based platforms — and generates **Collective Perception Messages (CPMs)** that inform nearby vehicles and infrastructure of the detected objects. It also supports the reception and processing of incoming CPMs, extracting and republishing the perceived object information through standard messaging transports for use by external applications
 
 ### Citation
 If you find this code useful in your research, please consider citing:
@@ -47,7 +47,7 @@ If you find this code useful in your research, please consider citing:
 
 
 - **Docker & Docker Compose** *(mandatory)*  
-  Used to run all CPS components.
+  Used to run all ITS Perception Service components.
   ```bash
   docker --version
   docker compose version
@@ -55,7 +55,7 @@ If you find this code useful in your research, please consider citing:
 
 - **V2X Stack (Vanetza-NAP)** *(optional)*  
   Required only for transmitting CPMs over a V2X network.  
-  The CPS can run without it — Generation publishes CPMs on DDS and the Processing service can consume them locally.  
+  The ITS Perception Service can run without it — Generation publishes CPMs on DDS and the Processing service can consume them locally.  
 
   Vanetza-NAP is available at [GitHub](https://github.com/nap-it/vanetza-nap)
 
@@ -72,7 +72,7 @@ git clone https://github.com/nap-it/its-perception-service.git
 cd its-perception-service
 ```
 
-2. Start the CPS. Note that by default the docker compose starts 4 containers: Generation, Processing, Camera Adapter, and Radar Adapter:
+2. Start the ITS Perception Service. By default, docker compose starts four containers: Generation, Processing, Camera Adapter, and Radar Adapter:
 ```bash
 docker compose up -d
 ```
@@ -101,10 +101,10 @@ mosquitto_sub -h localhost -t "objects" -v
 
 ## Architecture
 
-The Collective Perception Service (CPS) is composed of several Docker containers that work together to generate and process Collective Perception Messages (CPMs).
+The ITS Perception Service is composed of several Docker containers that work together to generate and process Collective Perception Messages (CPMs).
 
 The main components are:
-- **Sensor Adapters**: lightweight bridges that receive data from external sensor sources, convert it to the CPS object format, and publish it to the `generation/objects` DDS topic. 
+- **Sensor Adapters**: lightweight bridges that receive data from external sensor sources, convert it to the internal object format, and publish it to the `generation/objects` DDS topic. 
 - **Generation**: receives object and sensor information from the Sensor Adapters through DDS or Zenoh. It keeps track of the detected objects, checks which ones are fresh enough to be included according to ETSI priority rules, builds a compliant CPM JSON message, and publishes it through DDS, typically to `vanetza/in/cpm` for V2X transmission.
 
 - **Processing**: receives CPMs from DDS topics, decodes each message, enriches the objects with absolute coordinates and decomposed velocity vectors, and republishes the result in an application-friendly JSON format through MQTT, DDS, and Zenoh.
@@ -113,8 +113,8 @@ The main components are:
 
 
 ### Sensor Adapters
-Sensor adapters connect the CPS to external data sources such as cameras, radars, or autonomous vehicle stacks.
-Each adapter receives data from a specific source, converts it to the internal CPS object format, and publishes it to the `generation/objects` DDS topic.  
+Sensor adapters connect the ITS Perception Service to external data sources such as cameras, radars, or autonomous vehicle stacks.
+Each adapter receives data from a specific source, converts it to the internal object format, and publishes it to the `generation/objects` DDS topic.  
 Multiple adapters can run at the same time, depending on the available sensors.
 
 
@@ -148,13 +148,15 @@ On each generation cycle, by default every 100 ms, the service:
 3. Passes the fresh objects, sensor metadata, and station position to the Builder
 4. Publishes the resulting CPM JSON
 
+
+
 **ETSI Priority Rules** — an object is considered fresh if any of the following thresholds are exceeded since the object was last included in a CPM:
 - Position change ≥ 4 m (P_MIN–P_MAX: 0–8 m)
 - Speed change ≥ 0.5 m/s (S_MIN–S_MAX: 0–1 m/s)
 - Heading change ≥ 4° (O_MIN–O_MAX: 0–8°)
 - Time since last inclusion ≥ 1000 ms (T_MIN–T_MAX: 100–1000 ms)
 
-These thresholds can be bypassed by setting `aggregator.ignore_rules = true` in the Generation config. In this case all objects are included in the CPM.
+These thresholds can be disabled by setting `aggregator.ignore_rules = true` in the Generation config. In this case all objects are included in the CPM.
 
 ### Processing 
 The Processing service receives CPMs from DDS topics and converts them into an easier-to-use object format.
@@ -166,13 +168,28 @@ For each received CPM, the Processing service:
 4. Converts sensor type and classification codes into readable strings.
 5. Publishes the enriched object list through MQTT, DDS, and Zenoh.
 
+
+## Communication Technologies
+
+The ITS Perception Service supports multiple communication technologies depending on the deployment scenario.  
+Due to its microservice-based architecture, communication interfaces are isolated from the core generation and processing logic, making it straightforward to add or replace communication backends.
+
+| Interface | Description | Technologies |
+|---|---|---|
+| Sensor input | Object detections received from external sensors by the Adapter services | DDS, MQTT, Zenoh, ... |
+| Internal communication | Communication between ITS Perception Service containers | DDS |
+| CPM dissemination | CPMs forwarded to Vanetza-NAP for V2X transmission | DDS |
+| CPM reception | CPMs received from Vanetza-NAP | DDS |
+| Processed object output | Enriched object data published for external applications | MQTT, DDS, Zenoh |
+| Station location input | CAM/VAM messages used for station positioning | DDS, MQTT |
+
 ## Message Formats
 
 ### Sensor Data — input topic `generation/sensors`
 
 ```json
 {
-    "sensorID": 3,
+    "sensorID": 1,
     "sensorType": 3,
     "shadowingApplies": false
 }
@@ -216,7 +233,7 @@ For each received CPM, the Processing service:
 }
 ```
 
-Fields marked as optional can be omitted; the Generation service treats missing values as unavailable.
+Optional fields may be omitted; the Generation service treats missing values as unavailable.
 
 | Field | Type | Required | Description |
 |---|---|---|---|
@@ -312,7 +329,7 @@ Additional compose files are available for single-camera and radar-only deployme
 
 ### Ansible (production)
 
-The [`deployment/`](deployment/) folder contains an Ansible role that deploys the CPS to one or more target hosts.
+The [`deployment/`](deployment/) folder contains an Ansible role that deploys the ITS Perception Service to one or more target hosts.
 
 ```bash
 cd deployment
@@ -363,25 +380,56 @@ Performance CSV logs (when `performance_logs = true`) are written to `/logs/` in
 - Prometheus metrics
 - Ansible deployment
 
+
 ## Documentation & Examples
 
-- **Component configuration:** See each component's `README.md` for `config.ini` parameter reference
-- **CPM structure reference:** See [docs/cpmReference.md](docs/cpmReference.md) for a field-by-field breakdown of the CPM JSON format
-- **Input examples:**
-  - [docs/examples/sensor_object_input.json](docs/examples/sensor_object_input.json) — object data published by a sensor adapter
-  - [docs/examples/sensor_info_input.json](docs/examples/sensor_info_input.json) — sensor metadata published by a sensor adapter
-- **Output examples:**
-  - [docs/examples/cpm_output.json](docs/examples/cpm_output.json) — synthetic CPM produced by the Generation service
-  - [docs/examples/cpm_output_captured.json](docs/examples/cpm_output_captured.json) — real captured CPM (from Autoware VPI / ITS aggregation sensor)
-  - [docs/examples/cpm_received_v2x.json](docs/examples/cpm_received_v2x.json) — real CPM as received over V2X (with radio metadata)
-  - [docs/examples/processed_output.json](docs/examples/processed_output.json) — enriched objects published by the Processing service
+This repository includes configuration references, CPM structure documentation, input/output examples, and automatically generated API documentation.
+
+### Configuration Reference
+
+Each component provides its own configuration reference and deployment notes:
+
+- [Generation](generation/README.md)
+- [Processing](processing/README.md)
+- [Camera Adapter](sensor-adapters/camera-adapter/README.md)
+- [Radar Adapter](sensor-adapters/radar-adapter/README.md)
+- [Bike Adapter](sensor-adapters/bike-adapter/README.md)
+- [Autoware Adapter](sensor-adapters/autoware-adapter/README.md)
+
+### CPM Structure Reference
+
+For a field-by-field description of the CPM JSON structure, see:
+
+- [docs/cpmReference.md](docs/cpmReference.md)
+
+### Input Examples
+
+- [docs/examples/sensor_object_input.json](docs/examples/sensor_object_input.json) — example object detections published to `generation/objects`
+- [docs/examples/sensor_info_input.json](docs/examples/sensor_info_input.json) — example sensor metadata published to `generation/sensors`
+
+### Output Examples
+
+- [docs/examples/cpm_output.json](docs/examples/cpm_output.json) — example CPM generated by the Generation service
+- [docs/examples/cpm_output_captured.json](docs/examples/cpm_output_captured.json) — real CPM captured from an ITS aggregation source
+- [docs/examples/cpm_received_v2x.json](docs/examples/cpm_received_v2x.json) — CPM received through V2X including radio metadata
+- [docs/examples/processed_output.json](docs/examples/processed_output.json) — enriched object output produced by the Processing service
+
+### API Documentation (Doxygen)
+
+This project provides automatically generated API documentation using Doxygen.
+
+To generate the documentation locally:
+
+```bash
+doxygen Doxyfile
+```
 
 ## Authors
 
-Development of the CPS is part of ongoing research work at [Instituto de Telecomunicações' Network Architectures and Protocols Group](https://www.it.pt/Groups/Index/36).
+Development of the ITS Perception Service is part of ongoing research work at [Instituto de Telecomunicações' Network Architectures and Protocols Group](https://www.it.pt/Groups/Index/36).
 
-Questions and Bug Reports: andreiagf@av.it.pt / jp.amaral@av.it.pt 
+Questions and bug reports: andreiagf@av.it.pt / jp.amaral@av.it.pt 
 
 ## License
 
-The Collective Perception Service is licensed under LGPLv3. See the [LICENSE](LICENSE) file for details.
+The ITS Perception Service is licensed under LGPLv3. See the [LICENSE](LICENSE) file for details.

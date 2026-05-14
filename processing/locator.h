@@ -49,21 +49,21 @@ enum class ProviderType {
 };
 
 struct SenderInfo {
-    int station_id;
-    float speed;        
-    float heading;      
-    float altitude;     
-    float acceleration; 
-    std::chrono::steady_clock::time_point cam_timestamp;
+    int station_id;   ///< Sender station identifier.
+    float speed;        ///< Station speed in m/s.
+    float heading;      ///< Station heading in degrees.
+    float altitude;     ///< Station altitude in meters.
+    float acceleration; ///< Station acceleration in m/s².
+    std::chrono::steady_clock::time_point cam_timestamp; ///< Timestamp when CAM was received.
 };
 
 class Locator {
 public:
     /**
-     * @brief Construct a new Locator object.
+     * @brief Construct a new Locator object for the Processing service.
      *
      * @param provider The provider type: STATIC, MQTT, or DDS.
-     * @param configStationId Station id from configuration (when processing own messages)
+     * @param configStationId Station ID from configuration (used in STATIC mode).
      * @param mqttBroker MQTT broker address if provider is MQTT.
      * @param mqttTopic MQTT topic to subscribe for CAMs if provider is MQTT.
      * @param ddsDomain DDS domain ID if provider is DDS.
@@ -76,49 +76,83 @@ public:
                    int ddsDomain,
                    std::string ddsTopic);
     
+    /**
+     * @brief Destroy the Locator object.
+     */
     ~Locator();
 
+    /**
+     * @brief Start the Locator's main loop in its own thread.
+     * Manages subscriptions to CAM topics depending on the provider mode.
+     */
     void run();
 
-    // Getter for station data.
+    /**
+     * @brief Retrieve the latest kinematic state for a given sender station.
+     * Returns cached CAM data if available, or default values in STATIC mode.
+     * @param stationId The station identifier to query.
+     * @return SenderInfo The latest kinematic state for the station.
+     */
     SenderInfo getStationData(int stationId);
 private:
 
-    std::unordered_map<int, SenderInfo> camDataMap_;
-    std::mutex camMtx_;
+    std::unordered_map<int, SenderInfo> camDataMap_; ///< Cache of latest CAM data indexed by station ID.
+    std::mutex camMtx_;                              ///< Protects access to camDataMap_.
 
     // Station ID for own messages.
-    int station_id_;
+    int station_id_; ///< Configured station ID for handling own CAM broadcasts.
 
-    std::thread locatorThread_;
+    std::thread locatorThread_; ///< Worker thread that runs the Locator's main loop.
 
     // Provider type chosen at construction.
-    ProviderType provider_;
+    ProviderType provider_; ///< Location provider mode: STATIC, MQTT, or DDS.
 
     // MQTT client 
-    MqttWrapper* mqttClient_;
+    MqttWrapper* mqttClient_; ///< Optional MQTT client used in MQTT provider mode.
 
     // MQTT topic to subscribe to for CAM location messages.
-    std::string mqttTopic_;
+    std::string mqttTopic_;   ///< MQTT topic for CAM subscription.
 
     // DDS client
-    Dds* dds_;
+    Dds* dds_;                ///< Optional DDS client used in DDS provider mode.
 
     // DDS topic to subscribe to for CAM location messages.
-    std::string ddsTopic_;
+    std::string ddsTopic_;    ///< DDS topic for CAM subscription.
 
-    // Internal callback for MQTT messages.
+    /**
+     * @brief Internal callback for MQTT messages.
+     * Invoked when a CAM message arrives on the subscribed MQTT topic.
+     * @param topic The MQTT topic.
+     * @param message The received message (JSON formatted).
+     */
     void on_message_mqtt(const std::string& topic, const std::string& message);
 
-    // Internal callback for DDS messages.
+    /**
+     * @brief Internal callback for DDS messages.
+     * Invoked when a CAM message arrives on the subscribed DDS topic.
+     * @param topic The DDS topic.
+     * @param message The received message (JSON formatted).
+     */
     void on_message_dds(const std::string& topic, const std::string& message);
 
-    // Helper to parse CAM messages and update location.
+    /**
+     * @brief Parse a CAM message and update the sender data cache.
+     * Extracts station ID, speed, heading, altitude, and acceleration from incoming CAMs.
+     * @param topic The message topic.
+     * @param message The raw message (JSON formatted).
+     */
     void parseAndUpdateData(const std::string& topic, const std::string& message);
 
-    // Cleanup CAM data map.
+    /**
+     * @brief Cleanup stale entries from the CAM data map.
+     * Removes cached data for stations from which no CAM has been received recently.
+     */
     void cleanupDataMap();
 
+    /**
+     * @brief Main loop executed in the worker thread.
+     * Manages subscriptions and event processing depending on the provider mode.
+     */
     void runLoop();
 };
 

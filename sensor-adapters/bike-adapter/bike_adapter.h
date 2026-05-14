@@ -37,66 +37,85 @@
 namespace rj = rapidjson;
 
 struct Config {
-    int domain_id;
-    bool debug;
-    std::string mqtt_host;
-    int mqtt_port;
-    std::string mqtt_topic;
-    std::string mqtt_client_id;
+    int domain_id;                 ///< DDS domain identifier.
+    bool debug;                    ///< Enables debug logging.
+    std::string mqtt_host;         ///< MQTT broker host.
+    int mqtt_port;                 ///< MQTT broker port.
+    std::string mqtt_topic;        ///< MQTT topic to subscribe to.
+    std::string mqtt_client_id;    ///< MQTT client identifier.
 };
 
 struct Object {
-    int objectID;
-    int sensorID;
-    double timestamp;
-    int classification;
-    int confidence;
-    float speed;
-    float heading;
-    float acceleration;                 // Not used
-    float latitude;
-    float longitude;
-    float altitude = 0.0f;              // Not used
-    float size_x = 0.0f;                // Not used
-    float size_y = 0.0f;                // Not used
-    float size_z = 0.0f;                // Not used
-    float angular_velocity = 0.0f;      // Not used
-    float cov_latitude = 0.0f;          // Not used
-    float cov_longitude = 0.0f;         // Not used
-    float cov_altitude = 0.0f;          // Not used
-    float cov_heading = 0.0f;           // Not used
-    float cov_speed = 0.0f;             // Not used
-    float cov_angular_velocity = 0.0f;  // Not used
+    int objectID;                      ///< Raw object identifier from the bike camera pipeline.
+    int sensorID;                      ///< Source sensor identifier.
+    double timestamp;                  ///< Object timestamp in UNIX seconds.
+    int classification;                ///< Classification code.
+    int confidence;                    ///< Classification confidence.
+    float speed;                       ///< Object speed in m/s.
+    float heading;                     ///< Object heading in degrees.
+    float acceleration;                ///< Not used by this adapter.
+    float latitude;                    ///< Latitude in WGS-84 degrees.
+    float longitude;                   ///< Longitude in WGS-84 degrees.
+    float altitude = 0.0f;             ///< Not used by this adapter.
+    float size_x = 0.0f;               ///< Not used by this adapter.
+    float size_y = 0.0f;               ///< Not used by this adapter.
+    float size_z = 0.0f;               ///< Not used by this adapter.
+    float angular_velocity = 0.0f;     ///< Not used by this adapter.
+    float cov_latitude = 0.0f;         ///< Not used by this adapter.
+    float cov_longitude = 0.0f;        ///< Not used by this adapter.
+    float cov_altitude = 0.0f;         ///< Not used by this adapter.
+    float cov_heading = 0.0f;          ///< Not used by this adapter.
+    float cov_speed = 0.0f;            ///< Not used by this adapter.
+    float cov_angular_velocity = 0.0f; ///< Not used by this adapter.
 };
 
 class BikeAdapter {
 public:
+    /**
+     * @brief Construct a new Bike Adapter object.
+     * @param config Configuration with MQTT broker, topic, and DDS domain.
+     */
     BikeAdapter(const Config& config);
+
+    /**
+     * @brief Start the adapter main loop.
+     * Subscribes to the MQTT topic and processes incoming bike camera detections.
+     */
     void run();
 
 private:
-    Config config;
-    Dds* dds_;
-    MqttWrapper* mqtt_wrapper;
+    Config config;                    ///< Runtime configuration.
+    Dds* dds_;                        ///< DDS client for publishing normalized objects.
+    MqttWrapper* mqtt_wrapper;        ///< MQTT client for subscribing to bike camera topic.
 
     /**
-     * Callback function for MQTT messages.
+     * @brief Callback function invoked when an MQTT message arrives.
+     * Parses the message and publishes normalized objects on DDS.
+     * @param topic The MQTT topic.
+     * @param message The raw message (JSON formatted).
      */
     void on_message_mqtt(const std::string& topic, const std::string& message);
 
     /**
-     * Callback function for DDS messages.
+     * @brief Static callback function for DDS messages.
+     * Not used in this adapter (bike camera input is MQTT only).
+     * @param topic The DDS topic.
+     * @param message The raw message (JSON formatted).
      */
     static void on_message_dds(const std::string& topic, const std::string& message) {}
 
     /**
-     * Parse an incoming MQTT message (as JSON text) into an Object,
-     * and return the resulting JSON string for DDS publishing.
+     * @brief Parse an incoming MQTT message into CPS Object format.
+     * Extracts fields from JSON and normalizes to the standard schema.
+     * @param message The raw message (JSON formatted).
+     * @return std::string Normalized object as JSON suitable for DDS publication.
      */
     std::string parseMessage(const std::string& message);
 
     /**
-     * Returns a random number string.
+     * @brief Generate a random number string.
+     * Used for generating unique message identifiers or request IDs.
+     * @return std::string A random number as a string.
      */
     std::string getRandomNumberString();
 };

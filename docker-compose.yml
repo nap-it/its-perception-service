@@ -1,6 +1,6 @@
 services:
   generation:
-    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/generation
+    image: ghcr.io/nap-it/its-notification-service:generation 
     restart: always
     volumes:
       - ./generation/config.ini:/config.ini
@@ -9,7 +9,7 @@ services:
     ipc: host
 
   processing:
-    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/processing
+    image: ghcr.io/nap-it/its-notification-service:processing
     restart: always
     volumes:
       - ./processing/config.ini:/config.ini
@@ -18,7 +18,7 @@ services:
     ipc: host
 
   radar-adapter:
-    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/radar-adapter
+    image: ghcr.io/nap-it/its-notification-service:radar-adapter
     restart: always
     volumes:
       - ./sensor-adapters/radar-adapter/config.ini:/config.ini
@@ -26,7 +26,7 @@ services:
     ipc: host
 
   camera-adapter:
-    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/camera-adapter
+    image: ghcr.io/nap-it/its-notification-service:camera-adapter
     restart: always
     volumes:
       - ./sensor-adapters/camera-adapter/config.ini:/config.ini

@@ -76,43 +76,62 @@ public:
 
 private:
 
-    std::thread locatorThread_;
+    std::thread locatorThread_; ///< Worker thread that runs the Locator's main loop.
 
     // Provider type chosen at construction.
-    ProviderType provider_;
+    ProviderType provider_;     ///< Location provider mode: STATIC, MQTT, or DDS.
 
     // Station type
-    int stationType_;
+    int stationType_;           ///< Station type code (RSU, vehicle, etc.).
 
     // Latest station dynamic location values (updated by client callbacks).
-    double latestLatitude_;
-    double latestLongitude_;
-    float latestHeading_;
+    double latestLatitude_;     ///< Current latitude in WGS-84 degrees.
+    double latestLongitude_;    ///< Current longitude in WGS-84 degrees.
+    float latestHeading_;       ///< Current heading in degrees.
 
     // Mutex to protect dynamic updates.
-    std::mutex mtx_;
+    std::mutex mtx_; ///< Protects access to latitude, longitude, and heading fields.
 
     // MQTT client 
-    MqttWrapper* mqttClient_;
+    MqttWrapper* mqttClient_; ///< Optional MQTT client used in MQTT provider mode.
 
     // MQTT topic to subscribe to for CAM location messages.
-    std::string mqttTopic_;
+    std::string mqttTopic_;   ///< MQTT topic for CAM/VAM subscription.
 
     // DDS client
-    Dds* dds_;
+    Dds* dds_;                ///< Optional DDS client used in DDS provider mode.
 
     // DDS topic to subscribe to for CAM location messages.
-    std::string ddsTopic_;
+    std::string ddsTopic_;    ///< DDS topic for CAM/VAM subscription.
 
-    // Internal callback for MQTT messages.
+    /**
+     * @brief Internal callback for MQTT messages.
+     * Invoked when a CAM/VAM message arrives on the subscribed MQTT topic.
+     * @param topic The MQTT topic.
+     * @param message The received message (JSON formatted).
+     */
     void on_message_mqtt(const std::string& topic, const std::string& message);
 
-    // Internal callback for DDS messages.
+    /**
+     * @brief Internal callback for DDS messages.
+     * Invoked when a CAM/VAM message arrives on the subscribed DDS topic.
+     * @param topic The DDS topic.
+     * @param message The received message (JSON formatted).
+     */
     void on_message_dds(const std::string& topic, const std::string& message);
 
-    // Helper to parse CAM messages and update location.
+    /**
+     * @brief Helper to parse CAM/VAM messages and update location.
+     * Extracts latitude, longitude, and heading from incoming messages and updates internal state.
+     * @param topic The message topic.
+     * @param message The raw message (JSON formatted).
+     */
     void parseAndUpdateLocation(const std::string& topic, const std::string& message);
 
+    /**
+     * @brief Main loop executed in the worker thread.
+     * Manages subscriptions and event processing depending on the provider mode.
+     */
     void runLoop();
 };
 
