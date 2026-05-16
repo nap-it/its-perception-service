@@ -38,53 +38,67 @@
 namespace rj = rapidjson;
 
 struct Config {
-    int domain_id;
-    bool debug;
+    int domain_id; ///< DDS domain identifier.
+    bool debug;    ///< Enables debug logging.
 };
 
 struct Object {
-    int objectID;
-    int sensorID;
-    double timestamp;
-    int classification;
-    int confidence;
-    float speed;
-    float heading;
-    float acceleration;
-    float latitude;
-    float longitude;
-    float altitude = 0.0f;   // Not used
-    float size_x = 0.0f;
-    float size_y = 0.0f;     // Not used
-    float size_z = 0.0f;     // Not used
-    float angular_velocity = 0.0f; // Not used
-    float cov_latitude = 0.0f;     // Not used
-    float cov_longitude = 0.0f;    // Not used
-    float cov_altitude = 0.0f;     // Not used
-    float cov_heading = 0.0f;      // Not used
-    float cov_speed = 0.0f;        // Not used
-    float cov_angular_velocity = 0.0f; // Not used
+    int objectID;                      ///< Raw object identifier from the Autoware pipeline.
+    int sensorID;                      ///< Source sensor identifier.
+    double timestamp;                  ///< Object timestamp in UNIX seconds.
+    int classification;                ///< Classification code.
+    int confidence;                    ///< Classification confidence.
+    float speed;                       ///< Object speed in m/s.
+    float heading;                     ///< Object heading in degrees.
+    float acceleration;                ///< Longitudinal acceleration in m/s².
+    float latitude;                    ///< Latitude in WGS-84 degrees.
+    float longitude;                   ///< Longitude in WGS-84 degrees.
+    float altitude = 0.0f;             ///< Not used by this adapter.
+    float size_x = 0.0f;               ///< Object length in meters.
+    float size_y = 0.0f;               ///< Not used by this adapter.
+    float size_z = 0.0f;               ///< Not used by this adapter.
+    float angular_velocity = 0.0f;     ///< Not used by this adapter.
+    float cov_latitude = 0.0f;         ///< Not used by this adapter.
+    float cov_longitude = 0.0f;        ///< Not used by this adapter.
+    float cov_altitude = 0.0f;         ///< Not used by this adapter.
+    float cov_heading = 0.0f;          ///< Not used by this adapter.
+    float cov_speed = 0.0f;            ///< Not used by this adapter.
+    float cov_angular_velocity = 0.0f; ///< Not used by this adapter.
 };
 
 class AutowareAdapter {
 public:
+    /**
+     * @brief Construct a new Autoware Adapter object.
+     * @param config Configuration with DDS domain and debug settings.
+     */
     AutowareAdapter(const Config& config);
+
+    /**
+     * @brief Start the adapter main loop.
+     * Subscribes to DDS topics and processes incoming Autoware VPI detections.
+     */
     void run();
     void stop();
 
 private:
     std::atomic<bool> stopFlag_{false};
-    Config config;
-    Dds* dds_;
+    Config config;    ///< Runtime configuration.
+    Dds* dds_;        ///< DDS client for subscribing to Autoware and publishing normalized objects.
 
     /**
-     * Callback function for DDS messages.
+     * @brief Callback function invoked when a DDS message arrives.
+     * Parses the message and publishes normalized objects on DDS.
+     * @param topic The DDS topic.
+     * @param message The raw message (JSON formatted).
      */
     void on_message_dds(string topic, string message);
 
     /**
-     * Parse an incoming MQTT message (as JSON text) into an Object,
-     * and return the resulting JSON string for DDS publishing.
+     * @brief Parse an incoming DDS message into CPS Object format.
+     * Extracts fields from JSON and normalizes to the standard schema.
+     * @param message The raw message (JSON formatted).
+     * @return std::string Normalized object as JSON suitable for DDS publication.
      */
     std::string parseMessage(const std::string& message);
 };

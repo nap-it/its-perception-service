@@ -1,5 +1,0 @@
-<map id="generation/builder.h" name="generation/builder.h">
-<area shape="rect" id="Node000001" title="Stateless CPM JSON constructor for the CPS Generation service." alt="" coords="17,5,150,31"/>
-<area shape="rect" id="Node000002" href="$generation_8h.html" title="CPM generation loop component for the Collective Perception Service." alt="" coords="5,79,162,105"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="85,45,86,79,81,78,82,48"/>
-</map>

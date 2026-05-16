@@ -1,4 +1,4 @@
-# Doxyfile for the Collective Perception Service (CPS)
+# Doxyfile for the ITS Perception Service
 # Generate with: doxygen Doxyfile
 # Output:        docs/doxygen/html/index.html
 
@@ -7,7 +7,7 @@
 #---------------------------------------------------------------------------
 
 DOXYFILE_ENCODING      = UTF-8
-PROJECT_NAME           = "Collective Perception Service"
+PROJECT_NAME           = "ITS Perception Service"
 PROJECT_NUMBER         = "2.0.0"
 PROJECT_BRIEF          = "ETSI TS 103 324 CPS Implementation for V2X"
 PROJECT_LOGO           =
@@ -115,3 +115,6 @@ CLASS_GRAPH            = YES
 COLLABORATION_GRAPH    = YES
 DOT_IMAGE_FORMAT       = svg
 INTERACTIVE_SVG        = YES
+IMAGE_PATH             = ./docs/images
+
+
