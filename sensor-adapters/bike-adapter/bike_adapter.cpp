@@ -71,11 +71,19 @@ void BikeAdapter::run() {
     sensorDoc.Accept(sensorWriter);
     std::string sensorInfoStr = sensorBuffer.GetString();
 
-    while (true) {
+    stopFlag_ = false;
+    while (!stopFlag_) {
         std::this_thread::sleep_for(std::chrono::seconds(5));
+        if (stopFlag_) break;
         dds_->publish("generation/sensors", sensorInfoStr);
         spdlog::info("Sensor information published: {}", sensorInfoStr);
     }
+    spdlog::info("[BikeAdapter] run loop exited.");
+}
+
+void BikeAdapter::stop() {
+    stopFlag_ = true;
+    spdlog::info("[BikeAdapter] stop requested.");
 }
 
 void BikeAdapter::on_message_mqtt(const std::string& topic, const std::string& message) {

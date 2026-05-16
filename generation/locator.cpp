@@ -21,7 +21,8 @@ Locator::Locator(ProviderType provider,
         mqttClient_(nullptr),
         dds_(nullptr),
         mqttTopic_(mqttTopic),
-        ddsTopic_(ddsTopic)
+        ddsTopic_(ddsTopic),
+        stopFlag_(false)
 {
     spdlog::info("[Locator] Constructing with provider type: {}", (provider_ == ProviderType::STATIC ? "STATIC" : (provider_ == ProviderType::MQTT ? "MQTT" : "DDS")));
 
@@ -66,17 +67,27 @@ Locator::~Locator() {
         delete dds_;
         dds_ = nullptr;
     }
+    if(locatorThread_.joinable()) {
+        locatorThread_.join();
+    }
 }
 
 void Locator::run() {
+    stopFlag_ = false;
     locatorThread_ = std::thread(&Locator::runLoop, this);
     spdlog::info("[Locator] run loop started.");
 }
 
+void Locator::stop() {
+    stopFlag_ = true;
+    spdlog::info("[Locator] stop requested.");
+}
+
 void Locator::runLoop() {
-    while(true) {
+    while(!stopFlag_) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
+    spdlog::info("[Locator] run loop exited.");
 }
 
 double Locator::getStationLatitude() {

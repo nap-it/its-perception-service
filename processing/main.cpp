@@ -6,6 +6,18 @@
 #include <thread>
 #include <chrono>
 #include <memory>
+#include <atomic>
+#include <csignal>
+#include <unistd.h>
+
+static std::atomic<bool> g_shutdown_requested{false};
+
+void signalHandler(int signum) {
+    const char* signal_name = (signum == SIGTERM) ? "SIGTERM" : (signum == SIGINT) ? "SIGINT" : "UNKNOWN";
+    std::string msg = std::string("[main] Received ") + signal_name + " - initiating graceful shutdown...\n";
+    write(STDOUT_FILENO, msg.c_str(), msg.length());
+    g_shutdown_requested.store(true);
+}
 
 int main() {
 
@@ -15,6 +27,10 @@ int main() {
         spdlog::error("Can't load 'config.ini'");
         return 1;
     }
+
+    signal(SIGTERM, signalHandler);
+    signal(SIGINT, signalHandler);
+    spdlog::info("[main] Signal handlers registered (SIGTERM, SIGINT)");
 
     // Logger level configuration
     std::string level_str = reader.Get("general", "log_level", "info");
@@ -120,11 +136,23 @@ int main() {
     std::shared_ptr<Processor> processor = std::make_shared<Processor>(config, locator, processor_performance_logs, prometheus, metrics);
     spdlog::info("[Processor] Starting processor...");
 
-    processor->run();
+    std::thread processor_thread(&Processor::run, processor.get());
+    spdlog::info("[main] CPS Processing service running.");
 
-    while (true) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    while (!g_shutdown_requested.load()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
+
+    spdlog::info("[main] Initiating graceful shutdown...");
+
+    processor->stop();
+    if (processor_thread.joinable()) {
+        processor_thread.join();
+        spdlog::info("[main] Processor thread joined.");
+    }
+
+    locator->stop();
+    spdlog::info("[main] Graceful shutdown complete.");
 
     return 0;
 }

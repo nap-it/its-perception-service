@@ -28,6 +28,7 @@
 #include <vector>
 #include <random>
 #include <thread>
+#include <atomic>
 #include "mqttwrapper.h"
 #include "fastdds-cpp-wrapper/dds.hpp"
 #include "rapidjson/document.h"
@@ -73,10 +74,12 @@ class CameraAdapter {
 public:
     CameraAdapter(const Config& config);
     void run();
+    void stop();
 
 private:
     int message_count_ = 0;
     std::mutex counter_mutex_;
+    std::atomic<bool> stopFlag_{false};
 
     Config config;
     Dds* dds_;

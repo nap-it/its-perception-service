@@ -7,7 +7,18 @@
 #include <thread>
 #include <chrono>
 #include <memory>
+#include <atomic>
+#include <csignal>
+#include <unistd.h>
 
+static std::atomic<bool> g_shutdown_requested{false};
+
+void signalHandler(int signum) {
+    const char* signal_name = (signum == SIGTERM) ? "SIGTERM" : (signum == SIGINT) ? "SIGINT" : "UNKNOWN";
+    std::string msg = std::string("[main] Received ") + signal_name + " - initiating graceful shutdown...\n";
+    write(STDOUT_FILENO, msg.c_str(), msg.length());
+    g_shutdown_requested.store(true);
+}
 
 int main() {
 
@@ -17,6 +28,10 @@ int main() {
         spdlog::error("Can't load 'config.ini'");
         return 1;
     }
+
+    signal(SIGTERM, signalHandler);
+    signal(SIGINT, signalHandler);
+    spdlog::info("[main] Signal handlers registered (SIGTERM, SIGINT)");
 
     // Logger level configuration
     std::string level_str = reader.Get("general", "log_level", "info");
@@ -146,12 +161,18 @@ int main() {
                     metrics);
     generation.run();
 
-    while (true) {
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+    spdlog::info("[main] CPS Generation service running.");
+
+    while (!g_shutdown_requested.load()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
+
+    spdlog::info("[main] Initiating graceful shutdown...");
 
     generation.stop();
     aggregator->stop();
+    locator->stop();
 
+    spdlog::info("[main] Graceful shutdown complete.");
     return 0;
 }

@@ -1,5 +1,17 @@
 #include <camera_adapter.h>
 #include "config_reader.h"
+#include <atomic>
+#include <csignal>
+#include <unistd.h>
+
+static std::atomic<bool> g_shutdown_requested{false};
+
+void signalHandler(int signum) {
+    const char* signal_name = (signum == SIGTERM) ? "SIGTERM" : (signum == SIGINT) ? "SIGINT" : "UNKNOWN";
+    std::string msg = std::string("[main] Received ") + signal_name + " - initiating graceful shutdown...\n";
+    write(STDOUT_FILENO, msg.c_str(), msg.length());
+    g_shutdown_requested.store(true);
+}
 
 /**
  * Read configuration file
@@ -35,12 +47,24 @@ void readConfigFile(const std::string& path, Config& config) {
 }
 
 int main(int argc, char* argv[]) {
+    signal(SIGTERM, signalHandler);
+    signal(SIGINT, signalHandler);
+
     Config config;
     readConfigFile("../config.ini", config);
 
     CameraAdapter adapter(config);
     std::thread camera_thread(&CameraAdapter::run, &adapter);
 
-    camera_thread.join(); 
+    while (!g_shutdown_requested.load()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+
+    adapter.stop();
+    if (camera_thread.joinable()) {
+        camera_thread.join();
+    }
+
+    spdlog::info("[main] Graceful shutdown complete.");
     return 0;
 }

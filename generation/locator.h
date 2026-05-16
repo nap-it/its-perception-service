@@ -27,6 +27,7 @@
 
 #include <string>
 #include <mutex>
+#include <atomic>
 #include "rapidjson/document.h"
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
@@ -68,6 +69,8 @@ public:
 
     void run();
 
+    void stop();
+
     // Getters for location and station type.
     double getStationLatitude();
     double getStationLongitude();
@@ -77,6 +80,7 @@ public:
 private:
 
     std::thread locatorThread_;
+    std::atomic<bool> stopFlag_;
 
     // Provider type chosen at construction.
     ProviderType provider_;

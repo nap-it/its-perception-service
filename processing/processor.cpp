@@ -122,9 +122,14 @@ void Processor::run() {
     stopFlag_ = false;
     spdlog::info("[Processor] Running...");
     while (!stopFlag_) {
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
     spdlog::info("[Processor] Stopped.");
+}
+
+void Processor::stop() {
+    stopFlag_ = true;
+    spdlog::info("[Processor] stop requested.");
 }
 
 void Processor::on_message_dds(const std::string& topic, const std::string& message) {

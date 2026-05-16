@@ -28,6 +28,7 @@
 #include <vector>
 #include <random>
 #include <thread>
+#include <atomic>
 #include <spdlog/spdlog.h>
 #include "fastdds-cpp-wrapper/dds.hpp"
 #include "rapidjson/document.h"
@@ -69,8 +70,10 @@ class AutowareAdapter {
 public:
     AutowareAdapter(const Config& config);
     void run();
+    void stop();
 
 private:
+    std::atomic<bool> stopFlag_{false};
     Config config;
     Dds* dds_;
 

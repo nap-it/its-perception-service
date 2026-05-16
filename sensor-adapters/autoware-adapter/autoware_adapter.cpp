@@ -57,11 +57,19 @@ void AutowareAdapter::run() {
     sensorDoc.Accept(sensorWriter);
     std::string sensorInfoStr = sensorBuffer.GetString();
 
-    while (true) {
+    stopFlag_ = false;
+    while (!stopFlag_) {
         std::this_thread::sleep_for(std::chrono::seconds(5));
+        if (stopFlag_) break;
         dds_->publish("generation/sensors", sensorInfoStr);
         spdlog::info("Sensor information published: {}", sensorInfoStr);
     }
+    spdlog::info("[AutowareAdapter] run loop exited.");
+}
+
+void AutowareAdapter::stop() {
+    stopFlag_ = true;
+    spdlog::info("[AutowareAdapter] stop requested.");
 }
 
 void AutowareAdapter::on_message_dds(std::string topic, std::string message) {

@@ -30,6 +30,7 @@
 
 #include <string>
 #include <mutex>
+#include <atomic>
 #include "rapidjson/document.h"
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
@@ -80,6 +81,8 @@ public:
 
     void run();
 
+    void stop();
+
     // Getter for station data.
     SenderInfo getStationData(int stationId);
 private:
@@ -91,6 +94,7 @@ private:
     int station_id_;
 
     std::thread locatorThread_;
+    std::atomic<bool> stopFlag_;
 
     // Provider type chosen at construction.
     ProviderType provider_;
