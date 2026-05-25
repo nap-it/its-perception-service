@@ -17,3 +17,19 @@ services:
       - ./logs:/logs
     network_mode: host
     ipc: host
+
+  camera-adapter:
+    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/camera-adapter:latest
+    restart: always
+    volumes:
+      - /services/cps/camera-adapter/config.ini:/config.ini
+    network_mode: host
+    ipc: host
+
+  radar-adapter:
+    image: code.nap.av.it.pt:5050/mobility-networks/cps-v2/radar-adapter:latest
+    restart: always
+    volumes:
+      - /services/cps/radar-adapter/config.ini:/config.ini
+    network_mode: host
+    ipc: host
