@@ -96,20 +96,20 @@ void Generation::runLoop() {
             sensorInfo = aggregator_->getSensorInfo();
             addSensor = true;
             for (const auto& [sensorID, sensor] : sensorInfo) {
-                spdlog::info("[Generation]: Sensor ID: {}, Type: {}", sensor.sensorID, sensor.sensorType);
+                spdlog::debug("[Generation]: Sensor ID: {}, Type: {}", sensor.sensorID, sensor.sensorType);
             }
             last_sensor_ts = now;
         }
 
         if (freshObjects.empty()) {
-            spdlog::info("[Generation]: No fresh objects retrieved this cycle.");
+            spdlog::debug("[Generation]: No fresh objects retrieved this cycle.");
 
             if(addSensor) {
                 stationLatitude = locator_->getStationLatitude();
                 stationLongitude = locator_->getStationLongitude();
                 stationHeading = locator_->getStationHeading();
                 stationType = locator_->getStationType();
-                spdlog::info("[Generation]: Station Latitude: {}, Longitude: {}, Type: {}", stationLatitude, stationLongitude, stationType);
+                spdlog::debug("[Generation]: Station Latitude: {}, Longitude: {}, Type: {}", stationLatitude, stationLongitude, stationType);
 
                 // Generate CPM
                 auto t1 = std::chrono::high_resolution_clock::now();
@@ -130,7 +130,7 @@ void Generation::runLoop() {
                     spdlog::debug("[Generation]: Prometheus metrics updated: cpm_built incremented, last_cpm_ts set to current time, objects_per_msg observed with {}, cpm_build_seconds observed with {}", freshObjects.size(), build_duration); 
                 }
 
-                spdlog::info("[Generation]: Publising CPM: {}", cpm_str);
+                spdlog::debug("[Generation]: Publising CPM: {}", cpm_str);
 
                 // Publish CPM
                 dds_->publish(ddsTopic_, cpm_str);
@@ -138,17 +138,17 @@ void Generation::runLoop() {
                 if(mqttDebug_) {
                     // Publish to MQTT if enabled
                     mqttClient_->publish("mqtt/in/cpm", cpm_str);
-                    spdlog::info("[Generation]: Published CPM to MQTT topic mqtt/in/cpm");
+                    spdlog::debug("[Generation]: Published CPM to MQTT topic mqtt/in/cpm");
                 }
             }
         } else {
-            spdlog::info("[Generation]: Retrieved {} fresh objects.", freshObjects.size());
+            spdlog::debug("[Generation]: Retrieved {} fresh objects.", freshObjects.size());
             
             stationLatitude = locator_->getStationLatitude();
             stationLongitude = locator_->getStationLongitude();
             stationHeading = locator_->getStationHeading();
             stationType = locator_->getStationType();
-            spdlog::info("[Generation]: Station Latitude: {}, Longitude: {}, Type: {}", stationLatitude, stationLongitude, stationType);
+            spdlog::debug("[Generation]: Station Latitude: {}, Longitude: {}, Type: {}", stationLatitude, stationLongitude, stationType);
 
             // Generate CPM
             auto t1 = std::chrono::high_resolution_clock::now();
@@ -172,7 +172,7 @@ void Generation::runLoop() {
                 generation_file_logger_->info("Generation,generateCPM,{},{},{},{}", aggregator_->getCurrentTimestampString(), freshObjects.size(), t1_timestamp, generate_cpm_duration_us);
             }
 
-            spdlog::info("[Generation]: Publising CPM: {}", cpm_str);
+            spdlog::debug("[Generation]: Publising CPM: {}", cpm_str);
 
             // Publish CPM
             dds_->publish(ddsTopic_, cpm_str);
@@ -180,7 +180,7 @@ void Generation::runLoop() {
             if(mqttDebug_) {
                 // Publish to MQTT if enabled
                 mqttClient_->publish("mqtt/in/cpm", cpm_str);
-                spdlog::info("[Generation]: Published CPM to MQTT topic mqtt/in/cpm");
+                spdlog::debug("[Generation]: Published CPM to MQTT topic mqtt/in/cpm");
             }
         }
         
@@ -197,7 +197,7 @@ void Generation::runLoop() {
         // Sleep for the current request rate - time taken to process this cycle.
         end = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-        spdlog::info("[Generation]: Cycle took {} ms, sleeping for {} ms", duration, requestRateMs_.load() - duration);
+        spdlog::debug("[Generation]: Cycle took {} ms, sleeping for {} ms", duration, requestRateMs_.load() - duration);
 
         if (prometheus_ && metrics_) {
             metrics_->cycle_ms->Observe(duration);
