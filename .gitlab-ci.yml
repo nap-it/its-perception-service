@@ -3,6 +3,7 @@
 # ------------------------------------------------------------------------------
 variables:
   DOCKER_HOST: "unix:///var/run/docker.sock"
+  FORCE_BUILD: "true"
 
 stages:
   - build
