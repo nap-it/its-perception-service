@@ -1,0 +1,13 @@
+#Global
+**/build
+**/fastdds-cpp-wrapper
+**/rapidjson
+**/spdlog
+**/.vscode
+**/paho-mqtt-cpp-wrapper
+**/logs
+**/build_docker_images.log
+**/hosts_test.yml
+**/hosts_rpis.yml
+**/deploy_test.yml
+**/.DS_Store

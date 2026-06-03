@@ -1,0 +1,34 @@
+services:
+  generation:
+    image: ghcr.io/nap-it/its-perception-service:generation 
+    restart: always
+    volumes:
+      - ./generation/config.ini:/config.ini
+      - ./logs:/logs
+    network_mode: host
+    ipc: host
+
+  processing:
+    image: ghcr.io/nap-it/its-perception-service:processing
+    restart: always
+    volumes:
+      - ./processing/config.ini:/config.ini
+      - ./logs:/logs
+    network_mode: host
+    ipc: host
+
+  radar-adapter:
+    image: ghcr.io/nap-it/its-perception-service:radar-adapter
+    restart: always
+    volumes:
+      - ./sensor-adapters/radar-adapter/config.ini:/config.ini
+    network_mode: host
+    ipc: host
+
+  camera-adapter:
+    image: ghcr.io/nap-it/its-perception-service:camera-adapter
+    restart: always
+    volumes:
+      - ./sensor-adapters/camera-adapter/config.ini:/config.ini
+    network_mode: host
+    ipc: host

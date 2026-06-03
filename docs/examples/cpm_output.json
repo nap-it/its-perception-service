@@ -1,0 +1,152 @@
+{
+    "managementContainer": {
+        "referenceTime": 694485600.123,
+        "referencePosition": {
+            "latitude": 40.63028,
+            "longitude": -8.65422,
+            "altitude": {
+                "altitudeValue": 0.0,
+                "altitudeConfidence": 0
+            },
+            "positionConfidenceEllipse": {
+                "semiMajorConfidence": 4095,
+                "semiMinorConfidence": 4095,
+                "semiMajorOrientation": 0
+            }
+        }
+    },
+    "cpmContainers": [
+        {
+            "containerId": 2,
+            "containerData": {}
+        },
+        {
+            "containerId": 3,
+            "containerData": [
+                {
+                    "sensorId": 3,
+                    "sensorType": 3,
+                    "shadowingApplies": false
+                }
+            ]
+        },
+        {
+            "containerId": 5,
+            "containerData": {
+                "numberOfPerceivedObjects": 2,
+                "perceivedObjects": [
+                    {
+                        "objectId": 1,
+                        "sensorIdList": [3],
+                        "measurementDeltaTime": 123,
+                        "position": {
+                            "xCoordinate": {
+                                "value": 10.5,
+                                "confidence": 40.95
+                            },
+                            "yCoordinate": {
+                                "value": 15.3,
+                                "confidence": 40.95
+                            },
+                            "zCoordinate": {
+                                "value": 12.5,
+                                "confidence": 40.95
+                            }
+                        },
+                        "velocity": {
+                            "cartesianVelocity": {
+                                "xVelocity": {
+                                    "value": 0.0,
+                                    "confidence": 0.32
+                                },
+                                "yVelocity": {
+                                    "value": 1.4,
+                                    "confidence": 0.32
+                                }
+                            }
+                        },
+                        "acceleration": {
+                            "cartesianAcceleration": {
+                                "xAcceleration": {
+                                    "value": 0.0,
+                                    "confidence": 1.3
+                                },
+                                "yAcceleration": {
+                                    "value": 0.1,
+                                    "confidence": 1.3
+                                }
+                            }
+                        },
+                        "angles": {
+                            "zAngle": {
+                                "value": 90.0,
+                                "confidence": 0.71
+                            }
+                        },
+                        "classification": [
+                            {
+                                "objectClass": {
+                                    "vehicleSubClass": 1
+                                },
+                                "confidence": 80
+                            }
+                        ],
+                        "objectDimensionX": {
+                            "value": 0.5,
+                            "confidence": 32
+                        },
+                        "objectDimensionY": {
+                            "value": 1.7,
+                            "confidence": 32
+                        },
+                        "objectDimensionZ": {
+                            "value": 1.8,
+                            "confidence": 32
+                        }
+                    },
+                    {
+                        "objectId": 2,
+                        "sensorIdList": [3],
+                        "measurementDeltaTime": 100,
+                        "position": {
+                            "xCoordinate": {
+                                "value": 22.1,
+                                "confidence": 40.95
+                            },
+                            "yCoordinate": {
+                                "value": 28.7,
+                                "confidence": 40.95
+                            }
+                        },
+                        "velocity": {
+                            "cartesianVelocity": {
+                                "xVelocity": {
+                                    "value": 0.0,
+                                    "confidence": 1.27
+                                },
+                                "yVelocity": {
+                                    "value": -0.8,
+                                    "confidence": 1.27
+                                }
+                            }
+                        },
+                        "angles": {
+                            "zAngle": {
+                                "value": 270.0,
+                                "confidence": 12.7
+                            }
+                        },
+                        "classification": [
+                            {
+                                "objectClass": {
+                                    "vehicleSubClass": 2
+                                },
+                                "confidence": 65
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    ]
+}
