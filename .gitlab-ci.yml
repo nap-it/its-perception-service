@@ -30,7 +30,7 @@ before_script:
   image: code.nap.av.it.pt:5050/external-tools/misc-docker-images/docker
   script:
     - |
-      if [[ -n "$CI_COMMIT_TAG" && "$CI_COMMIT_TAG" != "latest" ]]; then
+      if [[ -n "$CI_COMMIT_TAG" && "$CI_COMMIT_TAG" != "latest" ]] && [[ "$FORCE_BUILD" != "true" ]]; then
         echo "→ Preparing diff against previous tag…"
         git fetch --unshallow || true            # ensure HEAD^ exists
         git fetch --tags                         # pull down all tags
@@ -157,8 +157,8 @@ build_radar_adapter_arm64:
     - echo "→ Logging in for manifest"
     - echo "$CI_TOKEN" | docker login -u "$CI_USER" --password-stdin code.nap.av.it.pt:5050
     - |
-      # ——— Only run if this folder changed since last tag ———
-      if [[ -n "$CI_COMMIT_TAG" && "$CI_COMMIT_TAG" != "latest" ]]; then
+      # ——— Only run if this folder changed since last tag or FORCE_BUILD is true ———
+      if [[ -n "$CI_COMMIT_TAG" && "$CI_COMMIT_TAG" != "latest" ]] && [[ "$FORCE_BUILD" != "true" ]]; then
         echo "→ Checking if ${DOCKERFILE_PATH} changed since last tag…"
         git fetch --unshallow || true
         git fetch --tags
