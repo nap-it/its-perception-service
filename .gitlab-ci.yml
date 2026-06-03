@@ -69,7 +69,7 @@ before_script:
         --push \
         --build-arg VERSION="$DOCKER_TAG" \
         --build-arg COMMIT="$CI_COMMIT_SHORT_SHA" \
-        -t code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${DOCKER_TAG}-${ARCH} \
+        -t code.nap.av.it.pt:5050/mobility-networks/its-perception-service/${IMAGE_NAME}:${DOCKER_TAG}-${ARCH} \
         -f ${DOCKERFILE_PATH}/Dockerfile \
         ${DOCKERFILE_PATH}
 
@@ -183,11 +183,11 @@ build_radar_adapter_arm64:
       fi
 
     - |
-      export IMAGE_REF=code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${DOCKER_TAG}
+      export IMAGE_REF=code.nap.av.it.pt:5050/mobility-networks/its-perception-service/${IMAGE_NAME}:${DOCKER_TAG}
       echo "→ Creating multi-arch manifest ${IMAGE_NAME}:${DOCKER_TAG}"
       docker buildx imagetools create -t $IMAGE_REF \
-        code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${DOCKER_TAG}-amd64 \
-        code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${DOCKER_TAG}-arm64
+        code.nap.av.it.pt:5050/mobility-networks/its-perception-service/${IMAGE_NAME}:${DOCKER_TAG}-amd64 \
+        code.nap.av.it.pt:5050/mobility-networks/its-perception-service/${IMAGE_NAME}:${DOCKER_TAG}-arm64
       INSPECT_OUTPUT="$(docker buildx imagetools inspect $IMAGE_REF)"
       echo "$INSPECT_OUTPUT"
       echo "$INSPECT_OUTPUT" | grep -q "linux/amd64" || { echo "Missing linux/amd64 in $IMAGE_REF"; exit 1; }
@@ -195,11 +195,11 @@ build_radar_adapter_arm64:
 
       # Only on tag pipelines, also bump :latest
       if [[ -n "$CI_COMMIT_TAG" && "$CI_COMMIT_TAG" != "latest" ]]; then
-        export LATEST_REF=code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:latest
+        export LATEST_REF=code.nap.av.it.pt:5050/mobility-networks/its-perception-service/${IMAGE_NAME}:latest
         echo "→ Also updating multi-arch manifest ${IMAGE_NAME}:latest"
         docker buildx imagetools create -t $LATEST_REF \
-          code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${DOCKER_TAG}-amd64 \
-          code.nap.av.it.pt:5050/mobility-networks/cps-v2/${IMAGE_NAME}:${DOCKER_TAG}-arm64
+          code.nap.av.it.pt:5050/mobility-networks/its-perception-service/${IMAGE_NAME}:${DOCKER_TAG}-amd64 \
+          code.nap.av.it.pt:5050/mobility-networks/its-perception-service/${IMAGE_NAME}:${DOCKER_TAG}-arm64
         INSPECT_OUTPUT="$(docker buildx imagetools inspect $LATEST_REF)"
         echo "$INSPECT_OUTPUT"
         echo "$INSPECT_OUTPUT" | grep -q "linux/amd64" || { echo "Missing linux/amd64 in $LATEST_REF"; exit 1; }
@@ -292,10 +292,10 @@ cleanup:
     - |
       for IMAGE in generation processing autoware-adapter bike-adapter camera-adapter radar-adapter; do
         echo "→ Cleaning up $IMAGE"
-        regctl tag rm code.nap.av.it.pt:5050/mobility-networks/cps-v2/$IMAGE:${DOCKER_TAG}-amd64 || true
-        regctl tag rm code.nap.av.it.pt:5050/mobility-networks/cps-v2/$IMAGE:${DOCKER_TAG}-arm64 || true
-        regctl tag rm code.nap.av.it.pt:5050/mobility-networks/cps-v2/$IMAGE:latest-amd64 || true
-        regctl tag rm code.nap.av.it.pt:5050/mobility-networks/cps-v2/$IMAGE:latest-arm64 || true
+        regctl tag rm code.nap.av.it.pt:5050/mobility-networks/its-perception-service/$IMAGE:${DOCKER_TAG}-amd64 || true
+        regctl tag rm code.nap.av.it.pt:5050/mobility-networks/its-perception-service/$IMAGE:${DOCKER_TAG}-arm64 || true
+        regctl tag rm code.nap.av.it.pt:5050/mobility-networks/its-perception-service/$IMAGE:latest-amd64 || true
+        regctl tag rm code.nap.av.it.pt:5050/mobility-networks/its-perception-service/$IMAGE:latest-arm64 || true
       done
 
   rules:
