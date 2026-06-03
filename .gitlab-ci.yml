@@ -3,7 +3,6 @@
 # ------------------------------------------------------------------------------
 variables:
   DOCKER_HOST: "unix:///var/run/docker.sock"
-  FORCE_BUILD: "true"
 
 stages:
   - build
@@ -22,6 +21,7 @@ before_script:
         DOCKER_TAG="$CI_COMMIT_BRANCH"
       fi
       echo "→ DOCKER_TAG=$DOCKER_TAG"
+      echo "→ FORCE_BUILD=$FORCE_BUILD"
 
 # ------------------------------------------------------------------------------
 # 1) BUILD TEMPLATE
