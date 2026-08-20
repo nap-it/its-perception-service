@@ -318,7 +318,7 @@ std::string Builder::generateCPM(const std::vector<Object>& freshObjects,
 
     auto t2 = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
-    spdlog::info("[Builder] CPM generation took {} us", duration);
+    spdlog::debug("[Builder] CPM generation took {} us", duration);
 
     // Convert document to string.
     rj::StringBuffer buffer;
@@ -328,7 +328,7 @@ std::string Builder::generateCPM(const std::vector<Object>& freshObjects,
     
     auto t3 = std::chrono::high_resolution_clock::now();
     duration = std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2).count();
-    spdlog::info("[Builder] CPM serialization took {} us", duration);
+    spdlog::debug("[Builder] CPM serialization took {} us", duration);
 
     return cpm_str;
 }
